@@ -209,16 +209,60 @@ def config_update_unit_path(cls_name, unit_code, path):
 
 def lesson_list(cls_name, unit_code):
     """返回课节列表，格式同 scan_lessons"""
+    return lesson_list_batch().get(cls_name, {}).get(unit_code, [])
+
+def config_and_lessons():
+    """一次查询返回 config 和 lessons 全量数据"""
     db = get_db()
-    rows = db.execute(
-        "SELECT lesson_num, title, updated_at FROM lessons WHERE class_name=? AND unit_code=? ORDER BY lesson_num",
-        [cls_name, unit_code]).fetchall()
-    unit_info = config_get_unit(cls_name, unit_code)
-    unit_name = unit_info.get("name", unit_code)
-    result = []
+    req = {"requests": [
+        {"type": "execute", "stmt": {"sql": "SELECT class_name, unit_code, unit_name, path, created_by, class_time FROM config ORDER BY class_name"}},
+        {"type": "execute", "stmt": {"sql": "SELECT class_name, unit_code, lesson_num, title, updated_at FROM lessons ORDER BY class_name, unit_code, lesson_num"}},
+        {"type": "close"}
+    ]}
+    raw = db._req(req)
+    results = raw.get('results', [])
+
+    # Parse config result
+    cfg = {}
+    cfg_rows = db._parse_result({"results": [results[0]]})
+    for r in cfg_rows:
+        if r["class_name"] not in cfg:
+            cfg[r["class_name"]] = {}
+        cfg[r["class_name"]][r["unit_code"]] = {
+            "name": r["unit_name"], "path": r["path"],
+            "created_by": r["created_by"], "class_time": r["class_time"]
+        }
+
+    # Parse lessons result
+    lessons = {}
+    lesson_rows = db._parse_result({"results": [results[1]]})
+    for r in lesson_rows:
+        cn, uc = r["class_name"], r["unit_code"]
+        unit_name = cfg.get(cn, {}).get(uc, {}).get("name", uc)
+        if cn not in lessons: lessons[cn] = {}
+        if uc not in lessons[cn]: lessons[cn][uc] = []
+        lessons[cn][uc].append({
+            "folder": f"{cn}-{uc}-{r['lesson_num']}",
+            "lesson": str(r["lesson_num"]),
+            "title": r["title"],
+            "date": (r["updated_at"] or "")[:10],
+            "unit_name": unit_name
+        })
+    return cfg, lessons
+
+def lesson_list_batch():
+    """一次查询返回所有课节 {class_name: {unit_code: [{lesson_dict}, ...]}}"""
+    db = get_db()
+    cfg = config_all()
+    rows = db.execute("SELECT class_name, unit_code, lesson_num, title, updated_at FROM lessons ORDER BY class_name, unit_code, lesson_num").fetchall()
+    result = {}
     for r in rows:
-        result.append({
-            "folder": f"{cls_name}-{unit_code}-{r['lesson_num']}",
+        cn, uc = r["class_name"], r["unit_code"]
+        unit_name = cfg.get(cn, {}).get(uc, {}).get("name", uc)
+        if cn not in result: result[cn] = {}
+        if uc not in result[cn]: result[cn][uc] = []
+        result[cn][uc].append({
+            "folder": f"{cn}-{uc}-{r['lesson_num']}",
             "lesson": str(r["lesson_num"]),
             "title": r["title"],
             "date": (r["updated_at"] or "")[:10],

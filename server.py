@@ -100,12 +100,12 @@ def test_page():
 @app.route("/api/config")
 def get_config_api():
     from collections import OrderedDict
-    cfg = get_config()
+    cfg, all_lessons = db.config_and_lessons()
     out = OrderedDict()
     for k in sort_class_names(cfg.keys()):
         out[k] = cfg[k]
     zg_user = os.environ.get("ZG_USER", "")
-    return jsonify({"classes": out, "zg_user": zg_user})
+    return jsonify({"classes": out, "lessons": all_lessons, "zg_user": zg_user})
 
 @app.route("/api/pick-folder")
 def pick_folder():
@@ -135,12 +135,13 @@ def list_classes():
     cfg = get_config()
     if not cfg: return jsonify({})
     from collections import OrderedDict
+    # 一次查询所有课节（避免 N 次 Turso HTTP 请求）
+    all_lessons = db.lesson_list_batch()
     cls = OrderedDict()
     for class_name in sort_class_names(cfg.keys()):
         cls[class_name] = {}
         for unit_code, info in cfg[class_name].items():
-            path = info.get("path", "")
-            ls = scan_lessons(class_name, unit_code, path)
+            ls = all_lessons.get(class_name, {}).get(unit_code, [])
             cls[class_name][unit_code] = ls
             if not ls:
                 cls[class_name][unit_code] = [{"folder":"","lesson":"","title":"","date":"","unit_name": info.get("name", unit_code)}]

@@ -46,63 +46,62 @@ function expandAll(e){e.preventDefault();document.querySelectorAll('#classList .
 function collapseAll(e){e.preventDefault();document.querySelectorAll('#classList .ci').forEach(function(d){var u=d.nextElementSibling;if(u){u.style.display='none'}})}
 
 function renderClassList(){
+  var el=document.getElementById('classList');el.innerHTML='';
   var filter=getCheckedUsers().length>0;
-  fetch(API+'/classes').then(function(r){return r.json()}).then(function(data){
-    var el=document.getElementById('classList');el.innerHTML='';
-    Object.keys(data).forEach(function(cls){
-      var units=data[cls];if(!Object.keys(units).length)return;
-      // filter: only show classes where at least one unit was created by me
-      if(filter){var clsUnits=cfgInfo[cls]||{};var hasMine=Object.values(clsUnits).some(function(u){return getCheckedUsers().indexOf(u.created_by)>=0});if(!hasMine)return}
-      var d=document.createElement('div');d.className='ci';d.style.cssText='display:flex;align-items:center;cursor:pointer';
-      d.onclick=function(e){if(e.target.tagName==='BUTTON')return;var ul=this.nextElementSibling;if(ul)ul.style.display=ul.style.display==='none'?'block':'none';var first=ul&&ul.querySelector('.li');if(first)first.click()};
-      var cnSpan=document.createElement('span');cnSpan.textContent=cls;cnSpan.style.flex='1';
-      d.appendChild(cnSpan);
-      var trashBtn=document.createElement('button');trashBtn.innerHTML='<svg width=\"12\" height=\"14\" viewBox=\"0 0 12 14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"><path d=\"M1 3h10M4 3V2a1 1 0 011-1h2a1 1 0 011 1v1M2 3v10a1 1 0 001 1h6a1 1 0 001-1V3M4.5 6v5M7.5 6v5\"/></svg>';trashBtn.title='删除班级';
-      trashBtn.style.cssText='border:none;background:none;cursor:pointer;color:var(--sb);padding:0 2px;opacity:.4;flex-shrink:0';
-      trashBtn.onclick=function(e){e.stopPropagation();deleteClass(cls,units)};
-      d.appendChild(trashBtn);
-      el.appendChild(d);
-      var unitDiv=document.createElement('div');unitDiv.style.cssText='display:none;padding-left:4px';
-      var unitKeys=Object.keys(units);
-      unitKeys.forEach(function(un,idx){
-        var uname=(units[un]&&units[un][0]&&units[un][0].unit_name)||un;
-        var isLast=(idx===unitKeys.length-1);
-        var uh=document.createElement('div');
-        uh.style.cssText='font-size:12px;color:var(--go);padding:2px 0;cursor:pointer;display:flex;align-items:center;position:relative';
-        uh.innerHTML='<span style="flex:1">'+uname+'</span>';
-        var trashBtn2=document.createElement('button');trashBtn2.innerHTML='<svg width=\"12\" height=\"14\" viewBox=\"0 0 12 14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"><path d=\"M1 3h10M4 3V2a1 1 0 011-1h2a1 1 0 011 1v1M2 3v10a1 1 0 001 1h6a1 1 0 001-1V3M4.5 6v5M7.5 6v5\"/></svg>';trashBtn2.title='删除单元';
-        trashBtn2.style.cssText='border:none;background:none;cursor:pointer;color:var(--sb);padding:0 3px;position:absolute;right:22px;opacity:.4';
-        trashBtn2.onclick=function(e){e.stopPropagation();deleteUnit(cls,un,uname)};
-        uh.appendChild(trashBtn2);
-        var addBtn=document.createElement('button');addBtn.textContent='+';addBtn.title='新建课节';
-        addBtn.style.cssText='border:none;background:none;cursor:pointer;font-size:14px;color:var(--sb);padding:0 2px;position:absolute;right:8px';
-        addBtn.onclick=function(e){e.stopPropagation();newLesson(cls,un,uname)};
-        uh.appendChild(addBtn);
-        uh.onclick=function(e){e.stopPropagation();var ul=this.nextElementSibling;if(ul)ul.style.display=ul.style.display==='none'?'block':'none'};
-        unitDiv.appendChild(uh);
-        var ldiv=document.createElement('div');ldiv.style.cssText='padding-left:0px;'+(isLast?'':'display:none');
-        units[un].forEach(function(l){
-          var li=document.createElement('div');li.className='li';
-          var dt=(l.date||'');var shortDt=dt.length>=10?dt.slice(5).replace(/-/g,''):dt;
-          li.textContent=(l.title||'')+'-'+shortDt;
-          if(l.folder){li.onclick=function(e){e.stopPropagation();loadAndOpen(l.folder,cls)}}else{li.style.opacity='.4';li.style.cursor='default';li.textContent='请先建课节'}
-          ldiv.appendChild(li);
-        });
-        unitDiv.appendChild(ldiv);
+  // Build class list from cfgInfo + allLessons (loaded once via /api/config)
+  Object.keys(cfgInfo).forEach(function(cls){
+    var units=cfgInfo[cls];if(!Object.keys(units).length)return;
+    if(filter){var hasMine=Object.values(units).some(function(u){return getCheckedUsers().indexOf(u.created_by)>=0});if(!hasMine)return}
+    var d=document.createElement('div');d.className='ci';d.style.cssText='display:flex;align-items:center;cursor:pointer';
+    d.onclick=function(e){if(e.target.tagName==='BUTTON')return;var ul=this.nextElementSibling;if(ul)ul.style.display=ul.style.display==='none'?'block':'none';var first=ul&&ul.querySelector('.li');if(first)first.click()};
+    var cnSpan=document.createElement('span');cnSpan.textContent=cls;cnSpan.style.flex='1';
+    d.appendChild(cnSpan);
+    var trashBtn=document.createElement('button');trashBtn.innerHTML='<svg width=\"12\" height=\"14\" viewBox=\"0 0 12 14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"><path d=\"M1 3h10M4 3V2a1 1 0 011-1h2a1 1 0 011 1v1M2 3v10a1 1 0 001 1h6a1 1 0 001-1V3M4.5 6v5M7.5 6v5\"/></svg>';trashBtn.title='删除班级';
+    trashBtn.style.cssText='border:none;background:none;cursor:pointer;color:var(--sb);padding:0 2px;opacity:.4;flex-shrink:0';
+    trashBtn.onclick=function(e){e.stopPropagation();deleteClass(cls,units)};
+    d.appendChild(trashBtn);
+    el.appendChild(d);
+    var unitDiv=document.createElement('div');unitDiv.style.cssText='display:none;padding-left:4px';
+    var unitKeys=Object.keys(units);
+    unitKeys.forEach(function(un,idx){
+      var uname=(units[un]&&units[un].name)||un;
+      var isLast=(idx===unitKeys.length-1);
+      var uh=document.createElement('div');
+      uh.style.cssText='font-size:12px;color:var(--go);padding:2px 0;cursor:pointer;display:flex;align-items:center;position:relative';
+      uh.innerHTML='<span style="flex:1">'+uname+'</span>';
+      var trashBtn2=document.createElement('button');trashBtn2.innerHTML='<svg width=\"12\" height=\"14\" viewBox=\"0 0 12 14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"><path d=\"M1 3h10M4 3V2a1 1 0 011-1h2a1 1 0 011 1v1M2 3v10a1 1 0 001 1h6a1 1 0 001-1V3M4.5 6v5M7.5 6v5\"/></svg>';trashBtn2.title='删除单元';
+      trashBtn2.style.cssText='border:none;background:none;cursor:pointer;color:var(--sb);padding:0 3px;position:absolute;right:22px;opacity:.4';
+      trashBtn2.onclick=function(e){e.stopPropagation();deleteUnit(cls,un,uname)};
+      uh.appendChild(trashBtn2);
+      var addBtn=document.createElement('button');addBtn.textContent='+';addBtn.title='新建课节';
+      addBtn.style.cssText='border:none;background:none;cursor:pointer;font-size:14px;color:var(--sb);padding:0 2px;position:absolute;right:8px';
+      addBtn.onclick=function(e){e.stopPropagation();newLesson(cls,un,uname)};
+      uh.appendChild(addBtn);
+      uh.onclick=function(e){e.stopPropagation();var ul=this.nextElementSibling;if(ul)ul.style.display=ul.style.display==='none'?'block':'none'};
+      unitDiv.appendChild(uh);
+      var ldiv=document.createElement('div');ldiv.style.cssText='padding-left:0px;'+(isLast?'':'display:none');
+      var lessons=allLessons[cls]&&allLessons[cls][un]?allLessons[cls][un]:[];
+      lessons.forEach(function(l){
+        var li=document.createElement('div');li.className='li';
+        var dt=(l.date||'');var shortDt=dt.length>=10?dt.slice(5).replace(/-/g,''):dt;
+        li.textContent=(l.title||'')+'-'+shortDt;
+        if(l.folder){li.onclick=function(e){e.stopPropagation();loadAndOpen(l.folder,cls)}}else{li.style.opacity='.4';li.style.cursor='default';li.textContent='请先建课节'}
+        ldiv.appendChild(li);
       });
-      el.appendChild(unitDiv);
+      unitDiv.appendChild(ldiv);
     });
-  }).catch(function(e){document.getElementById('classList').textContent='加载失败: '+e.message});
+    el.appendChild(unitDiv);
+  });
 }
-var cfgInfo={},zgUser='';
-function fetchConfig(){fetch(API+'/config').then(function(r){return r.json()}).then(function(d){cfgInfo=d.classes||d;zgUser=d.zg_user||''}).catch(function(){})}
-fetchConfig();setTimeout(renderClassList,300);
+var cfgInfo={},allLessons={},zgUser='';
+function fetchConfig(){fetch(API+'/config').then(function(r){return r.json()}).then(function(d){cfgInfo=d.classes||d;allLessons=d.lessons||{};zgUser=d.zg_user||'';renderClassList()}).catch(function(){})}
+fetchConfig();
 
 function newClass(){
   var n=prompt('班级名称（如 周一探索）:');if(!n)return;
   var t=prompt('上课时间（如 19:30）:');if(t===null)return;
   fetch(API+'/classes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n,created_by:getCheckedUsers()[0]||'',class_time:t})})
-    .then(function(r){return r.json()}).then(function(d){if(d.status==='ok'){fetchConfig();renderClassList()}else alert(d.message)})
+    .then(function(r){return r.json()}).then(function(d){if(d.status==='ok'){fetchConfig()}else alert(d.message)})
     .catch(function(){alert('创建班级失败')});
 }
 function deleteClass(cls, units){
@@ -130,8 +129,8 @@ function newUnitAll(){
       clsList.forEach(function(cls){
         fetch(API+'/classes/'+encodeURIComponent(cls)+'/units',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,name:name,path:d.path,created_by:getCheckedUsers()[0]||''})})
           .then(function(r){return r.json()}).then(function(r2){
-            done++;if(done===clsList.length){fetchConfig();renderClassList()};
-          }).catch(function(){done++;if(done===clsList.length){fetchConfig();renderClassList()}});
+            done++;if(done===clsList.length){fetchConfig()};
+          }).catch(function(){done++;if(done===clsList.length){fetchConfig()}});
       });
     });
   });
@@ -323,7 +322,7 @@ function showPreviewImage(path,name){
 
 
 function detectGoldenAsync(){var d=tabs[activeTab];if(!d||!d.topics.length)return;var btn=document.querySelector('#previewContent .btn.bo');if(btn){btn.textContent='标记中... 预计10秒';btn.disabled=true}var sents=[];d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){sents.push({text:s.content,name:s.name})})});if(!sents.length)return;fetch(API+'/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sentences:sents,meta:d.meta,topics:d.topics.map(function(t){return t.title})})}).then(function(r){return r.json()}).then(function(data){if(!tabs[activeTab])return;var d=tabs[activeTab];if(!d._golden)d._golden={};var byName={};data.forEach(function(item){var n=item.name;if(!byName[n])byName[n]=[];byName[n].push(item)});var total=0;Object.keys(byName).forEach(function(n){var sp=0,tp=new Set();d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){if(s.name===n){sp++;tp.add(t.title)}})});var nhl=(sp>=5&&tp.size>=5)?3:2;byName[n].slice(0,nhl).forEach(function(item){var key=item.name+':'+item.text;if(!(key in d._golden))d._golden[key]=true;total++})});renderPreview();renderPosterSectionUI();var btn2=document.querySelector('#previewContent .btn.bo');if(btn2){btn2.textContent='已标'+total+'句';btn2.disabled=false;setTimeout(function(){btn2.textContent='自动标记'},3000)}}).catch(function(){var btn3=document.querySelector('#previewContent .btn.bo');if(btn3){btn3.textContent='自动标记';btn3.disabled=false}})}
-function generateAllUI(){if(!activeTab)return;saveMeta();saveTopics();renderPreview();var d=tabs[activeTab],gs=document.getElementById('genStatus'),gw=document.getElementById('genWarn');gs.textContent='生成中...';gs.className='st';gw.textContent='';var allImages={};d.topics.forEach(function(t,i){if(t._images&&t._images.length)allImages[i]=t._images});fetch(API+'/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({meta:d.meta,topics:d.topics,movies:getPosterQuotes(),gender:d.meta.gender||'',tab_name:d.folder||activeTab,golden_quotes:getGoldenQuotes(),poster_quotes:getPosterQuotes(),feedback_styles:(document.getElementById('fbXinxin').checked?'xinxin,':'')+(document.getElementById('fbBiscuit').checked?'biscuit,':'')+(document.getElementById('fbFusion').checked?'fusion':''),images:allImages})}).then(function(r){return r.json()}).then(function(data){if(data.status==='error'){gs.textContent='失败: '+data.message;gs.className='st';gs.style.color='var(--rd)';return}gs.textContent='完成!';gs.className='st';gs.style.color='';if(data.font_warning){gw.textContent=data.font_warning}renderOutputs(data.outputs||[]);if(data.folder){if(activeTab.indexOf('-new')>-1){var newTab=data.folder;tabs[newTab]=d;delete tabs[activeTab];activeTab=newTab;d.folder=newTab;renderTabs()}renderClassList()}renderPreview();setTimeout(function(){var gs2=document.getElementById('genStatus');if(gs2)gs2.textContent='完成!'},500)}).catch(function(e){gs.textContent='失败: '+e.message;gs.className='st';gs.style.color='var(--rd)'})}
+function generateAllUI(){if(!activeTab)return;saveMeta();saveTopics();renderPreview();var d=tabs[activeTab],gs=document.getElementById('genStatus'),gw=document.getElementById('genWarn');gs.textContent='生成中...';gs.className='st';gw.textContent='';var allImages={};d.topics.forEach(function(t,i){if(t._images&&t._images.length)allImages[i]=t._images});fetch(API+'/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({meta:d.meta,topics:d.topics,movies:getPosterQuotes(),gender:d.meta.gender||'',tab_name:d.folder||activeTab,golden_quotes:getGoldenQuotes(),poster_quotes:getPosterQuotes(),feedback_styles:(document.getElementById('fbXinxin').checked?'xinxin,':'')+(document.getElementById('fbBiscuit').checked?'biscuit,':'')+(document.getElementById('fbFusion').checked?'fusion':''),images:allImages})}).then(function(r){return r.json()}).then(function(data){if(data.status==='error'){gs.textContent='失败: '+data.message;gs.className='st';gs.style.color='var(--rd)';return}gs.textContent='完成!';gs.className='st';gs.style.color='';if(data.font_warning){gw.textContent=data.font_warning}renderOutputs(data.outputs||[]);if(data.folder){if(activeTab.indexOf('-new')>-1){var newTab=data.folder;tabs[newTab]=d;delete tabs[activeTab];activeTab=newTab;d.folder=newTab;renderTabs()}fetchConfig()}renderPreview();setTimeout(function(){var gs2=document.getElementById('genStatus');if(gs2)gs2.textContent='完成!'},500)}).catch(function(e){gs.textContent='失败: '+e.message;gs.className='st';gs.style.color='var(--rd)'})}
 
 function changeUnitPath(){
   if(!activeTab)return;
