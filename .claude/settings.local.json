@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ' *)",
+      "Bash(python3 generate_class_image.py input_template.txt)",
+      "Bash(python3 generate_all.py 周四探索.txt)",
+      "Bash(chmod +x \"/Users/meowmeow/Claude code test/setup.sh\")",
+      "Bash(bash setup.sh)",
+      "Bash(python3 generate_feedback.py 测试.txt)",
+      "Bash(LC_ALL=C sed -i '' 's/\\\\xe2\\\\x80\\\\x9c/\"/g; s/\\\\xe2\\\\x80\\\\x9d/\"/g' generate_feedback.py)",
+      "Bash(python3 -c \"compile\\(open\\('generate_feedback.py'\\).read\\(\\), 'generate_feedback.py', 'exec'\\); print\\('OK'\\)\")",
+      "Bash(grep -v \"^$\")",
+      "Bash(python3 generate_all.py)",
+      "Bash(python3 generate_all.py 周六启航.txt)",
+      "Bash(mkdir -p \"/Users/meowmeow/Claude code test/课后素材-饼干专用\" && cp \"/Users/meowmeow/Claude code test/\"*.py \"/Users/meowmeow/Claude code test/课后素材-饼干专用/\" 2>/dev/null; cp \"/Users/meowmeow/Claude code test/setup.sh\" \"/Users/meowmeow/Claude code test/课后素材-饼干专用/\" 2>/dev/null; echo \"done\")",
+      "Bash(cp \"/Users/meowmeow/Claude code test/周日晚.txt\" .)",
+      "Bash(cp \"/Users/meowmeow/Claude code test/\"*.png .)",
+      "Bash(cp \"/Users/meowmeow/Claude code test/generate_class_image.py\" \"/Users/meowmeow/Claude code test/课后素材-饼干专用/generate_class_image.py\")",
+      "Bash(python3)",
+      "WebFetch(domain:api-docs.deepseek.com)",
+      "WebSearch",
+      "Bash(ls \"/Users/meowmeow/追光π/2605春季班/2605课后材料/\" | head -40)",
+      "Read(//Users/meowmeow/追光π/2605春季班/2605课后材料/**)",
+      "Bash(ls \"/Users/meowmeow/追光π/CLAUDE.md\" 2>/dev/null || ls \"/Users/meowmeow/追光π/2605春季班/2605课后材料/CLAUDE.md\" 2>/dev/null || echo \"no CLAUDE.md in 追光π\")",
+      "Read(//Users/meowmeow/追光π/**)",
+      "Bash(cp \"/Users/meowmeow/Claude code test/CLAUDE.md\" \"/Users/meowmeow/追光π/2605春季班/2605课后材料/CLAUDE.md\")",
+      "Bash(python3 -c \"compile\\(open\\('generate_feedback.py'\\).read\\(\\), 'generate_feedback.py', 'exec'\\); print\\('Syntax OK'\\)\")",
+      "Bash(cp \"/Users/meowmeow/追光π/2605春季班/2605课后材料/周四探索-2605-1/周四探索.txt\" .)",
+      "Bash(python3 generate_feedback.py 周四探索.txt)",
+      "Bash(sed 's/2026-05-14/2026-05-21/' 周四探索.txt)",
+      "Bash(python3 generate_feedback.py 周四探索-sim.txt)",
+      "Bash(rm -f 周四探索-sim.txt)",
+      "Bash(osascript -e 'display notification \"反馈记忆系统已就绪，可以测试了\" with title \"Claude 提示\"')"
+    ],
+    "additionalDirectories": [
+      "/Users/meowmeow/Claude code test",
+      "/Users/meowmeow/追光π/2605春季班/2605课后材料"
+    ]
+  }
+}

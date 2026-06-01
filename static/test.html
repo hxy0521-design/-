@@ -1,0 +1,68 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Test</title>
+<style>
+:root{--bg:#f5f3ee;--p:#fff;--bd:#ddd;--bl:#4a6fa5;--go:#c8953a;--rd:#b5452a;--tx:#333;--sb:#888}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:14px/1.6 -apple-system,system-ui;background:var(--bg);color:var(--tx);display:flex;height:100vh;overflow:hidden}
+.pl{width:280px;min-width:280px;padding:14px;border-right:1px solid var(--bd);overflow-y:auto;background:var(--p);height:100vh}
+.pc{flex:1;padding:14px 20px;overflow-y:auto;background:var(--p);height:100vh}
+h2{font-size:15px;margin-bottom:10px;color:var(--bl)}h3{font-size:13px;margin:14px 0 6px;color:var(--sb)}
+.btn{padding:7px 14px;border-radius:6px;border:none;cursor:pointer;font-size:13px;margin:3px}
+.bp{background:var(--bl);color:#fff}.bg{background:var(--go);color:#fff}.bo{background:none;border:1px solid var(--bd)}
+input,select{width:100%;padding:7px 9px;border:1px solid var(--bd);border-radius:4px;font:13px/1.5 system-ui;margin:3px 0}
+.mr{display:flex;gap:8px}.mr input{flex:1}
+pre{background:#faf8f4;padding:12px;border-radius:8px;border:1px solid var(--bd);font-size:11px;line-height:1.5;max-height:400px;overflow:auto;white-space:pre-wrap;margin:6px 0}
+.st{font-size:12px;color:var(--sb)}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;margin:2px}.ok{background:#d4edda;color:#155724}.err{background:#f8d7da;color:#721c24}
+</style></head><body>
+<div class="pl">
+  <h2>API Tests</h2>
+  <div style="margin-bottom:10px"><button class="btn bp" style="width:100%" onclick="cmd('GET','/api/config')">/api/config</button></div>
+  <div style="margin-bottom:10px"><button class="btn bp" style="width:100%" onclick="cmd('GET','/api/classes')">/api/classes</button></div>
+  <h3>Load</h3>
+  <input id="loadFolder" placeholder="Folder (e.g. 周一探索-2605-1)" value="周一探索-2605-1">
+  <button class="btn bp" style="width:100%" onclick="cmd('GET','/api/load/'+ge('loadFolder'))">Load Lesson</button>
+  <h3>Create Class</h3>
+  <input id="newClass" placeholder="Class name">
+  <button class="btn bo" style="width:100%" onclick="cmd('POST','/api/classes',{name:ge('newClass')})">Create Class</button>
+  <h3>Create Unit</h3>
+  <input id="unitCls" placeholder="Class" style="width:100%">
+  <div class="mr"><input id="unitCode" placeholder="Code (e.g. 2606)" style="flex:1"><input id="unitName" placeholder="Name" style="flex:1"></div>
+  <div class="mr"><input id="unitPath" placeholder="Path" style="flex:1"><button class="btn bo" style="white-space:nowrap" onclick="pickAndSet()">Pick</button></div>
+  <button class="btn bo" style="width:100%" onclick="cmd('POST','/api/classes/'+encodeURIComponent(ge('unitCls'))+'/units',{code:ge('unitCode'),name:ge('unitName'),path:ge('unitPath')})">Create Unit</button>
+  <h3>Generate</h3>
+  <button class="btn bg" style="width:100%" onclick="testGenerate()">Generate (test data)</button>
+</div>
+<div class="pc">
+  <h2>Response <span class="st" id="status"></span></h2>
+  <pre id="out">Click a button on the left to test an API endpoint. JSON response will appear here.</pre>
+</div>
+<script>
+var API=window.location.origin+'/api';
+function ge(id){return document.getElementById(id).value}
+function cmd(method,path,body){
+  var out=document.getElementById('out'),st=document.getElementById('status');
+  st.textContent='...';st.className='st';
+  var opts={method:method,headers:{'Content-Type':'application/json'}};
+  if(body)opts.body=JSON.stringify(body);
+  fetch(API+path,opts).then(function(r){return r.json()}).then(function(d){
+    out.textContent=JSON.stringify(d,null,2);
+    st.textContent=d.status==='ok'?'OK':d.status==='error'?'Error':method;
+    st.className='tag '+(d.status==='error'?'err':'ok');
+  }).catch(function(e){
+    out.textContent='FAILED: '+e.message;
+    st.textContent='Error';st.className='tag err';
+  });
+}
+function pickAndSet(){
+  fetch(API+'/pick-folder').then(function(r){return r.json()}).then(function(d){
+    if(d.path)document.getElementById('unitPath').value=d.path;
+  });
+}
+function testGenerate(){
+  cmd('POST','/api/generate',{
+    meta:{title:'Test',unit:'2605',date:'2026-05-20',class:'Test班'},
+    topics:[{title:'Test',speeches:[{name:'A',content:'hello world'}]}],
+    movies:{},gender:'',tab_name:'Test班',golden_quotes:{}
+  });
+}
+</script></body></html>
