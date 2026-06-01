@@ -127,6 +127,15 @@ def init_db():
             path TEXT,
             deleted_at TEXT
         );
+        CREATE TABLE IF NOT EXISTS lessons (
+            class_name TEXT NOT NULL,
+            unit_code TEXT NOT NULL,
+            lesson_num INTEGER NOT NULL DEFAULT 1,
+            title TEXT DEFAULT '',
+            content TEXT DEFAULT '',
+            updated_at TEXT DEFAULT '',
+            PRIMARY KEY (class_name, unit_code, lesson_num)
+        );
     """)
     db.commit()
 
@@ -195,6 +204,53 @@ def config_get_unit(cls_name, unit_code):
 def config_update_unit_path(cls_name, unit_code, path):
     db = get_db()
     db.execute("UPDATE config SET path=? WHERE class_name=? AND unit_code=?", [path, cls_name, unit_code])
+
+# ------- Lessons (TXT content in cloud) -------
+
+def lesson_list(cls_name, unit_code):
+    """返回课节列表，格式同 scan_lessons"""
+    db = get_db()
+    rows = db.execute(
+        "SELECT lesson_num, title, updated_at FROM lessons WHERE class_name=? AND unit_code=? ORDER BY lesson_num",
+        [cls_name, unit_code]).fetchall()
+    unit_info = config_get_unit(cls_name, unit_code)
+    unit_name = unit_info.get("name", unit_code)
+    result = []
+    for r in rows:
+        result.append({
+            "folder": f"{cls_name}-{unit_code}-{r['lesson_num']}",
+            "lesson": str(r["lesson_num"]),
+            "title": r["title"],
+            "date": (r["updated_at"] or "")[:10],
+            "unit_name": unit_name
+        })
+    return result
+
+def lesson_get(cls_name, unit_code, lesson_num):
+    """返回课节 TXT 内容"""
+    db = get_db()
+    r = db.execute(
+        "SELECT title, content FROM lessons WHERE class_name=? AND unit_code=? AND lesson_num=?",
+        [cls_name, unit_code, lesson_num]).fetchone()
+    return (r["title"], r["content"]) if r else ("", "")
+
+def lesson_save(cls_name, unit_code, lesson_num, title, content):
+    """保存课节 TXT 内容"""
+    from datetime import datetime
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    db = get_db()
+    # Check if exists
+    r = db.execute(
+        "SELECT lesson_num FROM lessons WHERE class_name=? AND unit_code=? AND lesson_num=?",
+        [cls_name, unit_code, lesson_num]).fetchone()
+    if r:
+        db.execute(
+            "UPDATE lessons SET title=?, content=?, updated_at=? WHERE class_name=? AND unit_code=? AND lesson_num=?",
+            [title, content, now, cls_name, unit_code, lesson_num])
+    else:
+        db.execute(
+            "INSERT INTO lessons (class_name, unit_code, lesson_num, title, content, updated_at) VALUES (?,?,?,?,?,?)",
+            [cls_name, unit_code, lesson_num, title, content, now])
 
 # ------- Student Profiles -------
 

@@ -58,11 +58,6 @@ def unit_path(cls_name, unit_code):
     u = db.config_get_unit(cls_name, unit_code)
     return u.get("path", "")
 
-def source_path():
-    """共享底表路径（欣欣和饼干共用同一个）"""
-    db_dir = os.path.dirname(os.environ.get("ZG_DB", ""))
-    return os.path.join(db_dir, "底表")
-
 # ====== Helpers ======
 
 def find_cards(folder, base_path):
@@ -89,36 +84,8 @@ def find_golden(folder, cls_name, base_path):
     return g
 
 def scan_lessons(cls_name, unit_code, unit_path_dir):
-    """扫描共享底表找课节 txt（格式：班级-单元名-#课节号 课节名.txt）"""
-    lessons = []
-    src = source_path()
-    unit_info = db.config_get_unit(cls_name, unit_code)
-    unit_name = unit_info.get("name", unit_code)
-    unit_dir = os.path.join(src, unit_name)
-    if not os.path.isdir(unit_dir): return lessons
-    prefix = f"{cls_name}-{unit_name}-"
-    for f in sorted(os.listdir(unit_dir)):
-        if not f.startswith(prefix) or not f.endswith(".txt"): continue
-        txt_path = os.path.join(unit_dir, f)
-        # 解析文件名: 班级-单元名-#课节号 课节名.txt
-        rest = f[len(prefix):-4]
-        parts = rest.split(" ", 1)
-        lesson_num = parts[0] if parts else "1"
-        lesson_title = parts[1] if len(parts) > 1 else rest
-        title, date = lesson_title, ""
-        try:
-            with open(txt_path, encoding='utf-8') as fh:
-                for line in fh:
-                    s = line.strip()
-                    if s.startswith("@title"): title = s[7:].strip()
-                    if s.startswith("@date"): date = s[6:].strip()
-        except: pass
-        folder = f"{cls_name}-{unit_code}-{lesson_num}"
-        lessons.append({
-            "folder": folder, "lesson": lesson_num,
-            "title": title, "date": date, "unit_name": unit_name
-        })
-    return lessons
+    """从 Turso 读取课节列表"""
+    return db.lesson_list(cls_name, unit_code)
 
 # ====== API ======
 
@@ -266,24 +233,18 @@ def load_lesson(folder):
     unit_code = unit_from_folder(folder)
     base = unit_path(cls_name, unit_code)
     if not base: return jsonify({"error":"未找到该课节所属单元的路径"}), 404
-    # 从共享底表读源文件
-    unit_info = db.config_get_unit(cls_name, unit_code)
-    unit_name = unit_info.get("name", unit_code)
-    src_dir = os.path.join(source_path(), unit_name)
-    txt = None
     lesson_num = folder.split(f"-{unit_code}-")[-1] if f"-{unit_code}-" in folder else "1"
-    prefix = f"{cls_name}-{unit_name}-{lesson_num} "
-    if os.path.isdir(src_dir):
-        for f in sorted(os.listdir(src_dir)):
-            if f.startswith(prefix) and f.endswith(".txt"):
-                txt = os.path.join(src_dir, f); break
-    if not txt:
-        # fallback: check unit_path
-        short = folder.split(f"-{unit_code}-")[0]
-        p = os.path.join(base, folder)
-        txt = os.path.join(p, f"{short}.txt") if os.path.isdir(p) else None
-    from generate_class_image import parse_input_txt
-    meta, topics = parse_input_txt(txt) if txt and os.path.exists(txt) else ({}, [])
+    # 从 Turso 读课节 TXT 内容
+    title, content = db.lesson_get(cls_name, unit_code, int(lesson_num))
+    import tempfile
+    if content:
+        tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8')
+        tmp.write(content); tmp.close()
+        from generate_class_image import parse_input_txt
+        meta, topics = parse_input_txt(tmp.name)
+        os.unlink(tmp.name)
+    else:
+        meta, topics = {}, []
     outputs = []
     # 本地输出目录
     p = os.path.join(base, folder)
@@ -358,25 +319,11 @@ def save_lesson():
                     try: n = int(f.rsplit("-",1)[-1]); max_n = max(max_n, n)
                     except: pass
         folder = f"{prefix}-{max_n + 1}"
-    # 写到共享底表
-    unit_info = db.config_get_unit(cls_name, unit_code)
-    unit_name = unit_info.get("name", unit_code)
-    src_dir = os.path.join(source_path(), unit_name)
-    os.makedirs(src_dir, exist_ok=True)
     lesson_num = folder.split(f"-{unit_code}-")[-1] if f"-{unit_code}-" in folder else "1"
-    # 删除旧版同名文件（标题可能变了）
-    old_prefix = f"{cls_name}-{unit_name}-{lesson_num} "
-    if os.path.isdir(src_dir):
-        for old_f in os.listdir(src_dir):
-            if old_f.startswith(old_prefix) and old_f.endswith(".txt"):
-                os.remove(os.path.join(src_dir, old_f))
-    title_safe = meta.get("title", folder)[:30].replace("/", " ").replace(":", " ")
-    txt_name = f"{cls_name}-{unit_name}-{lesson_num} {title_safe}.txt"
-    txt_path = os.path.join(src_dir, txt_name)
     # 确保本地输出目录存在
     p = os.path.join(base, folder)
     if not os.path.isdir(p): os.makedirs(p, exist_ok=True)
-    # 保存图片
+    # 保存图片到本地
     images = data.get("images", {})
     if images:
         import base64 as _b64
@@ -391,15 +338,17 @@ def save_lesson():
                         with open(os.path.join(img_dir, f"topic{ti}_{idx}.{ext}"), "wb") as _f:
                             _f.write(_b64.b64decode(data))
                     except: pass
-    with open(txt_path, 'w', encoding='utf-8') as f:
-        f.write(f"# ====== 课节信息 ======\n@title {meta.get('title','')}\n@unit {meta.get('unit','')}\n@date {meta.get('date','')}\n@class {meta.get('class','')}\n")
-        if meta.get('gender'): f.write(f"@gender {meta['gender']}\n")
-        f.write("\n# ====== 课堂发言 ======\n")
-        for t in topics_data:
-            f.write(t.get("title","") + "\n")
-            for s in t.get("speeches",[]):
-                f.write(f"{s.get('name','')}：{s.get('content','')}\n")
-            f.write("\n")
+    # 写 TXT 到 Turso
+    content_lines = [f"# ====== 课节信息 ======\n@title {meta.get('title','')}\n@unit {meta.get('unit','')}\n@date {meta.get('date','')}\n@class {meta.get('class','')}\n"]
+    if meta.get('gender'): content_lines.append(f"@gender {meta['gender']}\n")
+    content_lines.append("\n# ====== 课堂发言 ======\n")
+    for t in topics_data:
+        content_lines.append(t.get("title","") + "\n")
+        for s in t.get("speeches",[]):
+            content_lines.append(f"{s.get('name','')}：{s.get('content','')}\n")
+        content_lines.append("\n")
+    content = ''.join(content_lines)
+    db.lesson_save(cls_name, unit_code, int(lesson_num), meta.get('title',''), content)
     return jsonify({"status":"ok","folder":folder})
 
 @app.route("/api/parse", methods=["POST"])
@@ -554,17 +503,11 @@ def generate_all():
                 if f.startswith(prefix + "-") and os.path.isdir(os.path.join(base, f)):
                     try: n = int(f.rsplit("-",1)[-1]); max_n = max(max_n, n)
                     except: pass
-        # 也查底表已有文件，避免底表和输出目录不同步导致跳号
-        unit_info_tmp = db.config_get_unit(cls, unit_code)
-        unit_name_tmp = unit_info_tmp.get("name", unit_code)
-        src_dir_tmp = os.path.join(source_path(), unit_name_tmp)
-        if os.path.isdir(src_dir_tmp):
-            for f in os.listdir(src_dir_tmp):
-                if f.startswith(f"{cls}-{unit_name_tmp}-") and f.endswith(".txt"):
-                    try:
-                        n = int(f[len(f"{cls}-{unit_name_tmp}-"):].split(" ",1)[0])
-                        max_n = max(max_n, n)
-                    except: pass
+        # 也查 Turso 已有课节，避免跳号
+        existing = db.lesson_list(cls, unit_code)
+        for l in existing:
+            try: n = int(l["lesson"]); max_n = max(max_n, n)
+            except: pass
         folder = f"{prefix}-{max_n + 1}"
     elif f"-{unit_code}-" in folder_base:
         folder = folder_base
@@ -589,52 +532,43 @@ def generate_all():
                             _f.write(_b64.b64decode(data))
                     except: pass
 
-    # 写 TXT 到本地输出目录（供生成脚本读取，生成完后删除）
+    # 构建 TXT 内容
     short = folder.split(f"-{unit_code}-")[0]
     txt_path = os.path.join(folder_path, f"{short}.txt")
+    content_lines = [f"# ====== 课节信息 ======\n@title {title}\n@unit {unit}\n@date {date}\n@class {cls}\n"]
+    if gender: content_lines.append(f"@gender {gender}\n")
+    content_lines.append("\n# ====== 推荐 ======\n")
+    for name, info in movies.items():
+        if info.get("movie"):
+            content_lines.append(f"@student {name}\n")
+            if info.get("quote"): content_lines.append(f"@quote {info['quote']}\n")
+            content_lines.append(f"@movie {info['movie']}\n")
+            if info.get("poster"): content_lines.append(f"@poster {info['poster']}\n")
+            if info.get("rating"): content_lines.append(f"@rating {info['rating']}\n")
+            if info.get("line"): content_lines.append(f"@line {info['line']}\n")
+            content_lines.append("\n")
+    for name, info in poster_qs.items():
+        if info.get("movie") or info.get("quote"):
+            content_lines.append(f"@student {name}\n")
+            if info.get("quote"): content_lines.append(f"@quote {info['quote']}\n")
+            if info.get("movie"): content_lines.append(f"@movie {info['movie']}\n")
+            if info.get("poster"): content_lines.append(f"@poster {info['poster']}\n")
+            if info.get("rating"): content_lines.append(f"@rating {info['rating']}\n")
+            if info.get("line"): content_lines.append(f"@line {info['line']}\n")
+            content_lines.append("\n")
+    content_lines.append("\n# ====== 课堂发言 ======\n")
+    for t in topics_data:
+        content_lines.append(t["title"] + "\n")
+        for s in t["speeches"]:
+            content_lines.append(f"{s['name']}：{s['content']}\n")
+        content_lines.append("\n")
+    content = ''.join(content_lines)
+    # 写本地临时文件供生成脚本读取（生成完后删除）
     with open(txt_path, 'w', encoding='utf-8') as f:
-        f.write(f"# ====== 课节信息 ======\n@title {title}\n@unit {unit}\n@date {date}\n@class {cls}\n")
-        if gender: f.write(f"@gender {gender}\n")
-        f.write("\n# ====== 推荐 ======\n")
-        for name, info in movies.items():
-            if info.get("movie"):
-                f.write(f"@student {name}\n")
-                if info.get("quote"): f.write(f"@quote {info['quote']}\n")
-                f.write(f"@movie {info['movie']}\n")
-                if info.get("poster"): f.write(f"@poster {info['poster']}\n")
-                if info.get("rating"): f.write(f"@rating {info['rating']}\n")
-                if info.get("line"): f.write(f"@line {info['line']}\n")
-                f.write("\n")
-        for name, info in poster_qs.items():
-            if info.get("movie") or info.get("quote"):
-                f.write(f"@student {name}\n")
-                if info.get("quote"): f.write(f"@quote {info['quote']}\n")
-                if info.get("movie"): f.write(f"@movie {info['movie']}\n")
-                if info.get("poster"): f.write(f"@poster {info['poster']}\n")
-                if info.get("rating"): f.write(f"@rating {info['rating']}\n")
-                if info.get("line"): f.write(f"@line {info['line']}\n")
-                f.write("\n")
-        f.write("\n# ====== 课堂发言 ======\n")
-        for t in topics_data:
-            f.write(t["title"] + "\n")
-            for s in t["speeches"]:
-                f.write(f"{s['name']}：{s['content']}\n")
-            f.write("\n")
-
-    # 同步复制到底表（持久化，供 scan_lessons 扫描）
-    unit_info = db.config_get_unit(cls, unit_code)
-    unit_name = unit_info.get("name", unit_code)
-    src_dir = os.path.join(source_path(), unit_name)
-    os.makedirs(src_dir, exist_ok=True)
+        f.write(content)
+    # 保存到 Turso 云端
     lesson_num = folder.split(f"-{unit_code}-")[-1] if f"-{unit_code}-" in folder else "1"
-    old_prefix = f"{cls}-{unit_name}-{lesson_num} "
-    if os.path.isdir(src_dir):
-        for old_f in os.listdir(src_dir):
-            if old_f.startswith(old_prefix) and old_f.endswith(".txt"):
-                os.remove(os.path.join(src_dir, old_f))
-    title_safe = title[:30].replace("/", " ").replace(":", " ")
-    base_txt_name = f"{cls}-{unit_name}-{lesson_num} {title_safe}.txt"
-    shutil.copy(txt_path, os.path.join(src_dir, base_txt_name))
+    db.lesson_save(cls, unit_code, int(lesson_num), title, content)
 
     font_path = os.path.expanduser("~/Library/Fonts/荆南麦圆体.ttf")
     font_warning = None
@@ -713,17 +647,10 @@ def serve_file(folder, filename):
     cls_name = cls_from_folder(folder)
     unit_code = unit_from_folder(folder)
     base = unit_path(cls_name, unit_code)
-    # 优先查本地输出
     if base:
         fp = os.path.join(base, folder)
         if os.path.isfile(os.path.join(fp, filename)):
             return send_from_directory(fp, filename)
-    # 再查共享底表
-    unit_info = db.config_get_unit(cls_name, unit_code)
-    unit_name = unit_info.get("name", unit_code)
-    src_dir = os.path.join(source_path(), unit_name)
-    if os.path.isfile(os.path.join(src_dir, filename)):
-        return send_from_directory(src_dir, filename)
     return jsonify({"error":"file not found"}), 404
 
 @app.route("/api/preview-poster", methods=["POST"])
