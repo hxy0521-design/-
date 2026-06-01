@@ -262,8 +262,6 @@ def load_lesson(folder):
                 if os.path.exists(fb):
                     outputs.append({"name": os.path.basename(fb), "path": f"/api/file/{folder}/{os.path.basename(fb)}"}); break
             else: continue; break
-    if txt and os.path.exists(txt):
-        outputs.append({"name": os.path.basename(txt), "path": f"/api/file/{folder}/{os.path.basename(txt)}"})
     # 加载已保存的图片
     topic_images = {}
     img_dir = os.path.join(p, "images") if os.path.isdir(p) else ""
