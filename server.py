@@ -908,6 +908,46 @@ def pricing_update():
     db.pricing_set(data["segment"], data["course_type"], data["discount_type"], data["unit_price"], data["discount_multiplier"])
     return jsonify({"status": "ok"})
 
+# ====== 财务 CRUD ======
+
+@app.route("/api/finance/add-revenue", methods=["POST"])
+def finance_add_revenue():
+    data = request.json
+    from db import purchase_add
+    purchase_add(data)
+    return jsonify({"status": "ok"})
+
+@app.route("/api/finance/delete-purchase", methods=["POST"])
+def finance_delete_purchase():
+    data = request.json
+    db.execute("DELETE FROM purchases WHERE id=?", [int(data.get("id", 0))])
+    return jsonify({"status": "ok"})
+
+@app.route("/api/finance/add-cost", methods=["POST"])
+def finance_add_cost():
+    data = request.json
+    db.cost_add(data)
+    return jsonify({"status": "ok"})
+
+@app.route("/api/finance/delete-cost", methods=["POST"])
+def finance_delete_cost():
+    data = request.json
+    db.execute("DELETE FROM costs WHERE id=?", [int(data.get("id", 0))])
+    return jsonify({"status": "ok"})
+
+# ====== 学生扩展 CRUD ======
+
+@app.route("/api/students")
+def students_list():
+    rows = db.student_ext_all()
+    return jsonify(rows)
+
+@app.route("/api/students", methods=["POST"])
+def students_upsert():
+    data = request.json
+    db.student_ext_upsert(data.get("student_name", ""), data)
+    return jsonify({"status": "ok"})
+
 if __name__ == "__main__":
     print(f"追光π 课后素材 → http://localhost:{_PORT}")
     if not os.environ.get("DEEPSEEK_API_KEY"):

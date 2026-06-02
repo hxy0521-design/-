@@ -27,12 +27,31 @@ textarea{min-height:120px;font-family:monospace;resize:vertical}
 .op{padding:8px;margin:4px 0;border-radius:6px;background:#faf8f4;border:1px solid var(--bd);font-size:12px}.op a{color:var(--bl)}
 .pt{white-space:pre-wrap;font-size:12px;background:#faf8f4;padding:14px;border-radius:8px;border:1px solid var(--bd);line-height:1.6;text-align:left}
 </style></head><body>
-<div class="panel pl"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkXinxin" onchange="onUserChange()" style="width:auto;margin:0 2px">只看欣欣</label><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkBiscuit" onchange="onUserChange()" style="width:auto;margin:0 2px">只看饼干</label></div><h2>班级 <span style="font-size:10px;float:right"><a href="#" onclick="expandAll(event)" style="color:var(--sb)">展开</a> | <a href="#" onclick="collapseAll(event)" style="color:var(--sb)">折叠</a></span></h2><div id="classList"></div><button class="btn bo" style="margin-top:4px;width:100%" onclick="newUnitAll()">+ 新建单元</button><button class="btn bo" style="margin-top:4px;width:100%" onclick="newClass()">+ 新建班级</button><h3 style="margin-top:18px">输出文件</h3><div id="outputList"></div><div style="margin-top:12px;display:flex;gap:4px;flex-wrap:wrap"><button class="btn bo" style="padding:4px 8px;font-size:10px;flex:1" onclick="showFinance()">财务</button><button class="btn bo" style="padding:4px 8px;font-size:10px;flex:1" onclick="showPricing()">定价</button><button class="btn bo" style="padding:4px 8px;font-size:10px;flex:1" onclick="document.getElementById('xlsxUpload').click()">导入Excel</button><input type="file" id="xlsxUpload" accept=".xlsx" style="display:none" onchange="uploadExcel(this.files[0])"></div></div>
-<div class="panel pc"><div class="tabs" id="tabBar"></div><div class="ed-body" id="editorBody"><div style="color:var(--sb);text-align:center;padding:60px 0">请从左侧选择班级</div></div></div>
+<div class="panel pl"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkXinxin" onchange="onUserChange()" style="width:auto;margin:0 2px">只看欣欣</label><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkBiscuit" onchange="onUserChange()" style="width:auto;margin:0 2px">只看饼干</label></div><h2>班级 <span style="font-size:10px;float:right"><a href="#" onclick="expandAll(event)" style="color:var(--sb)">展开</a> | <a href="#" onclick="collapseAll(event)" style="color:var(--sb)">折叠</a></span></h2><div id="classList"></div><button class="btn bo" style="margin-top:4px;width:100%" onclick="newUnitAll()">+ 新建单元</button><button class="btn bo" style="margin-top:4px;width:100%" onclick="newClass()">+ 新建班级</button><h3 style="margin-top:18px">输出文件</h3><div id="outputList"></div><div style="margin-top:8px;font-size:10px;color:var(--sb)"><input type="file" id="xlsxUpload" accept=".xlsx" style="display:none" onchange="uploadExcel(this.files[0])"><a href="#" onclick="document.getElementById('xlsxUpload').click();return false">导入Excel</a></div></div>
+<div class="panel pc"><div class="tabs" id="tabBar"></div><div id="mainTabs" style="display:flex;gap:4px;padding:4px 8px;border-bottom:2px solid #e2e8f0;margin-bottom:0;overflow-x:auto;flex-shrink:0"></div><div class="ed-body" id="editorBody"><div style="color:var(--sb);text-align:center;padding:60px 0">请从左侧选择班级</div></div></div>
 <div class="panel pr" id="previewPanel"><h2 style="cursor:pointer" onclick="togglePreview()"><span id="pvLabel">预览</span> <span id="pvHint" style="font-size:11px;color:var(--sb)">点击收起</span></h2><div id="previewContent" style="font-size:12px;color:var(--sb)">粘贴发言后在此预览</div></div>
 <script>
 var API=window.location.origin+'/api';
-var tabs={},activeTab=null,cfgReady=false;
+var tabs={},activeTab=null,activeMainTab='edit',cfgReady=false;
+function renderMainTabs(){
+  var tb=document.getElementById('mainTabs');if(!tb)return;
+  var items=[{id:'edit',label:'编辑'},{id:'finance',label:'财务'},{id:'students',label:'学生'},{id:'pricing',label:'定价'}];
+  tb.innerHTML='';
+  items.forEach(function(it){
+    var t=document.createElement('button');t.textContent=it.label;
+    t.style.cssText='padding:6px 14px;border-radius:8px 8px 0 0;border:none;background:'+(activeMainTab===it.id?'var(--bl)':'transparent')+';color:'+(activeMainTab===it.id?'#fff':'var(--sb)')+';font-size:13px;cursor:pointer;font-weight:'+(activeMainTab===it.id?'600':'400');
+    t.onclick=function(){activeMainTab=it.id;renderMainTabs();switchMainTab()};
+    tb.appendChild(t);
+  });
+}
+function switchMainTab(){
+  var el=document.getElementById('editorBody');if(!el)return;
+  if(activeMainTab==='edit'&&activeTab)renderEditor();
+  else if(activeMainTab==='finance')renderFinanceTab();
+  else if(activeMainTab==='students')renderStudentTab();
+  else if(activeMainTab==='pricing')renderPricingTab();
+  else el.innerHTML='<div style="color:var(--sb);text-align:center;padding:60px 0">请从左侧选择班级</div>';
+}
 
 function getCheckedUsers(){var u=[];if(document.getElementById('chkXinxin')&&document.getElementById('chkXinxin').checked)u.push('欣欣');if(document.getElementById('chkBiscuit')&&document.getElementById('chkBiscuit').checked)u.push('饼干');return u}
 function onUserChange(){renderClassList()}
@@ -157,11 +176,11 @@ function newLesson(cls,unit,unitFull){
 }
 
 function openTab(cls){if(!tabs[cls])tabs[cls]={meta:{title:'',unit:'',date:'',class:cls,gender:''},topics:[],_golden:{}};activeTab=cls;renderTabs();renderEditor();renderPreview()}
-function closeTab(cls,e){e.stopPropagation();delete tabs[cls];if(activeTab===cls)activeTab=Object.keys(tabs)[0]||null;renderTabs();if(activeTab){renderEditor();renderPreview()}else{document.getElementById('editorBody').innerHTML='<div style="color:var(--sb);text-align:center;padding:60px 0">请从左侧选择班级</div>';document.getElementById('previewContent').innerHTML='<span class="st">粘贴发言后在此预览</span>';document.getElementById('outputList').innerHTML=''}}
+function closeTab(cls,e){e.stopPropagation();delete tabs[cls];if(activeTab===cls)activeTab=Object.keys(tabs)[0]||null;renderTabs();renderMainTabs();if(activeTab){switchMainTab();renderPreview()}else{document.getElementById('editorBody').innerHTML='<div style="color:var(--sb);text-align:center;padding:60px 0">请从左侧选择班级</div>';document.getElementById('previewContent').innerHTML='<span class="st">粘贴发言后在此预览</span>';document.getElementById('outputList').innerHTML=''}}
 function renderOutputs(outputs){var ol=document.getElementById('outputList');ol.innerHTML='';(outputs||[]).forEach(function(o){var op=document.createElement('div');op.className='op';if(o.path){var isPng=o.name&&o.name.toLowerCase().endsWith('.png');if(isPng){op.innerHTML='<a href="#" onclick="showPreviewImage(\''+o.path+'\',\''+esc(o.name)+'\');return false">'+o.name+'</a>'}else{op.innerHTML='<a href="'+o.path+'" target="_blank">'+o.name+'</a>'}}else{op.textContent=o.name}ol.appendChild(op)})}
 function loadAndOpen(folder,cls){fetch(API+'/load/'+folder).then(function(r){return r.json()}).then(function(d){
 d.topics.forEach(function(t,i){t._images=(d.images&&d.images[i])?d.images[i].slice():[]});tabs[cls]={meta:d.meta||{},topics:d.topics||[],_golden:{},folder:folder,basePath:d.base_path||''};activeTab=cls;renderTabs();renderEditor();renderPreview();renderOutputs(d.outputs||[])}).catch(function(e){alert('加载失败')})}
-function renderTabs(){var tb=document.getElementById('tabBar');tb.innerHTML='';Object.keys(tabs).forEach(function(cls){var t=document.createElement('div');t.className='tab'+(cls===activeTab?' ac':'');t.innerHTML=cls+'<span class="close" onclick="closeTab(\''+cls+'\',event)"> x</span>';t.onclick=function(){activeTab=cls;renderTabs();renderEditor();renderPreview()};tb.appendChild(t)})}
+function renderTabs(){var tb=document.getElementById('tabBar');tb.innerHTML='';Object.keys(tabs).forEach(function(cls){var t=document.createElement('div');t.className='tab'+(cls===activeTab?' ac':'');t.innerHTML=cls+'<span class="close" onclick="closeTab(\''+cls+'\',event)"> x</span>';t.onclick=function(){activeTab=cls;renderTabs();renderMainTabs();switchMainTab();renderPreview()};tb.appendChild(t)})}
 
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function ge(id){var e=document.getElementById(id);return e?e.value:''}
@@ -418,8 +437,69 @@ setInterval(saveAll,300000);
 window.addEventListener('beforeunload',saveAll);
 
 // ====== 财务面板 ======
-var financeTab='revenue';
-function showFinance(){
+var financeSubTab='revenue';
+function renderFinanceTab(){
+  var el=document.getElementById('editorBody');if(!el)return;
+  fetch(API+'/finance/summary').then(function(r){return r.json()}).then(function(s){
+    var h='<div style="padding:16px">';
+    h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">';
+    h+='<div style="background:#fff;border-radius:8px;padding:14px;text-align:center;border-top:3px solid #16a34a"><div style="font-size:11px;color:var(--sb)">总收入</div><div style="font-size:20px;font-weight:700;color:#16a34a">¥'+s.total_revenue.toFixed(0)+'</div></div>';
+    h+='<div style="background:#fff;border-radius:8px;padding:14px;text-align:center;border-top:3px solid #dc2626"><div style="font-size:11px;color:var(--sb)">总成本</div><div style="font-size:20px;font-weight:700;color:#dc2626">¥'+s.total_cost.toFixed(0)+'</div></div>';
+    h+='<div style="background:#fff;border-radius:8px;padding:14px;text-align:center;border-top:3px solid #3b82f6"><div style="font-size:11px;color:var(--sb)">结余</div><div style="font-size:20px;font-weight:700;color:#3b82f6">¥'+s.balance.toFixed(0)+'</div></div>';
+    h+='<div style="background:#fff;border-radius:8px;padding:14px;text-align:center;border-top:3px solid #8b5cf6"><div style="font-size:11px;color:var(--sb)">在读学生</div><div style="font-size:20px;font-weight:700;color:#8b5cf6">'+s.active_students+'人</div></div>';
+    h+='</div>';
+    h+='<div style="display:flex;gap:6px;margin-bottom:12px;border-bottom:1px solid #e2e8f0;padding-bottom:8px">';
+    var sts=[{id:'revenue',label:'收费记录'},{id:'attendance',label:'销课记录'},{id:'cost',label:'成本记录'}];
+    sts.forEach(function(st){h+='<button style="padding:5px 14px;border-radius:6px;border:none;font-size:12px;cursor:pointer;font-weight:'+(financeSubTab===st.id?'600':'400')+';background:'+(financeSubTab===st.id?'var(--bl)':'#f1f5f9')+';color:'+(financeSubTab===st.id?'#fff':'var(--sb)')+'" onclick="financeSubTab=\''+st.id+'\';renderFinanceTab()">'+st.label+'</button>'});
+    h+='<span style="flex:1"></span>';
+    if(financeSubTab==='revenue')h+='<button class="btn bg" style="padding:5px 12px;font-size:11px" onclick="showAddRevenueModal()">+ 新增收费</button>';
+    if(financeSubTab==='cost')h+='<button class="btn bg" style="padding:5px 12px;font-size:11px" onclick="showAddCostModal()">+ 新增成本</button>';
+    h+='</div><div id="financeTable" style="font-size:12px">加载中...</div></div>';
+    el.innerHTML=h;loadFinanceData();
+  });
+}
+function loadFinanceData(){
+  var p='type='+(financeSubTab==='cost'?'cost':(financeSubTab==='attendance'?'attendance':'revenue'))+'&limit=100';
+  fetch(API+'/finance/records?'+p).then(function(r){return r.json()}).then(function(rows){
+    var el=document.getElementById('financeTable');if(!el)return;
+    if(!rows.length){el.innerHTML='<div style="text-align:center;color:var(--sb);padding:20px">暂无记录</div>';return}
+    var h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">';
+    if(financeSubTab==='revenue'){
+      h+='<tr style="border-bottom:2px solid #e2e8f0;color:var(--sb);font-size:11px"><th style="padding:6px 8px;text-align:left">学生</th><th>分段</th><th>课型</th><th>方式</th><th>优惠</th><th>课次</th><th>金额</th><th>日期</th><th>操作</th></tr>';
+      rows.forEach(function(r){h+='<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:6px 8px"><b>'+esc(r.student_name)+'</b></td><td>'+esc(r.segment||'')+'</td><td>'+esc(r.course_type||'')+'</td><td>'+esc(r.method||'')+'</td><td>'+esc(r.discount_type||'')+'</td><td>'+r.lesson_count+'</td><td>¥'+(r.amount||0)+'</td><td style="font-size:10px">'+(r.actual_pay_date||'').slice(0,10)+'</td><td><button onclick="deletePurchase(\''+r.id+'\')" style="border:none;background:none;color:var(--rd);cursor:pointer;font-size:11px">删除</button></td></tr>'});
+    }else if(financeSubTab==='attendance'){
+      h+='<tr style="border-bottom:2px solid #e2e8f0;color:var(--sb);font-size:11px"><th style="padding:6px 8px;text-align:left">班级</th><th>课节</th><th>学生</th><th>状态</th><th>备注</th><th>日期</th></tr>';
+      rows.forEach(function(r){h+='<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:6px 8px">'+esc(r.class_name)+'</td><td>'+esc(r.lesson_title||'')+' #'+r.lesson_num+'</td><td><b>'+esc(r.student_name)+'</b></td><td style="color:'+(r.status==='出席'?'var(--go)':'var(--rd)')+'">'+r.status+'</td><td style="font-size:10px">'+esc(r.note||'')+'</td><td style="font-size:10px">'+(r.lesson_date||'').slice(0,10)+'</td></tr>'});
+    }else{
+      h+='<tr style="border-bottom:2px solid #e2e8f0;color:var(--sb);font-size:11px"><th style="padding:6px 8px;text-align:left">原因</th><th>类型</th><th>渠道</th><th>金额</th><th>日期</th><th>操作</th></tr>';
+      rows.forEach(function(r){h+='<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:6px 8px"><b>'+esc(r.reason)+'</b></td><td>'+esc(r.cost_type||'')+'</td><td>'+esc(r.channel||'')+'</td><td>¥'+(r.amount||0)+'</td><td style="font-size:10px">'+(r.cost_date||'').slice(0,10)+'</td><td><button onclick="deleteCost(\''+r.id+'\')" style="border:none;background:none;color:var(--rd);cursor:pointer;font-size:11px">删除</button></td></tr>'});
+    }
+    h+='</table></div>';el.innerHTML=h;
+  });
+}
+function showAddRevenueModal(){
+  var ov=document.createElement('div');ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML='<div style="background:#fff;border-radius:12px;padding:20px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)"><h3>新增收费</h3><input id="rfName" placeholder="学生姓名" class="fi" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:6px"><input id="rfSeg" placeholder="分段" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="rfType" placeholder="课型" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"></div><div style="display:flex;gap:6px"><input id="rfMethod" placeholder="方式(微信/小红书)" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="rfDisc" placeholder="优惠方式" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"></div><div style="display:flex;gap:6px"><input id="rfCnt" type="number" placeholder="课次" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="rfAmt" type="number" step="0.01" placeholder="金额" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"></div><input id="rfDate" type="date" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button onclick="this.closest(\'div\').parentElement.remove()" style="padding:6px 14px;border:1px solid #e2e8f0;border-radius:6px;background:#fff">取消</button><button onclick="saveRevenue()" class="btn bg" style="padding:6px 14px">保存</button></div></div>';
+  document.body.appendChild(ov);
+}
+function saveRevenue(){
+  var d={student_name:document.getElementById('rfName').value,segment:document.getElementById('rfSeg').value,course_type:document.getElementById('rfType').value,method:document.getElementById('rfMethod').value,discount_type:document.getElementById('rfDisc').value,lesson_count:parseInt(document.getElementById('rfCnt').value)||0,amount:parseFloat(document.getElementById('rfAmt').value)||0,actual_pay_date:document.getElementById('rfDate').value,order_id:'',xiaohongshu_received:0};
+  if(!d.student_name)return alert('请输入学生姓名');
+  fetch(API+'/finance/add-revenue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){document.querySelectorAll('#editorBody ~ div').forEach(function(x){if(x.style&&x.style.position==='fixed')x.remove()});renderFinanceTab()}else alert(rd.message)});
+}
+function deletePurchase(id){if(!confirm('确定删除此收费记录？'))return;fetch(API+'/finance/delete-purchase',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok')renderFinanceTab()})}
+function showAddCostModal(){
+  var ov=document.createElement('div');ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML='<div style="background:#fff;border-radius:12px;padding:20px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)"><h3>新增成本</h3><input id="cfReason" placeholder="支出原因" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:6px"><input id="cfType" placeholder="类型(平台费/工资/其他)" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfChannel" placeholder="渠道(淘宝/微信/银行)" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"></div><input id="cfAmt" type="number" step="0.01" placeholder="金额" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfDate" type="date" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button onclick="this.closest(\'div\').parentElement.remove()" style="padding:6px 14px;border:1px solid #e2e8f0;border-radius:6px;background:#fff">取消</button><button onclick="saveCost()" class="btn bg" style="padding:6px 14px">保存</button></div></div>';
+  document.body.appendChild(ov);
+}
+function saveCost(){
+  var d={reason:document.getElementById('cfReason').value,cost_type:document.getElementById('cfType').value,channel:document.getElementById('cfChannel').value,amount:parseFloat(document.getElementById('cfAmt').value)||0,cost_date:document.getElementById('cfDate').value};
+  if(!d.reason)return alert('请输入支出原因');
+  fetch(API+'/finance/add-cost',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){document.querySelectorAll('#editorBody ~ div').forEach(function(x){if(x.style&&x.style.position==='fixed')x.remove()});renderFinanceTab()}else alert(rd.message)});
+}
+function deleteCost(id){if(!confirm('确定删除此成本记录？'))return;fetch(API+'/finance/delete-cost',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok')renderFinanceTab()})}
+function showFinance(){activeMainTab='finance';renderMainTabs();switchMainTab()}
   fetch(API+'/finance/summary').then(function(r){return r.json()}).then(function(s){
     var h='<div style="padding:16px"><h3>财务面板</h3>';
     h+='<div style="display:flex;gap:12px;margin:12px 0">';
@@ -433,43 +513,72 @@ function showFinance(){
     loadFinanceRecords();
   });
 }
-function loadFinanceRecords(){
-  var params='type='+(financeTab==='cost'?'cost':(financeTab==='attendance'?'attendance':'revenue'))+'&limit=50';
-  fetch(API+'/finance/records?'+params).then(function(r){return r.json()}).then(function(rows){
-    var el=document.getElementById('financeRecords');if(!el)return;
-    if(!rows.length){el.innerHTML='<span class="st">暂无记录</span>';return}
-    var h='<div style="max-height:400px;overflow-y:auto">';
+function renderStudentTab(){
+  var el=document.getElementById('editorBody');if(!el)return;
+  fetch(API+'/students').then(function(r){return r.json()}).then(function(rows){
+    var h='<div style="padding:16px"><h3 style="margin:0 0 12px">学生管理</h3>';
+    h+='<button class="btn bg" style="padding:4px 12px;font-size:11px;margin-bottom:12px" onclick="showAddStudentModal()">+ 新增学生</button>';
+    h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px">';
     rows.forEach(function(r){
-      if(financeTab==='revenue'){
-        h+='<div style="padding:6px 8px;margin:2px 0;border-radius:4px;background:#faf8f4"><b>'+esc(r.student_name)+'</b> '+esc(r.segment)+' '+esc(r.course_type)+' · '+esc(r.method)+' · '+esc(r.discount_type)+' · '+r.lesson_count+'节 ¥'+(r.amount||0)+' <span style="color:var(--sb);font-size:10px">'+esc(r.actual_pay_date||'')+'</span></div>';
-      }else if(financeTab==='attendance'){
-        h+='<div style="padding:6px 8px;margin:2px 0;border-radius:4px;background:#faf8f4"><b>'+esc(r.student_name)+'</b> '+esc(r.class_name)+' #'+r.lesson_num+' <span style="color:'+(r.status==='出席'?'var(--go)':'var(--rd)')+'">'+r.status+'</span> '+esc(r.note||'')+' <span style="color:var(--sb);font-size:10px">'+esc((r.lesson_date||'')+'')+'</span></div>';
-      }else{
-        h+='<div style="padding:6px 8px;margin:2px 0;border-radius:4px;background:#faf8f4"><b>'+esc(r.reason)+'</b> '+esc(r.cost_type)+' ¥'+(r.amount||0)+' <span style="color:var(--sb);font-size:10px">'+esc((r.cost_date||'')+'')+'</span></div>';
-      }
+      var pct=r.purchased_lessons>0?Math.round(r.used_lessons/r.purchased_lessons*100):0;
+      var barColor=pct>80?'#dc2626':(pct>50?'#d97706':'#16a34a');
+      h+='<div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #f1f5f9;cursor:pointer" onclick="toggleStudentDetail(\''+esc(r.student_name)+'\',this)">';
+      h+='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px">'+esc(r.student_name)+'</b><span style="font-size:10px;padding:2px 6px;border-radius:999px;background:'+(r.status==='在读中'?'#dcfce7':(r.status==='暂时停课'?'#fef3c7':'#fee2e2'))+';color:'+(r.status==='在读中'?'#16a34a':(r.status==='暂时停课'?'#d97706':'#dc2626'))+'">'+esc(r.status||'未知')+'</span></div>';
+      h+='<div style="font-size:11px;color:var(--sb);margin:4px 0">'+esc(r.segment||'')+' · '+esc(r.enrolled_class||'')+'</div>';
+      h+='<div style="height:6px;background:#e2e8f0;border-radius:3px;margin:8px 0"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:3px"></div></div>';
+      h+='<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--sb)"><span>已购 '+r.purchased_lessons+'节</span><span>已销 '+r.used_lessons+'节</span><span>剩余 '+(r.purchased_lessons-r.used_lessons)+'节</span></div>';
+      h+='<div id="studDetail_'+esc(r.student_name).replace(/\\s/g,'_')+'" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9;font-size:11px"></div>';
+      h+='</div>';
     });
-    h+='</div>';el.innerHTML=h;
+    h+='</div></div>';el.innerHTML=h;
   });
 }
-
-// ====== 定价配置 ======
-function showPricing(){
+function toggleStudentDetail(name,card){
+  var det=document.getElementById('studDetail_'+name.replace(/\\s/g,'_'));
+  if(!det)return;
+  if(det.style.display==='none'||!det.style.display){
+    det.style.display='block';det.textContent='加载中...';
+    fetch(API+'/finance/records?type=revenue&student='+encodeURIComponent(name)+'&limit=20').then(function(r){return r.json()}).then(function(rows){
+      var h='<div style="font-weight:600;margin-bottom:4px">收费记录</div>';
+      if(!rows.length)h+='<span style="color:var(--sb)">暂无</span>';
+      rows.forEach(function(r){h+='<div style="padding:3px 0;font-size:10px">'+esc(r.course_type)+' · '+esc(r.discount_type)+' · '+r.lesson_count+'节 ¥'+(r.amount||0)+' <span style="color:var(--sb)">'+(r.actual_pay_date||'').slice(0,10)+'</span></div>'});
+      det.innerHTML=h;
+    });
+  }else{det.style.display='none'}
+}
+function showAddStudentModal(){
+  var ov=document.createElement('div');ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML='<div style="background:#fff;border-radius:12px;padding:20px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)"><h3>新增/编辑学生</h3><input id="sfName" placeholder="学生姓名" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="sfCode" placeholder="编号" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:6px"><input id="sfSeg" placeholder="分段" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="sfStatus" placeholder="状态(在读中/暂时停课/终止课程)" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"></div><input id="sfClass" placeholder="在班" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:6px"><input id="sfPur" type="number" placeholder="已购课时" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="sfUsed" type="number" placeholder="已销课时" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button onclick="this.closest(\'div\').parentElement.remove()" style="padding:6px 14px;border:1px solid #e2e8f0;border-radius:6px;background:#fff">取消</button><button onclick="saveStudent()" class="btn bg" style="padding:6px 14px">保存</button></div></div>';
+  document.body.appendChild(ov);
+}
+function saveStudent(){
+  var d={student_name:document.getElementById('sfName').value,student_code:document.getElementById('sfCode').value,segment:document.getElementById('sfSeg').value,status:document.getElementById('sfStatus').value,enrolled_class:document.getElementById('sfClass').value,purchased_lessons:parseInt(document.getElementById('sfPur').value)||0,used_lessons:parseInt(document.getElementById('sfUsed').value)||0,remaining_lessons:0,source:'',notes:''};
+  if(!d.student_name)return alert('请输入学生姓名');
+  d.remaining_lessons=d.purchased_lessons-d.used_lessons;
+  fetch(API+'/students',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){document.querySelectorAll('#editorBody ~ div').forEach(function(x){if(x.style&&x.style.position==='fixed')x.remove()});renderStudentTab()}else alert(rd.message)});
+}
+function renderPricingTab(){
+  var el=document.getElementById('editorBody');if(!el)return;
   fetch(API+'/pricing').then(function(r){return r.json()}).then(function(rows){
-    var h='<div style="padding:16px"><h3>定价配置</h3><div style="font-size:11px;color:var(--sb);margin-bottom:12px">修改后自动保存</div>';
+    var h='<div style="padding:16px"><h3 style="margin:0 0 4px">定价配置</h3><div style="font-size:11px;color:var(--sb);margin-bottom:12px">修改后点击输入框外部自动保存</div>';
     var segs={};
     rows.forEach(function(r){var k=r.segment+'|'+r.course_type;if(!segs[k])segs[k]=[];segs[k].push(r)});
     Object.keys(segs).forEach(function(k){
       var items=segs[k];var parts=k.split('|');
-      h+='<div style="margin-bottom:12px"><b>'+esc(parts[0])+' · '+esc(parts[1])+'</b>';
+      h+='<div style="margin-bottom:14px;background:#fff;border-radius:8px;padding:12px;border:1px solid #f1f5f9"><b style="font-size:13px">'+esc(parts[0])+' · '+esc(parts[1])+'</b>';
       items.forEach(function(r){
-        h+='<div style="display:flex;gap:4px;align-items:center;margin:2px 0"><span style="font-size:11px;width:80px">'+esc(r.discount_type)+'</span><input value="'+r.unit_price+'" style="width:60px;padding:2px 4px;font-size:11px" onchange="savePrice(\''+esc(r.segment)+'\',\''+esc(r.course_type)+'\',\''+esc(r.discount_type)+'\',this.value,\''+r.discount_multiplier+'\')"><span style="font-size:10px;color:var(--sb)">×</span><input value="'+r.discount_multiplier+'" style="width:50px;padding:2px 4px;font-size:11px" onchange="savePrice(\''+esc(r.segment)+'\',\''+esc(r.course_type)+'\',\''+esc(r.discount_type)+'\',\''+r.unit_price+'\',this.value)"></div>';
+        h+='<div style="display:flex;gap:6px;align-items:center;margin:3px 0"><span style="font-size:11px;width:70px">'+esc(r.discount_type)+'</span><input value="'+r.unit_price+'" style="width:60px;padding:3px 6px;font-size:11px;border:1px solid #e2e8f0;border-radius:4px" onchange="savePrice(\''+esc(r.segment)+'\',\''+esc(r.course_type)+'\',\''+esc(r.discount_type)+'\',this.value,\''+r.discount_multiplier+'\')"><span style="font-size:10px;color:var(--sb)">×</span><input value="'+r.discount_multiplier+'" style="width:50px;padding:3px 6px;font-size:11px;border:1px solid #e2e8f0;border-radius:4px" onchange="savePrice(\''+esc(r.segment)+'\',\''+esc(r.course_type)+'\',\''+esc(r.discount_type)+'\',\''+r.unit_price+'\',this.value)'"></div>';
       });
       h+='</div>';
     });
-    h+='</div>';
-    document.getElementById('editorBody').innerHTML=h;
+    h+='</div>';el.innerHTML=h;
   });
 }
+function showPricing(){activeMainTab='pricing';renderMainTabs();switchMainTab()}
+
+// Render main tabs on page load
+setTimeout(function(){renderMainTabs()},100);
+
 function savePrice(seg,ct,dt,price,mult){
   fetch(API+'/pricing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({segment:seg,course_type:ct,discount_type:dt,unit_price:parseFloat(price),discount_multiplier:parseFloat(mult)})});
 }
