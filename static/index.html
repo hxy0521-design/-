@@ -546,19 +546,37 @@ function saveStudent(){
 function renderPricingTab(){
   var el=document.getElementById('editorBody');if(!el)return;
   fetch(API+'/pricing').then(function(r){return r.json()}).then(function(rows){
-    var h='<div style="padding:16px"><h3 style="margin:0 0 4px">定价配置</h3><div style="font-size:11px;color:var(--sb);margin-bottom:12px">修改后点击输入框外部自动保存</div>';
+    var h='<div style="padding:16px"><h3 style="margin:0 0 4px">定价配置</h3><div style="font-size:11px;color:var(--sb);margin-bottom:12px">修改后自动保存</div>';
     var segs={};
     rows.forEach(function(r){var k=r.segment+'|'+r.course_type;if(!segs[k])segs[k]=[];segs[k].push(r)});
     Object.keys(segs).forEach(function(k){
       var items=segs[k];var parts=k.split('|');
       h+='<div style="margin-bottom:14px;background:#fff;border-radius:8px;padding:12px;border:1px solid #f1f5f9"><b style="font-size:13px">'+esc(parts[0])+' · '+esc(parts[1])+'</b>';
-      items.forEach(function(r){
-        h+='<div style="display:flex;gap:6px;align-items:center;margin:3px 0"><span style="font-size:11px;width:70px">'+esc(r.discount_type)+'</span><input value="'+r.unit_price+'" style="width:60px;padding:3px 6px;font-size:11px;border:1px solid #e2e8f0;border-radius:4px" onchange="savePrice(\''+esc(r.segment)+'\',\''+esc(r.course_type)+'\',\''+esc(r.discount_type)+'\',this.value,\''+r.discount_multiplier+'\')"><span style="font-size:10px;color:var(--sb)">×</span><input value="'+r.discount_multiplier+'" style="width:50px;padding:3px 6px;font-size:11px;border:1px solid #e2e8f0;border-radius:4px" onchange="savePrice(\''+esc(r.segment)+'\',\''+esc(r.course_type)+'\',\''+esc(r.discount_type)+'\',\''+r.unit_price+'\',this.value)'"></div>';
+      items.forEach(function(r,idx){
+        var uid='p_'+k.replace(/[^a-zA-Z0-9]/g,'')+'_'+idx;
+        h+='<div style="display:flex;gap:6px;align-items:center;margin:3px 0"><span style="font-size:11px;width:70px">'+esc(r.discount_type)+'</span><input id="'+uid+'_p" value="'+r.unit_price+'" style="width:60px;padding:3px 6px;font-size:11px;border:1px solid #e2e8f0;border-radius:4px"><span style="font-size:10px;color:var(--sb)">×</span><input id="'+uid+'_m" value="'+r.discount_multiplier+'" style="width:50px;padding:3px 6px;font-size:11px;border:1px solid #e2e8f0;border-radius:4px"></div>';
       });
       h+='</div>';
     });
     h+='</div>';el.innerHTML=h;
+    // Attach event listeners after DOM is ready
+    setTimeout(function(){
+      document.querySelectorAll('#editorBody input[id$=\"_p\"]').forEach(function(inp){
+        inp.onchange=function(){var m=document.getElementById(this.id.replace('_p','_m'));savePriceByInputs(this,m)};
+      });
+      document.querySelectorAll('#editorBody input[id$=\"_m\"]').forEach(function(inp){
+        inp.onchange=function(){var p=document.getElementById(this.id.replace('_m','_p'));savePriceByInputs(p,this)};
+      });
+    },50);
   });
+}
+function savePriceByInputs(pInp,mInp){
+  // Parse the segment/course_type/discount_type from context
+  var row=pInp.closest('[id]')||pInp.parentElement;var seg='';var ct='';var dt='';
+  var label=row.querySelector('span');if(label)dt=label.textContent;
+  var b=row.closest('[style]')?row.parentElement.querySelector('b'):null;
+  if(b){var parts=b.textContent.split(' · ');seg=parts[0];ct=parts[1]||''}
+  if(seg&&dt)savePrice(seg,ct,dt,pInp.value,mInp.value)
 }
 function showPricing(){activeMainTab='pricing';renderMainTabs();switchMainTab()}
 
