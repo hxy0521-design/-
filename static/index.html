@@ -499,20 +499,6 @@ function saveCost(){
   fetch(API+'/finance/add-cost',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){document.querySelectorAll('#editorBody ~ div').forEach(function(x){if(x.style&&x.style.position==='fixed')x.remove()});renderFinanceTab()}else alert(rd.message)});
 }
 function deleteCost(id){if(!confirm('确定删除此成本记录？'))return;fetch(API+'/finance/delete-cost',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok')renderFinanceTab()})}
-function showFinance(){activeMainTab='finance';renderMainTabs();switchMainTab()}
-  fetch(API+'/finance/summary').then(function(r){return r.json()}).then(function(s){
-    var h='<div style="padding:16px"><h3>财务面板</h3>';
-    h+='<div style="display:flex;gap:12px;margin:12px 0">';
-    h+='<div style="flex:1;padding:12px;background:#e8f5e9;border-radius:8px;text-align:center"><div style="font-size:20px;font-weight:700">¥'+s.total_revenue.toFixed(0)+'</div><div style="font-size:10px;color:var(--sb)">总收入</div></div>';
-    h+='<div style="flex:1;padding:12px;background:#fce4ec;border-radius:8px;text-align:center"><div style="font-size:20px;font-weight:700">¥'+s.total_cost.toFixed(0)+'</div><div style="font-size:10px;color:var(--sb)">总成本</div></div>';
-    h+='<div style="flex:1;padding:12px;background:#e3f2fd;border-radius:8px;text-align:center"><div style="font-size:20px;font-weight:700">¥'+s.balance.toFixed(0)+'</div><div style="font-size:10px;color:var(--sb)">结余</div></div>';
-    h+='</div>';
-    h+='<div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn bo" style="padding:4px 12px;font-size:11px;'+(financeTab==='revenue'?'background:var(--bl);color:#fff':'')+'" onclick="financeTab=\'revenue\';showFinance()">收费</button><button class="btn bo" style="padding:4px 12px;font-size:11px;'+(financeTab==='attendance'?'background:var(--bl);color:#fff':'')+'" onclick="financeTab=\'attendance\';showFinance()">销课</button><button class="btn bo" style="padding:4px 12px;font-size:11px;'+(financeTab==='cost'?'background:var(--bl);color:#fff':'')+'" onclick="financeTab=\'cost\';showFinance()">成本</button></div>';
-    h+='<div id="financeRecords" style="font-size:12px">加载中...</div></div>';
-    document.getElementById('editorBody').innerHTML=h;
-    loadFinanceRecords();
-  });
-}
 function renderStudentTab(){
   var el=document.getElementById('editorBody');if(!el)return;
   fetch(API+'/students').then(function(r){return r.json()}).then(function(rows){
