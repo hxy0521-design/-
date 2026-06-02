@@ -698,6 +698,216 @@ def tmdb_search():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# ====== 考勤 ======
+
+@app.route("/api/attendance/suggest", methods=["POST"])
+def attendance_suggest():
+    data = request.json
+    cls_name = data.get("class_name", "")
+    topics = data.get("topics", [])
+    # 从发言中提取学生
+    speakers = set()
+    for t in topics:
+        for s in t.get("speeches", []):
+            n = s.get("name", "").strip()
+            if n and n != "图": speakers.add(n)
+    # 取班级花名册
+    roster = db.roster_get(cls_name)
+    # 取学生扩展信息
+    from db import student_ext_all as _se
+    # 构建建议
+    result = []
+    seen = set()
+    # 花名册中的学生
+    for name in roster:
+        seen.add(name)
+        status = "出席" if name in speakers else ""
+        result.append({"name": name, "status": status, "note": "", "inRoster": True})
+    # 在发言中但不在花名册的（新生）
+    for name in speakers:
+        if name not in seen:
+            result.append({"name": name, "status": "出席", "note": "", "inRoster": False, "isNew": True})
+    return jsonify({"roster": result, "speakers": list(speakers)})
+
+@app.route("/api/attendance/save", methods=["POST"])
+def attendance_save():
+    data = request.json
+    cls_name = data.get("class_name", "")
+    unit_code = data.get("unit_code", "")
+    lesson_num = int(data.get("lesson_num", 1))
+    lesson_title = data.get("lesson_title", "")
+    lesson_date = data.get("lesson_date", "")
+    records = data.get("records", [])
+    # 如果有新生，也加入花名册
+    new_students = data.get("new_students", [])
+    for ns in new_students:
+        roster = db.roster_get(cls_name)
+        if ns["name"] not in roster:
+            db.roster_set(cls_name, roster + [ns["name"]])
+    batch = []
+    for r in records:
+        batch.append({
+            "class_name": cls_name, "unit_code": unit_code,
+            "lesson_num": lesson_num, "lesson_title": lesson_title,
+            "lesson_date": lesson_date, "student_name": r["name"],
+            "status": r.get("status", "出席"), "note": r.get("note", "")
+        })
+    db.attendance_batch(batch)
+    return jsonify({"status": "ok", "count": len(batch)})
+
+# ====== 财务 ======
+
+@app.route("/api/finance/summary")
+def finance_summary():
+    s = db.finance_summary()
+    return jsonify(s)
+
+@app.route("/api/finance/records")
+def finance_records():
+    rtype = request.args.get("type", "revenue")
+    cls = request.args.get("class", "")
+    student = request.args.get("student", "")
+    limit = int(request.args.get("limit", 50))
+    if rtype == "cost":
+        records = db.cost_list(limit)
+    elif rtype == "attendance":
+        records = db.attendance_get(class_name=cls or None)
+    else:
+        records = db.purchase_list(student_name=student or None, limit=limit)
+    return jsonify(records)
+
+# ====== 花名册 ======
+
+@app.route("/api/roster/<cls_name>")
+def roster_get(cls_name):
+    return jsonify(db.roster_get(cls_name))
+
+@app.route("/api/roster/<cls_name>", methods=["POST"])
+def roster_set(cls_name):
+    students = request.json.get("students", [])
+    db.roster_set(cls_name, students)
+    return jsonify({"status": "ok"})
+
+# ====== Excel 导入 ======
+
+@app.route("/api/import-excel", methods=["POST"])
+def import_excel():
+    if "file" not in request.files:
+        return jsonify({"status": "error", "message": "请上传文件"}), 400
+    file = request.files["file"]
+    import tempfile, openpyxl
+    tmp = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
+    file.save(tmp.name)
+    tmp.close()
+    stats = {"student_ext": 0, "purchases_new": 0, "purchases_updated": 0, "attendance": 0, "costs": 0, "roster": 0}
+    try:
+        from db import get_db
+        wb = openpyxl.load_workbook(tmp.name, data_only=True)
+        stmts = []  # batch SQL statements for pipeline
+
+        def esc(v):
+            if v is None: return 'NULL'
+            if isinstance(v, (int, float)): return str(v)
+            return "'" + str(v).replace("'", "''") + "'"
+
+        # 学生基础信息
+        if "学生基础信息" in wb.sheetnames:
+            ws = wb["学生基础信息"]
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                if not row[0]: continue
+                stmts.append(f"INSERT OR REPLACE INTO student_ext VALUES ({esc(str(row[0]))},{esc(str(row[2] or ''))},{esc(str(row[1] or ''))},{esc(str(row[3] or ''))},{esc(str(row[4] or ''))},{esc(str(row[5] or ''))},{int(row[6] or 0)},{int(row[7] or 0)},{int(row[8] or 0)},{esc(str(row[9] or ''))})")
+                stats["student_ext"] += 1
+                if len(stmts) >= 100:
+                    get_db()._req({"requests": [{"type":"execute","stmt":{"sql":s}} for s in stmts] + [{"type":"close"}]})
+                    stmts = []
+        # 收费明细
+        if "收费明细" in wb.sheetnames:
+            ws = wb["收费明细"]
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                if not row[0]: continue
+                amt = str(row[9] or "0").replace("¥","").replace(",","").replace(" ","")
+                ref = str(row[10] or "0").replace("¥","").replace(",","").replace(" ","")
+                xs = str(row[15] or "0").replace("¥","").replace(",","").replace(" ","")
+                oid = str(row[12] or "")
+                vals = f"{esc(str(row[0]))},{esc(str(row[1] or ''))},{esc(str(row[2] or ''))},{esc(str(row[4] or ''))},{esc(str(row[5] or ''))},{esc(str(row[6] or ''))},{esc(str(row[7] or ''))},{int(row[8] or 0)},{float(amt) if amt else 0},{float(ref) if ref else 0},{esc(str(row[11] or ''))},{esc(oid)},{float(xs) if xs else 0},{esc(str(row[16] or ''))}"
+                if oid:
+                    stmts.append(f"DELETE FROM purchases WHERE order_id={esc(oid)}")
+                    stats["purchases_updated"] += 1
+                else:
+                    stats["purchases_new"] += 1
+                stmts.append(f"INSERT INTO purchases (student_name,student_code,charge_code,segment,course_type,method,discount_type,lesson_count,amount,refund_amount,actual_pay_date,order_id,xiaohongshu_received,notes) VALUES ({vals})")
+                if len(stmts) >= 80:
+                    get_db()._req({"requests": [{"type":"execute","stmt":{"sql":s}} for s in stmts] + [{"type":"close"}]})
+                    stmts = []
+        # 销课情况
+        if "销课情况" in wb.sheetnames:
+            ws = wb["销课情况"]
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                cls_name = str(row[2] or "")
+                date_val = str(row[6] or "")[:10]
+                rec = str(row[17] or "")
+                if not rec or not cls_name: continue
+                for name in rec.replace("，",",").split(","):
+                    n = name.strip()
+                    if not n: continue
+                    stmts.append(f"INSERT OR IGNORE INTO attendance (class_name,unit_code,lesson_num,lesson_title,lesson_date,student_name,status,note,recorded_at) VALUES ({esc(cls_name)},'2605',0,{esc(str(row[4] or ''))},{esc(date_val)},{esc(n)},'出席','',{esc(date_val)})")
+                    stats["attendance"] += 1
+                    if len(stmts) >= 100:
+                        get_db()._req({"requests": [{"type":"execute","stmt":{"sql":s}} for s in stmts] + [{"type":"close"}]})
+                        stmts = []
+        # 成本
+        if "成本" in wb.sheetnames:
+            ws = wb["成本"]
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                if not row[0]: continue
+                amt = str(row[5] or "0").replace("¥","").replace(",","").replace(" ","")
+                stmts.append(f"INSERT INTO costs (reason,cycle,cost_type,channel,cost_date,amount,notes) VALUES ({esc(str(row[0] or ''))},{esc(str(row[1] or ''))},{esc(str(row[2] or ''))},{esc(str(row[3] or ''))},{esc(str(row[4] or '')[:10])},{float(amt) if amt else 0},{esc(str(row[7] or ''))})")
+                stats["costs"] += 1
+                if len(stmts) >= 100:
+                    get_db()._req({"requests": [{"type":"execute","stmt":{"sql":s}} for s in stmts] + [{"type":"close"}]})
+                    stmts = []
+        # 排课表 → roster (batch at end)
+        class_names_set = {}
+        if "排课表" in wb.sheetnames:
+            ws = wb["排课表"]
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                cls_name = str(row[3] or "")
+                students_str = str(row[4] or "")
+                if not cls_name or not students_str: continue
+                names = [n.strip() for n in students_str.replace("，",",").split(",") if n.strip()]
+                if cls_name not in class_names_set: class_names_set[cls_name] = set()
+                class_names_set[cls_name].update(names)
+            for cls_name, names in class_names_set.items():
+                existing = db.roster_get(cls_name)
+                merged = list(set(existing + list(names)))
+                for n in merged:
+                    stmts.append(f"INSERT OR IGNORE INTO class_roster VALUES ({esc(cls_name)},{esc(n)})")
+                stats["roster"] += len(merged)
+                if len(stmts) >= 100:
+                    get_db()._req({"requests": [{"type":"execute","stmt":{"sql":s}} for s in stmts] + [{"type":"close"}]})
+                    stmts = []
+        # Flush remaining
+        if stmts:
+            get_db()._req({"requests": [{"type":"execute","stmt":{"sql":s}} for s in stmts] + [{"type":"close"}]})
+        os.unlink(tmp.name)
+        return jsonify({"status": "ok", "stats": stats})
+    except Exception as e:
+        try: os.unlink(tmp.name)
+        except: pass
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# ====== 定价 ======
+
+@app.route("/api/pricing")
+def pricing_list():
+    return jsonify(db.pricing_all())
+
+@app.route("/api/pricing", methods=["POST"])
+def pricing_update():
+    data = request.json
+    db.pricing_set(data["segment"], data["course_type"], data["discount_type"], data["unit_price"], data["discount_multiplier"])
+    return jsonify({"status": "ok"})
+
 if __name__ == "__main__":
     print(f"追光π 课后素材 → http://localhost:{_PORT}")
     if not os.environ.get("DEEPSEEK_API_KEY"):

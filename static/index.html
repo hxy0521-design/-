@@ -27,7 +27,7 @@ textarea{min-height:120px;font-family:monospace;resize:vertical}
 .op{padding:8px;margin:4px 0;border-radius:6px;background:#faf8f4;border:1px solid var(--bd);font-size:12px}.op a{color:var(--bl)}
 .pt{white-space:pre-wrap;font-size:12px;background:#faf8f4;padding:14px;border-radius:8px;border:1px solid var(--bd);line-height:1.6;text-align:left}
 </style></head><body>
-<div class="panel pl"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkXinxin" onchange="onUserChange()" style="width:auto;margin:0 2px">只看欣欣</label><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkBiscuit" onchange="onUserChange()" style="width:auto;margin:0 2px">只看饼干</label></div><h2>班级 <span style="font-size:10px;float:right"><a href="#" onclick="expandAll(event)" style="color:var(--sb)">展开</a> | <a href="#" onclick="collapseAll(event)" style="color:var(--sb)">折叠</a></span></h2><div id="classList"></div><button class="btn bo" style="margin-top:4px;width:100%" onclick="newUnitAll()">+ 新建单元</button><button class="btn bo" style="margin-top:4px;width:100%" onclick="newClass()">+ 新建班级</button><h3 style="margin-top:18px">输出文件</h3><div id="outputList"></div></div>
+<div class="panel pl"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkXinxin" onchange="onUserChange()" style="width:auto;margin:0 2px">只看欣欣</label><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkBiscuit" onchange="onUserChange()" style="width:auto;margin:0 2px">只看饼干</label></div><h2>班级 <span style="font-size:10px;float:right"><a href="#" onclick="expandAll(event)" style="color:var(--sb)">展开</a> | <a href="#" onclick="collapseAll(event)" style="color:var(--sb)">折叠</a></span></h2><div id="classList"></div><button class="btn bo" style="margin-top:4px;width:100%" onclick="newUnitAll()">+ 新建单元</button><button class="btn bo" style="margin-top:4px;width:100%" onclick="newClass()">+ 新建班级</button><h3 style="margin-top:18px">输出文件</h3><div id="outputList"></div><div style="margin-top:12px;display:flex;gap:4px;flex-wrap:wrap"><button class="btn bo" style="padding:4px 8px;font-size:10px;flex:1" onclick="showFinance()">财务</button><button class="btn bo" style="padding:4px 8px;font-size:10px;flex:1" onclick="showPricing()">定价</button><button class="btn bo" style="padding:4px 8px;font-size:10px;flex:1" onclick="document.getElementById('xlsxUpload').click()">导入Excel</button><input type="file" id="xlsxUpload" accept=".xlsx" style="display:none" onchange="uploadExcel(this.files[0])"></div></div>
 <div class="panel pc"><div class="tabs" id="tabBar"></div><div class="ed-body" id="editorBody"><div style="color:var(--sb);text-align:center;padding:60px 0">请从左侧选择班级</div></div></div>
 <div class="panel pr" id="previewPanel"><h2 style="cursor:pointer" onclick="togglePreview()"><span id="pvLabel">预览</span> <span id="pvHint" style="font-size:11px;color:var(--sb)">点击收起</span></h2><div id="previewContent" style="font-size:12px;color:var(--sb)">粘贴发言后在此预览</div></div>
 <script>
@@ -332,7 +332,72 @@ function showPreviewImage(path,name){
 
 
 function detectGoldenAsync(){var d=tabs[activeTab];if(!d||!d.topics.length)return;var btn=document.querySelector('#previewContent .btn.bo');if(btn){btn.textContent='标记中... 预计10秒';btn.disabled=true}var sents=[];d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){sents.push({text:s.content,name:s.name})})});if(!sents.length)return;fetch(API+'/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sentences:sents,meta:d.meta,topics:d.topics.map(function(t){return t.title})})}).then(function(r){return r.json()}).then(function(data){if(!tabs[activeTab])return;var d=tabs[activeTab];if(!d._golden)d._golden={};var byName={};data.forEach(function(item){var n=item.name;if(!byName[n])byName[n]=[];byName[n].push(item)});var total=0;Object.keys(byName).forEach(function(n){var sp=0,tp=new Set();d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){if(s.name===n){sp++;tp.add(t.title)}})});var nhl=(sp>=5&&tp.size>=5)?3:2;byName[n].slice(0,nhl).forEach(function(item){var key=item.name+':'+item.text;if(!(key in d._golden))d._golden[key]=true;total++})});renderPreview();renderPosterSectionUI();var btn2=document.querySelector('#previewContent .btn.bo');if(btn2){btn2.textContent='已标'+total+'句';btn2.disabled=false;setTimeout(function(){btn2.textContent='自动标记'},3000)}}).catch(function(){var btn3=document.querySelector('#previewContent .btn.bo');if(btn3){btn3.textContent='自动标记';btn3.disabled=false}})}
-function generateAllUI(){if(!activeTab)return;saveMeta();saveTopics();renderPreview();var d=tabs[activeTab],gs=document.getElementById('genStatus'),gw=document.getElementById('genWarn');gs.textContent='生成中...';gs.className='st';gw.textContent='';var allImages={};d.topics.forEach(function(t,i){if(t._images&&t._images.length)allImages[i]=t._images});fetch(API+'/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({meta:d.meta,topics:d.topics,movies:getPosterQuotes(),gender:d.meta.gender||'',tab_name:d.folder||activeTab,golden_quotes:getGoldenQuotes(),poster_quotes:getPosterQuotes(),feedback_styles:(document.getElementById('fbXinxin').checked?'xinxin,':'')+(document.getElementById('fbBiscuit').checked?'biscuit,':'')+(document.getElementById('fbFusion').checked?'fusion':''),images:allImages})}).then(function(r){return r.json()}).then(function(data){if(data.status==='error'){gs.textContent='失败: '+data.message;gs.className='st';gs.style.color='var(--rd)';return}gs.textContent='完成!';gs.className='st';gs.style.color='';if(data.font_warning){gw.textContent=data.font_warning}renderOutputs(data.outputs||[]);if(data.folder){if(activeTab.indexOf('-new')>-1){var newTab=data.folder;tabs[newTab]=d;delete tabs[activeTab];activeTab=newTab;d.folder=newTab;renderTabs()}fetchConfig()}renderPreview();setTimeout(function(){var gs2=document.getElementById('genStatus');if(gs2)gs2.textContent='完成!'},500)}).catch(function(e){gs.textContent='失败: '+e.message;gs.className='st';gs.style.color='var(--rd)'})}
+function generateAllUI(){if(!activeTab)return;saveMeta();saveTopics();renderPreview();var d=tabs[activeTab],gs=document.getElementById('genStatus'),gw=document.getElementById('genWarn');gs.textContent='生成中...';gs.className='st';gw.textContent='';var allImages={};d.topics.forEach(function(t,i){if(t._images&&t._images.length)allImages[i]=t._images};var genPayload={meta:d.meta,topics:d.topics,movies:getPosterQuotes(),gender:d.meta.gender||'',tab_name:d.folder||activeTab,golden_quotes:getGoldenQuotes(),poster_quotes:getPosterQuotes(),feedback_styles:(document.getElementById('fbXinxin').checked?'xinxin,':'')+(document.getElementById('fbBiscuit').checked?'biscuit,':'')+(document.getElementById('fbFusion').checked?'fusion':''),images:allImages};var genPromise=fetch(API+'/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(genPayload)}).then(function(r){return r.json()});showAttendanceModal(genPromise,d,gs,gw)}
+
+function showAttendanceModal(genPromise,d,gs,gw){
+  var cls=d.meta.class||activeTab;var unit=d.meta.unit||'';
+  var m=unit.match(/(\d{4})/);var unitCode=m?m[1]:'2605';
+  var lessonNum='1';if(d.folder){var parts=d.folder.split('-'+unitCode+'-');if(parts.length>1)lessonNum=parts[1]}
+  fetch(API+'/attendance/suggest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({class_name:cls,topics:d.topics})})
+  .then(function(r){return r.json()}).then(function(sug){
+    var overlay=document.createElement('div');overlay.id='attOverlay';overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
+    var h='<div style="background:#fff;border-radius:12px;padding:20px;max-width:480px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)">';
+    h+='<h3 style="margin:0 0 4px">考勤确认 — '+esc(cls)+'</h3><div style="font-size:11px;color:var(--sb);margin-bottom:12px">发言学生已自动勾选，请确认缺席/请假</div>';
+    var roster=sug.roster||[];var speakers=sug.speakers||[];
+    roster.forEach(function(r,i){
+      var bg=r.status==='出席'?'#e8f5e9':(r.isNew?'#e3f2fd':'#fff8e1');
+      h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;margin:2px 0;border-radius:6px;background:'+bg+'">';
+      h+='<input type="checkbox" id="attChk'+i+'" '+(r.status==='出席'?'checked':'')+' onchange="var s=document.getElementById(\'attSel'+i+'\');s.style.display=this.checked&&\''+esc(r.name)+'\'!==\'\'?\'none\':\'inline\';if(!this.checked)document.getElementById(\'attChk'+i+'\').checked=false" style="width:auto;margin:0">';
+      h+='<span style="flex:1;font-size:13px">'+esc(r.name)+(r.isNew?' <span style="font-size:10px;color:var(--bl)">新</span>':'')+'</span>';
+      h+='<select id="attSel'+i+'" style="display:'+(r.status==='出席'?'none':'inline')+';width:auto;padding:2px 4px;font-size:11px"><option value="">缺席</option><option value="请假">请假</option></select>';
+      h+='<input id="attNote'+i+'" placeholder="备注" style="width:80px;padding:2px 4px;font-size:11px;display:'+(r.status==='出席'?'none':'inline')+'">';
+      h+='</div>';
+    });
+    h+='<div style="margin-top:8px;font-size:11px;color:var(--sb)">+ 新增学生</div>';
+    h+='<div style="display:flex;gap:4px"><input id="attNewName" placeholder="姓名" style="flex:1;padding:4px 6px;font-size:12px"><input id="attNewNote" placeholder="备注" style="width:80px;padding:4px 6px;font-size:12px"><button class="btn bo" style="padding:4px 8px;font-size:11px" onclick="addAttNew()">添加</button></div>';
+    h+='<div id="attNewList" style="margin-top:4px"></div>';
+    h+='<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">';
+    h+='<button class="btn bo" style="padding:6px 16px" onclick="skipAttendance()">跳过</button>';
+    h+='<button class="btn bg" style="padding:6px 16px" onclick="submitAttendance(\''+esc(cls)+'\',\''+unitCode+'\',\''+lessonNum+'\',\''+esc(d.meta.title||'')+'\',\''+esc(d.meta.date||'')+'\')">确认考勤</button>';
+    h+='</div></div>';
+    overlay.innerHTML=h;document.body.appendChild(overlay);
+    window._attData={roster:roster,newStudents:[],genPromise:genPromise,d:d,gs:gs,gw:gw};
+    // 并行等待生成完成
+    genPromise.then(function(data){
+      window._attGenResult=data;
+      var gsEl=document.getElementById('genStatus');if(!gsEl)return;
+      if(data.status==='error'){gsEl.textContent='失败: '+data.message;gsEl.style.color='var(--rd)';return}
+      gsEl.textContent='完成!';gsEl.style.color='';
+      if(data.font_warning)document.getElementById('genWarn').textContent=data.font_warning;
+      renderOutputs(data.outputs||[]);
+      if(data.folder){if(activeTab.indexOf('-new')>-1){var newTab=data.folder;tabs[newTab]=d;delete tabs[activeTab];activeTab=newTab;d.folder=newTab;renderTabs()}fetchConfig()}
+      renderPreview();
+    }).catch(function(e){var gsEl=document.getElementById('genStatus');if(gsEl){gsEl.textContent='失败: '+e.message;gsEl.style.color='var(--rd)'}});
+  });
+}
+
+function addAttNew(){
+  var nm=document.getElementById('attNewName'),nt=document.getElementById('attNewNote');
+  if(!nm.value.trim())return;
+  window._attData.newStudents.push({name:nm.value.trim(),note:nt.value.trim()});
+  var list=document.getElementById('attNewList');list.innerHTML+='<span style="display:inline-block;background:#e3f2fd;padding:2px 6px;margin:2px;border-radius:4px;font-size:11px">'+esc(nm.value)+' <a href="#" onclick="this.parentElement.remove();return false" style="color:var(--rd)">x</a></span>';
+  nm.value='';nt.value='';
+}
+
+function skipAttendance(){var o=document.getElementById('attOverlay');if(o)o.remove()}
+
+function submitAttendance(cls,unitCode,lessonNum,title,date){
+  var records=[];var att=window._attData;var roster=att.roster;
+  for(var i=0;i<roster.length;i++){
+    var chk=document.getElementById('attChk'+i);var sel=document.getElementById('attSel'+i);var note=document.getElementById('attNote'+i);
+    var status=chk&&chk.checked?'出席':(sel?sel.value:'缺席');
+    var n=note?note.value:'';
+    records.push({name:roster[i].name,status:status,note:n||(sel&&sel.value?sel.value:'')});
+  }
+  att.newStudents.forEach(function(s){records.push({name:s.name,status:'出席',note:s.note||'新生'})});
+  fetch(API+'/attendance/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({class_name:cls,unit_code:unitCode,lesson_num:parseInt(lessonNum),lesson_title:title,lesson_date:date,records:records,new_students:att.newStudents})}).then(function(r){return r.json()}).then(function(rd){console.log('考勤已保存:',rd.count||0,'条')}).catch(function(e){console.log('考勤保存失败',e)});
+  var o=document.getElementById('attOverlay');if(o)o.remove();
+}
 
 function changeUnitPath(){
   if(!activeTab)return;
@@ -351,4 +416,75 @@ function saveToServer(){if(!activeTab)return;saveMeta();saveTopics();var d=tabs[
 function saveAll(){localStorage.setItem('tabsData',JSON.stringify(tabs))}
 setInterval(saveAll,300000);
 window.addEventListener('beforeunload',saveAll);
+
+// ====== 财务面板 ======
+var financeTab='revenue';
+function showFinance(){
+  fetch(API+'/finance/summary').then(function(r){return r.json()}).then(function(s){
+    var h='<div style="padding:16px"><h3>财务面板</h3>';
+    h+='<div style="display:flex;gap:12px;margin:12px 0">';
+    h+='<div style="flex:1;padding:12px;background:#e8f5e9;border-radius:8px;text-align:center"><div style="font-size:20px;font-weight:700">¥'+s.total_revenue.toFixed(0)+'</div><div style="font-size:10px;color:var(--sb)">总收入</div></div>';
+    h+='<div style="flex:1;padding:12px;background:#fce4ec;border-radius:8px;text-align:center"><div style="font-size:20px;font-weight:700">¥'+s.total_cost.toFixed(0)+'</div><div style="font-size:10px;color:var(--sb)">总成本</div></div>';
+    h+='<div style="flex:1;padding:12px;background:#e3f2fd;border-radius:8px;text-align:center"><div style="font-size:20px;font-weight:700">¥'+s.balance.toFixed(0)+'</div><div style="font-size:10px;color:var(--sb)">结余</div></div>';
+    h+='</div>';
+    h+='<div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn bo" style="padding:4px 12px;font-size:11px;'+(financeTab==='revenue'?'background:var(--bl);color:#fff':'')+'" onclick="financeTab=\'revenue\';showFinance()">收费</button><button class="btn bo" style="padding:4px 12px;font-size:11px;'+(financeTab==='attendance'?'background:var(--bl);color:#fff':'')+'" onclick="financeTab=\'attendance\';showFinance()">销课</button><button class="btn bo" style="padding:4px 12px;font-size:11px;'+(financeTab==='cost'?'background:var(--bl);color:#fff':'')+'" onclick="financeTab=\'cost\';showFinance()">成本</button></div>';
+    h+='<div id="financeRecords" style="font-size:12px">加载中...</div></div>';
+    document.getElementById('editorBody').innerHTML=h;
+    loadFinanceRecords();
+  });
+}
+function loadFinanceRecords(){
+  var params='type='+(financeTab==='cost'?'cost':(financeTab==='attendance'?'attendance':'revenue'))+'&limit=50';
+  fetch(API+'/finance/records?'+params).then(function(r){return r.json()}).then(function(rows){
+    var el=document.getElementById('financeRecords');if(!el)return;
+    if(!rows.length){el.innerHTML='<span class="st">暂无记录</span>';return}
+    var h='<div style="max-height:400px;overflow-y:auto">';
+    rows.forEach(function(r){
+      if(financeTab==='revenue'){
+        h+='<div style="padding:6px 8px;margin:2px 0;border-radius:4px;background:#faf8f4"><b>'+esc(r.student_name)+'</b> '+esc(r.segment)+' '+esc(r.course_type)+' · '+esc(r.method)+' · '+esc(r.discount_type)+' · '+r.lesson_count+'节 ¥'+(r.amount||0)+' <span style="color:var(--sb);font-size:10px">'+esc(r.actual_pay_date||'')+'</span></div>';
+      }else if(financeTab==='attendance'){
+        h+='<div style="padding:6px 8px;margin:2px 0;border-radius:4px;background:#faf8f4"><b>'+esc(r.student_name)+'</b> '+esc(r.class_name)+' #'+r.lesson_num+' <span style="color:'+(r.status==='出席'?'var(--go)':'var(--rd)')+'">'+r.status+'</span> '+esc(r.note||'')+' <span style="color:var(--sb);font-size:10px">'+esc((r.lesson_date||'')+'')+'</span></div>';
+      }else{
+        h+='<div style="padding:6px 8px;margin:2px 0;border-radius:4px;background:#faf8f4"><b>'+esc(r.reason)+'</b> '+esc(r.cost_type)+' ¥'+(r.amount||0)+' <span style="color:var(--sb);font-size:10px">'+esc((r.cost_date||'')+'')+'</span></div>';
+      }
+    });
+    h+='</div>';el.innerHTML=h;
+  });
+}
+
+// ====== 定价配置 ======
+function showPricing(){
+  fetch(API+'/pricing').then(function(r){return r.json()}).then(function(rows){
+    var h='<div style="padding:16px"><h3>定价配置</h3><div style="font-size:11px;color:var(--sb);margin-bottom:12px">修改后自动保存</div>';
+    var segs={};
+    rows.forEach(function(r){var k=r.segment+'|'+r.course_type;if(!segs[k])segs[k]=[];segs[k].push(r)});
+    Object.keys(segs).forEach(function(k){
+      var items=segs[k];var parts=k.split('|');
+      h+='<div style="margin-bottom:12px"><b>'+esc(parts[0])+' · '+esc(parts[1])+'</b>';
+      items.forEach(function(r){
+        h+='<div style="display:flex;gap:4px;align-items:center;margin:2px 0"><span style="font-size:11px;width:80px">'+esc(r.discount_type)+'</span><input value="'+r.unit_price+'" style="width:60px;padding:2px 4px;font-size:11px" onchange="savePrice(\''+esc(r.segment)+'\',\''+esc(r.course_type)+'\',\''+esc(r.discount_type)+'\',this.value,\''+r.discount_multiplier+'\')"><span style="font-size:10px;color:var(--sb)">×</span><input value="'+r.discount_multiplier+'" style="width:50px;padding:2px 4px;font-size:11px" onchange="savePrice(\''+esc(r.segment)+'\',\''+esc(r.course_type)+'\',\''+esc(r.discount_type)+'\',\''+r.unit_price+'\',this.value)"></div>';
+      });
+      h+='</div>';
+    });
+    h+='</div>';
+    document.getElementById('editorBody').innerHTML=h;
+  });
+}
+function savePrice(seg,ct,dt,price,mult){
+  fetch(API+'/pricing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({segment:seg,course_type:ct,discount_type:dt,unit_price:parseFloat(price),discount_multiplier:parseFloat(mult)})});
+}
+
+// ====== Excel 上传 ======
+function uploadExcel(file){
+  if(!file)return;
+  var form=new FormData();form.append('file',file);
+  var st=document.createElement('div');st.style.cssText='position:fixed;top:10px;right:10px;background:#fff;padding:12px;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);z-index:9999;font-size:13px';
+  st.textContent='导入中...';document.body.appendChild(st);
+  fetch(API+'/import-excel',{method:'POST',body:form}).then(function(r){return r.json()}).then(function(d){
+    if(d.status==='ok'){
+      var s=d.stats;st.innerHTML='导入完成!<br>学生:'+s.student_ext+' 收费:新增'+s.purchases_new+' 更新'+s.purchases_updated+' 考勤:'+s.attendance+' 成本:'+s.costs+' 花名册:'+s.roster;
+    }else{st.textContent='导入失败: '+d.message;st.style.color='var(--rd)'}
+    setTimeout(function(){st.remove()},4000);
+  }).catch(function(e){st.textContent='导入失败: '+e.message;st.style.color='var(--rd)';setTimeout(function(){st.remove()},4000)});
+}
 </script></body></html>

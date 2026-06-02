@@ -136,6 +136,70 @@ def init_db():
             updated_at TEXT DEFAULT '',
             PRIMARY KEY (class_name, unit_code, lesson_num)
         );
+        CREATE TABLE IF NOT EXISTS student_ext (
+            student_name TEXT NOT NULL PRIMARY KEY,
+            student_code TEXT DEFAULT '',
+            source TEXT DEFAULT '',
+            status TEXT DEFAULT '',
+            segment TEXT DEFAULT '',
+            enrolled_class TEXT DEFAULT '',
+            purchased_lessons INTEGER DEFAULT 0,
+            used_lessons INTEGER DEFAULT 0,
+            remaining_lessons INTEGER DEFAULT 0,
+            notes TEXT DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS attendance (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            class_name TEXT NOT NULL,
+            unit_code TEXT NOT NULL,
+            lesson_num INTEGER NOT NULL,
+            lesson_title TEXT DEFAULT '',
+            lesson_date TEXT DEFAULT '',
+            student_name TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT '出席',
+            note TEXT DEFAULT '',
+            recorded_at TEXT DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS purchases (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_name TEXT NOT NULL,
+            student_code TEXT DEFAULT '',
+            charge_code TEXT DEFAULT '',
+            segment TEXT DEFAULT '',
+            course_type TEXT DEFAULT '',
+            method TEXT DEFAULT '',
+            discount_type TEXT DEFAULT '',
+            lesson_count INTEGER DEFAULT 0,
+            amount REAL DEFAULT 0,
+            refund_amount REAL DEFAULT 0,
+            actual_pay_date TEXT DEFAULT '',
+            order_id TEXT DEFAULT '',
+            xiaohongshu_received REAL DEFAULT 0,
+            notes TEXT DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS costs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            reason TEXT DEFAULT '',
+            cycle TEXT DEFAULT '',
+            cost_type TEXT DEFAULT '',
+            channel TEXT DEFAULT '',
+            cost_date TEXT DEFAULT '',
+            amount REAL DEFAULT 0,
+            notes TEXT DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS class_roster (
+            class_name TEXT NOT NULL,
+            student_name TEXT NOT NULL,
+            PRIMARY KEY (class_name, student_name)
+        );
+        CREATE TABLE IF NOT EXISTS pricing (
+            segment TEXT NOT NULL,
+            course_type TEXT NOT NULL DEFAULT '正式课',
+            discount_type TEXT NOT NULL DEFAULT '一课一销',
+            unit_price REAL NOT NULL DEFAULT 0,
+            discount_multiplier REAL NOT NULL DEFAULT 1.0,
+            PRIMARY KEY (segment, course_type, discount_type)
+        );
     """)
     db.commit()
 
@@ -369,5 +433,171 @@ def recycle_all():
         [r["id"],r["class_name"],r["unit_code"],r["unit_name"],r["path"],r["deleted_at"]]))
         for r in db.execute("SELECT * FROM recycle ORDER BY id DESC").fetchall()]
 
+# ------- Student Ext -------
+
+def student_ext_all():
+    db = get_db()
+    rows = db.execute("SELECT * FROM student_ext ORDER BY student_name").fetchall()
+    return [dict(zip(["student_name","student_code","source","status","segment","enrolled_class","purchased_lessons","used_lessons","remaining_lessons","notes"], [r[col] for col in ["student_name","student_code","source","status","segment","enrolled_class","purchased_lessons","used_lessons","remaining_lessons","notes"]])) for r in rows]
+
+def student_ext_upsert(name, data):
+    db = get_db()
+    r = db.execute("SELECT student_name FROM student_ext WHERE student_name=?", [name]).fetchone()
+    if r:
+        db.execute("UPDATE student_ext SET student_code=?,source=?,status=?,segment=?,enrolled_class=?,purchased_lessons=?,used_lessons=?,remaining_lessons=?,notes=? WHERE student_name=?",
+            [data.get("student_code",""), data.get("source",""), data.get("status",""), data.get("segment",""), data.get("enrolled_class",""), int(data.get("purchased_lessons",0)), int(data.get("used_lessons",0)), int(data.get("remaining_lessons",0)), data.get("notes",""), name])
+    else:
+        db.execute("INSERT INTO student_ext (student_name,student_code,source,status,segment,enrolled_class,purchased_lessons,used_lessons,remaining_lessons,notes) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            [name, data.get("student_code",""), data.get("source",""), data.get("status",""), data.get("segment",""), data.get("enrolled_class",""), int(data.get("purchased_lessons",0)), int(data.get("used_lessons",0)), int(data.get("remaining_lessons",0)), data.get("notes","")])
+
+# ------- Attendance -------
+
+def attendance_batch(records):
+    """records = [{class_name, unit_code, lesson_num, lesson_title, lesson_date, student_name, status, note}]"""
+    from datetime import datetime
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    db = get_db()
+    for r in records:
+        # Delete existing record for this student+lesson
+        db.execute("DELETE FROM attendance WHERE class_name=? AND lesson_num=? AND student_name=?",
+            [r["class_name"], r["lesson_num"], r["student_name"]])
+        db.execute("INSERT INTO attendance (class_name,unit_code,lesson_num,lesson_title,lesson_date,student_name,status,note,recorded_at) VALUES (?,?,?,?,?,?,?,?,?)",
+            [r["class_name"], r.get("unit_code",""), r["lesson_num"], r.get("lesson_title",""), r.get("lesson_date",""), r["student_name"], r.get("status","出席"), r.get("note",""), now])
+
+def attendance_get(class_name=None, date_from=None, date_to=None):
+    db = get_db()
+    sql = "SELECT * FROM attendance WHERE 1=1"
+    params = []
+    if class_name:
+        sql += " AND class_name=?"
+        params.append(class_name)
+    if date_from:
+        sql += " AND lesson_date >= ?"
+        params.append(date_from)
+    if date_to:
+        sql += " AND lesson_date <= ?"
+        params.append(date_to)
+    sql += " ORDER BY lesson_date DESC, class_name, student_name"
+    rows = db.execute(sql, params).fetchall()
+    return [dict(zip(["id","class_name","unit_code","lesson_num","lesson_title","lesson_date","student_name","status","note","recorded_at"], [r[c] for c in ["id","class_name","unit_code","lesson_num","lesson_title","lesson_date","student_name","status","note","recorded_at"]])) for r in rows]
+
+def attendance_stats(class_name=None):
+    db = get_db()
+    sql = "SELECT status, COUNT(*) as cnt FROM attendance WHERE 1=1"
+    params = []
+    if class_name:
+        sql += " AND class_name=?"
+        params.append(class_name)
+    sql += " GROUP BY status"
+    rows = db.execute(sql, params).fetchall()
+    return {r["status"]: r["cnt"] for r in rows}
+
+# ------- Class Roster -------
+
+def roster_get(class_name):
+    db = get_db()
+    rows = db.execute("SELECT student_name FROM class_roster WHERE class_name=? ORDER BY student_name", [class_name]).fetchall()
+    return [r["student_name"] for r in rows]
+
+def roster_set(class_name, students):
+    db = get_db()
+    db.execute("DELETE FROM class_roster WHERE class_name=?", [class_name])
+    for s in students:
+        db.execute("INSERT INTO class_roster (class_name,student_name) VALUES (?,?)", [class_name, s])
+
+# ------- Purchases -------
+
+def purchase_add(data):
+    db = get_db()
+    oid = data.get("order_id","")
+    if oid:
+        r = db.execute("SELECT id FROM purchases WHERE order_id=?", [oid]).fetchone()
+        if r:
+            # Update existing by order_id
+            db.execute("UPDATE purchases SET student_name=?,student_code=?,charge_code=?,segment=?,course_type=?,method=?,discount_type=?,lesson_count=?,amount=?,refund_amount=?,actual_pay_date=?,xiaohongshu_received=?,notes=? WHERE order_id=?",
+                [data.get("student_name",""), data.get("student_code",""), data.get("charge_code",""), data.get("segment",""), data.get("course_type",""), data.get("method",""), data.get("discount_type",""), int(data.get("lesson_count",0)), float(data.get("amount",0)), float(data.get("refund_amount",0)), data.get("actual_pay_date",""), float(data.get("xiaohongshu_received",0)), data.get("notes",""), oid])
+            return "updated"
+    db.execute("INSERT INTO purchases (student_name,student_code,charge_code,segment,course_type,method,discount_type,lesson_count,amount,refund_amount,actual_pay_date,order_id,xiaohongshu_received,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        [data.get("student_name",""), data.get("student_code",""), data.get("charge_code",""), data.get("segment",""), data.get("course_type",""), data.get("method",""), data.get("discount_type",""), int(data.get("lesson_count",0)), float(data.get("amount",0)), float(data.get("refund_amount",0)), data.get("actual_pay_date",""), oid, float(data.get("xiaohongshu_received",0)), data.get("notes","")])
+    return "new"
+
+def purchase_list(student_name=None, date_from=None, date_to=None, limit=200):
+    db = get_db()
+    sql = "SELECT * FROM purchases WHERE 1=1"
+    params = []
+    if student_name:
+        sql += " AND student_name=?"
+        params.append(student_name)
+    if date_from:
+        sql += " AND actual_pay_date >= ?"
+        params.append(date_from)
+    if date_to:
+        sql += " AND actual_pay_date <= ?"
+        params.append(date_to)
+    sql += " ORDER BY actual_pay_date DESC LIMIT ?"
+    params.append(limit)
+    rows = db.execute(sql, params).fetchall()
+    cols = ["id","student_name","student_code","charge_code","segment","course_type","method","discount_type","lesson_count","amount","refund_amount","actual_pay_date","order_id","xiaohongshu_received","notes"]
+    return [dict(zip(cols, [r[c] for c in cols])) for r in rows]
+
+# ------- Costs -------
+
+def cost_add(data):
+    db = get_db()
+    db.execute("INSERT INTO costs (reason,cycle,cost_type,channel,cost_date,amount,notes) VALUES (?,?,?,?,?,?,?)",
+        [data.get("reason",""), data.get("cycle",""), data.get("cost_type",""), data.get("channel",""), data.get("cost_date",""), float(data.get("amount",0)), data.get("notes","")])
+
+def cost_list(limit=200):
+    db = get_db()
+    rows = db.execute("SELECT * FROM costs ORDER BY cost_date DESC LIMIT ?", [limit]).fetchall()
+    cols = ["id","reason","cycle","cost_type","channel","cost_date","amount","notes"]
+    return [dict(zip(cols, [r[c] for c in cols])) for r in rows]
+
+# ------- Pricing -------
+
+def pricing_all():
+    db = get_db()
+    rows = db.execute("SELECT * FROM pricing ORDER BY segment, course_type, discount_type").fetchall()
+    cols = ["segment","course_type","discount_type","unit_price","discount_multiplier"]
+    return [dict(zip(cols, [r[c] for c in cols])) for r in rows]
+
+def pricing_set(segment, course_type, discount_type, unit_price, discount_multiplier):
+    db = get_db()
+    db.execute("INSERT OR REPLACE INTO pricing (segment,course_type,discount_type,unit_price,discount_multiplier) VALUES (?,?,?,?,?)",
+        [segment, course_type, discount_type, float(unit_price), float(discount_multiplier)])
+
+def calc_price(segment, course_type, discount_type, lesson_count):
+    db = get_db()
+    r = db.execute("SELECT unit_price, discount_multiplier FROM pricing WHERE segment=? AND course_type=? AND discount_type=?", [segment, course_type, discount_type]).fetchone()
+    if r:
+        return float(r["unit_price"]) * int(lesson_count) * float(r["discount_multiplier"])
+    return 0
+
+def init_pricing():
+    """预填 Excel 定价公式的基准值"""
+    defaults = [
+        ("启航段","正式课","一课一销",160,1.0), ("启航段","正式课","月度9折",160,0.9), ("启航段","正式课","亲友85折",160,0.85),
+        ("探索段","正式课","一课一销",180,1.0), ("探索段","正式课","月度9折",180,0.9), ("探索段","正式课","亲友85折",180,0.85),
+        ("先锋段","正式课","一课一销",200,1.0), ("先锋段","正式课","月度9折",200,0.9),
+        ("领航1V1","正式课","一课一销",385,1.0), ("领航1V1","正式课","月度9折",385,0.9),
+        ("领航1V2","正式课","一课一销",330,1.0),
+        ("成人班","正式课","一课一销",69.9,1.0),
+        ("领航1V1","试听课","试听折扣",99.9,1.0),
+        ("探索段","试听课","试听折扣",69.9,1.0), ("启航段","试听课","试听折扣",69.9,1.0), ("先锋段","试听课","试听折扣",69.9,1.0),
+        ("混龄特典","正式课","单人特典",69.9,1.0), ("混龄特典","正式课","亲子特典",109.9,1.0),
+    ]
+    for s, ct, dt, price, mult in defaults:
+        pricing_set(s, ct, dt, price, mult)
+
+# ------- Finance Summary -------
+
+def finance_summary():
+    db = get_db()
+    rev = db.execute("SELECT COALESCE(SUM(amount),0) as t FROM purchases").fetchone()
+    cost = db.execute("SELECT COALESCE(SUM(amount),0) as t FROM costs").fetchone()
+    students = db.execute("SELECT COUNT(*) as t FROM student_ext WHERE status='在读中'").fetchone()
+    return {"total_revenue": float(rev["t"]), "total_cost": float(cost["t"]), "balance": float(rev["t"])-float(cost["t"]), "active_students": int(students["t"])}
+
 # ------- Init -------
 init_db()
+init_pricing()
