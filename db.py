@@ -186,7 +186,7 @@ def attendance_stats(class_name=None):
 
 def attendance_by_lesson(class_name=None, limit=50):
     db = get_db()
-    sql = "SELECT class_name, unit_code, lesson_num, lesson_title, lesson_date, COUNT(*) as total, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE 1=1"
+    sql = "SELECT class_name, ANY_VALUE(unit_code) as unit_code, lesson_num, ANY_VALUE(lesson_title) as lesson_title, lesson_date, COUNT(*) as total, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE 1=1"
     params = []
     if class_name: sql += " AND class_name=%s"; params.append(class_name)
     sql += " GROUP BY class_name, lesson_num, lesson_date ORDER BY lesson_date DESC, class_name LIMIT %s"
