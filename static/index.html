@@ -138,8 +138,8 @@ function renderClassList(){
   });
 }
 var cfgInfo={},allLessons={},zgUser='';
-function fetchConfig(){fetch(API+'/config').then(function(r){return r.json()}).then(function(d){cfgInfo=d.classes||d;allLessons=d.lessons||{};zgUser=d.zg_user||'';renderClassList()}).catch(function(e){console.log('Config load failed, retrying...');setTimeout(fetchConfig,1000)})}
-fetchConfig();
+function fetchConfig(){fetch(API+'/config').then(function(r){return r.json()}).then(function(d){cfgInfo=d.classes||d;allLessons=d.lessons||{};zgUser=d.zg_user||'';renderClassList()}).catch(function(e){console.log('Config load failed, retrying...');setTimeout(fetchConfig,2000)})}
+setTimeout(fetchConfig,500);
 
 function newClass(){
   var n=prompt('班级名称（如 周一探索）:');if(!n)return;
