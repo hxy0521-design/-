@@ -200,6 +200,34 @@ def init_db():
             discount_multiplier REAL NOT NULL DEFAULT 1.0,
             PRIMARY KEY (segment, course_type, discount_type)
         );
+        CREATE TABLE IF NOT EXISTS teacher_coefficients (
+            teacher_name TEXT NOT NULL PRIMARY KEY,
+            coefficient REAL DEFAULT 1.0,
+            hourly_rate REAL DEFAULT 0
+        );
+        CREATE TABLE IF NOT EXISTS revenue_splits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            cycle TEXT DEFAULT '',
+            content TEXT DEFAULT '',
+            expected_revenue REAL DEFAULT 0,
+            trial_count INTEGER DEFAULT 0,
+            formal_count INTEGER DEFAULT 0,
+            lesson_50pct REAL DEFAULT 0,
+            research_ratio REAL DEFAULT 0.15,
+            research_xinxin_coef REAL DEFAULT 0.9,
+            research_xinxin REAL DEFAULT 0,
+            research_sitong_coef REAL DEFAULT 0.1,
+            research_sitong REAL DEFAULT 0,
+            research_biscuit_coef REAL DEFAULT 0,
+            research_biscuit REAL DEFAULT 0,
+            source_20pct REAL DEFAULT 0,
+            new_enroll INTEGER DEFAULT 0,
+            recruitment_trial REAL DEFAULT 0,
+            renewal_remaining REAL DEFAULT 0,
+            neukol_fee REAL DEFAULT 0,
+            other_cost REAL DEFAULT 0,
+            notes TEXT DEFAULT ''
+        );
     """)
     db.commit()
 
@@ -598,6 +626,98 @@ def finance_summary():
     students = db.execute("SELECT COUNT(*) as t FROM student_ext WHERE status='在读中'").fetchone()
     return {"total_revenue": float(rev["t"]), "total_cost": float(cost["t"]), "balance": float(rev["t"])-float(cost["t"]), "active_students": int(students["t"])}
 
+# ------- Dashboard -------
+
+def dashboard_summary():
+    db = get_db()
+    active = db.execute("SELECT COUNT(*) as cnt FROM student_ext WHERE status='在读中'").fetchone()
+    now = __import__('datetime').datetime.now()
+    month_start = now.strftime("%Y-%m") + "-01"
+    month_att = db.execute("SELECT COUNT(*) as cnt, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE lesson_date >= ?", [month_start]).fetchone()
+    total_purchases = db.execute("SELECT COALESCE(SUM(amount),0) as t FROM purchases WHERE actual_pay_date >= ?", [month_start]).fetchone()
+    return {
+        "active_students": int(active["cnt"]) if active else 0,
+        "month_lessons": int(month_att["cnt"]) if month_att else 0,
+        "month_present": int(month_att["present"]) if month_att else 0,
+        "month_revenue": float(total_purchases["t"]) if total_purchases else 0
+    }
+
+def dashboard_weekly():
+    """当周课表：从 config 和 class_roster 构建"""
+    cfg = config_all()
+    from datetime import datetime, timedelta
+    now = datetime.now()
+    monday = now - timedelta(days=now.weekday())
+    days = [(monday + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
+    day_names = ["周一","周二","周三","周四","周五","周六","周日"]
+    _DAY_MAP = {"一":"周一","二":"周二","三":"周三","四":"周四","五":"周五","六":"周六","日":"周日"}
+    result = []
+    for cn, units in cfg.items():
+        ct = list(units.values())[0].get("class_time", "")
+        cb = list(units.values())[0].get("created_by", "")
+        # Find the weekday from the class name
+        weekday_cn = cn[1] if len(cn) > 1 else ""
+        weekday = _DAY_MAP.get(weekday_cn, "")
+        roster = roster_get(cn)
+        result.append({
+            "class_name": cn, "time": ct, "teacher": cb,
+            "weekday": weekday, "students": roster,
+            "color": "#8b5cf6" if cb == "欣欣" else "#3b82f6"
+        })
+    return result
+
+# ------- Teacher Coefficients -------
+
+def teacher_coefficients_all():
+    db = get_db()
+    rows = db.execute("SELECT * FROM teacher_coefficients").fetchall()
+    return [{"teacher_name": r["teacher_name"], "coefficient": r["coefficient"], "hourly_rate": r["hourly_rate"]} for r in rows]
+
+def teacher_coefficient_set(name, coefficient, hourly_rate):
+    db = get_db()
+    db.execute("INSERT OR REPLACE INTO teacher_coefficients VALUES (?,?,?)", [name, float(coefficient), float(hourly_rate)])
+
+# ------- Revenue Splits -------
+
+def revenue_split_list(cycle=None):
+    db = get_db()
+    if cycle:
+        rows = db.execute("SELECT * FROM revenue_splits WHERE cycle=? ORDER BY id", [cycle]).fetchall()
+    else:
+        rows = db.execute("SELECT * FROM revenue_splits ORDER BY id").fetchall()
+    cols = ["id","cycle","content","expected_revenue","trial_count","formal_count","lesson_50pct","research_ratio","research_xinxin_coef","research_xinxin","research_sitong_coef","research_sitong","research_biscuit_coef","research_biscuit","source_20pct","new_enroll","recruitment_trial","renewal_remaining","neukol_fee","other_cost","notes"]
+    return [dict(zip(cols, [r[c] for c in cols])) for r in rows]
+
+def revenue_split_upsert(data):
+    db = get_db()
+    rid = data.get("id", 0)
+    fields = ["cycle","content","expected_revenue","trial_count","formal_count","lesson_50pct","research_ratio","research_xinxin_coef","research_xinxin","research_sitong_coef","research_sitong","research_biscuit_coef","research_biscuit","source_20pct","new_enroll","recruitment_trial","renewal_remaining","neukol_fee","other_cost","notes"]
+    vals = [data.get(f, 0) if f not in ("cycle","content","notes") else data.get(f, "") for f in fields]
+    if rid:
+        sets = ", ".join(f"{f}=?" for f in fields)
+        db.execute(f"UPDATE revenue_splits SET {sets} WHERE id=?", vals + [rid])
+    else:
+        placeholders = ",".join(["?"]*len(fields))
+        db.execute(f"INSERT INTO revenue_splits ({','.join(fields)}) VALUES ({placeholders})", vals)
+
+# ------- Attendance by Lesson -------
+
+def attendance_by_lesson(class_name=None, limit=50):
+    db = get_db()
+    sql = "SELECT class_name, unit_code, lesson_num, lesson_title, lesson_date, COUNT(*) as total, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE 1=1"
+    params = []
+    if class_name:
+        sql += " AND class_name=?"
+        params.append(class_name)
+    sql += " GROUP BY class_name, lesson_num, lesson_date ORDER BY lesson_date DESC, class_name LIMIT ?"
+    params.append(limit)
+    rows = db.execute(sql, params).fetchall()
+    return [{"class_name": r["class_name"], "lesson_num": r["lesson_num"], "lesson_title": r["lesson_title"], "lesson_date": r["lesson_date"], "total": r["total"], "present": r["present"]} for r in rows]
+
 # ------- Init -------
 init_db()
 init_pricing()
+# 初始化老师系数默认值
+for n, c, r in [("欣欣", 0.9, 0), ("思童", 0.1, 0), ("饼干", 0, 0)]:
+    if not get_db().execute("SELECT teacher_name FROM teacher_coefficients WHERE teacher_name=?", [n]).fetchone():
+        teacher_coefficient_set(n, c, r)

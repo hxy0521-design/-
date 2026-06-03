@@ -26,31 +26,44 @@ textarea{min-height:120px;font-family:monospace;resize:vertical}
 .st{font-size:12px;color:var(--sb);margin:6px 0}
 .op{padding:8px;margin:4px 0;border-radius:6px;background:#faf8f4;border:1px solid var(--bd);font-size:12px}.op a{color:var(--bl)}
 .pt{white-space:pre-wrap;font-size:12px;background:#faf8f4;padding:14px;border-radius:8px;border:1px solid var(--bd);line-height:1.6;text-align:left}
+.kpi-card{background:#fff;border-radius:8px;padding:14px 16px;text-align:center;border-top:3px solid #ccc;box-shadow:0 1px 3px #0000000f}
+.kpi-label{font-size:11px;color:var(--sb);margin-bottom:2px}
+.kpi-val{font-size:22px;font-weight:700}
+.kpi-u{font-size:13px;font-weight:400;color:var(--sb);margin-left:2px}
 </style></head><body>
 <div class="panel pl"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkXinxin" onchange="onUserChange()" style="width:auto;margin:0 2px">只看欣欣</label><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkBiscuit" onchange="onUserChange()" style="width:auto;margin:0 2px">只看饼干</label></div><h2>班级 <span style="font-size:10px;float:right"><a href="#" onclick="expandAll(event)" style="color:var(--sb)">展开</a> | <a href="#" onclick="collapseAll(event)" style="color:var(--sb)">折叠</a></span></h2><div id="classList"></div><button class="btn bo" style="margin-top:4px;width:100%" onclick="newUnitAll()">+ 新建单元</button><button class="btn bo" style="margin-top:4px;width:100%" onclick="newClass()">+ 新建班级</button><h3 style="margin-top:18px">输出文件</h3><div id="outputList"></div><div style="margin-top:8px;font-size:10px;color:var(--sb)"><input type="file" id="xlsxUpload" accept=".xlsx" style="display:none" onchange="uploadExcel(this.files[0])"><a href="#" onclick="document.getElementById('xlsxUpload').click();return false">导入Excel</a></div></div>
 <div class="panel pc"><div class="tabs" id="tabBar"></div><div id="mainTabs" style="display:flex;gap:4px;padding:4px 8px;border-bottom:2px solid #e2e8f0;margin-bottom:0;overflow-x:auto;flex-shrink:0"></div><div class="ed-body" id="editorBody"><div style="color:var(--sb);text-align:center;padding:60px 0">请从左侧选择班级</div></div></div>
 <div class="panel pr" id="previewPanel"><h2 style="cursor:pointer" onclick="togglePreview()"><span id="pvLabel">预览</span> <span id="pvHint" style="font-size:11px;color:var(--sb)">点击收起</span></h2><div id="previewContent" style="font-size:12px;color:var(--sb)">粘贴发言后在此预览</div></div>
 <script>
 var API=window.location.origin+'/api';
-var tabs={},activeTab=null,activeMainTab='edit',cfgReady=false;
+var tabs={},activeTab=null,activeMainTab='overview',cfgReady=false;
 function renderMainTabs(){
   var tb=document.getElementById('mainTabs');if(!tb)return;
-  var items=[{id:'edit',label:'编辑'},{id:'finance',label:'财务'},{id:'students',label:'学生'},{id:'pricing',label:'定价'}];
+  var items=[{id:'overview',label:'总览'},{id:'schedule',label:'排课'},{id:'edit',label:'编辑'},{id:'attendance',label:'销课'},{id:'students',label:'学生'},{id:'payments',label:'缴费'},{id:'splits',label:'分账'},{id:'pricing',label:'定价'}];
   tb.innerHTML='';
   items.forEach(function(it){
     var t=document.createElement('button');t.textContent=it.label;
-    t.style.cssText='padding:6px 14px;border-radius:8px 8px 0 0;border:none;background:'+(activeMainTab===it.id?'var(--bl)':'transparent')+';color:'+(activeMainTab===it.id?'#fff':'var(--sb)')+';font-size:13px;cursor:pointer;font-weight:'+(activeMainTab===it.id?'600':'400');
+    t.style.cssText='padding:5px 10px;border-radius:8px 8px 0 0;border:none;background:'+(activeMainTab===it.id?'var(--bl)':'transparent')+';color:'+(activeMainTab===it.id?'#fff':'var(--sb)')+';font-size:12px;cursor:pointer;font-weight:'+(activeMainTab===it.id?'600':'400');
     t.onclick=function(){activeMainTab=it.id;renderMainTabs();switchMainTab()};
     tb.appendChild(t);
   });
 }
 function switchMainTab(){
   var el=document.getElementById('editorBody');if(!el)return;
-  if(activeMainTab==='edit'&&activeTab)renderEditor();
-  else if(activeMainTab==='finance')renderFinanceTab();
+  var pl=document.querySelector('.pl');var pr=document.getElementById('previewPanel');
+  var isEdit=activeMainTab==='edit';
+  if(pl)pl.style.display=isEdit?'block':'none';
+  if(pr)pr.style.display=isEdit?'block':'none';
+  document.querySelector('.pc').style.width=isEdit?'':'100%';
+  if(activeMainTab==='overview')renderOverviewTab();
+  else if(activeMainTab==='schedule')renderScheduleTab();
+  else if(activeMainTab==='edit'){if(activeTab)renderEditor();else el.innerHTML='<div style=\"color:var(--sb);text-align:center;padding:60px 0\">请从左侧选择班级</div>'}
+  else if(activeMainTab==='attendance')renderAttendanceTab();
   else if(activeMainTab==='students')renderStudentTab();
+  else if(activeMainTab==='payments')renderPaymentTab();
+  else if(activeMainTab==='splits')renderRevenueSplitTab();
   else if(activeMainTab==='pricing')renderPricingTab();
-  else el.innerHTML='<div style="color:var(--sb);text-align:center;padding:60px 0">请从左侧选择班级</div>';
+  else el.innerHTML='<div style=\"color:var(--sb);text-align:center;padding:60px 0\">请从左侧选择班级</div>';
 }
 
 function getCheckedUsers(){var u=[];if(document.getElementById('chkXinxin')&&document.getElementById('chkXinxin').checked)u.push('欣欣');if(document.getElementById('chkBiscuit')&&document.getElementById('chkBiscuit').checked)u.push('饼干');return u}
@@ -437,6 +450,100 @@ setInterval(saveAll,300000);
 window.addEventListener('beforeunload',saveAll);
 
 // ====== 财务面板 ======
+// ====== Tab 1: 总览 ======
+function renderOverviewTab(){
+  var el=document.getElementById('editorBody');if(!el)return;
+  fetch(API+'/dashboard/summary').then(function(r){return r.json()}).then(function(s){
+    fetch(API+'/dashboard/weekly').then(function(r2){return r2.json()}).then(function(week){
+      var h='<div style="padding:16px">';
+      h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">';
+      h+='<div class="kpi-card" style="border-top-color:#16a34a"><div class="kpi-label">在读学生</div><div class="kpi-val">'+s.active_students+'<span class="kpi-u">人</span></div></div>';
+      h+='<div class="kpi-card" style="border-top-color:#3b82f6"><div class="kpi-label">本月已销课</div><div class="kpi-val">'+s.month_present+'<span class="kpi-u">次</span></div></div>';
+      h+='<div class="kpi-card" style="border-top-color:#8b5cf6"><div class="kpi-label">本月待销课</div><div class="kpi-val">'+(s.month_lessons - s.month_present)+'<span class="kpi-u">次</span></div></div>';
+      h+='<div class="kpi-card" style="border-top-color:#d97706"><div class="kpi-label">本月收入</div><div class="kpi-val">¥'+s.month_revenue.toFixed(0)+'</div></div>';
+      h+='</div>';
+      h+='<h3 style="margin:12px 0 8px">当周课表</h3><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:#e2e8f0;border-radius:8px;overflow:hidden">';
+      var days=['周一','周二','周三','周四','周五','周六','周日'];
+      days.forEach(function(d){h+='<div style="background:#f8fafc;padding:6px;text-align:center;font-size:11px;font-weight:600;color:var(--sb)">'+d+'</div>'});
+      days.forEach(function(d){
+        h+='<div style="background:#fff;padding:6px;min-height:60px;font-size:10px">';
+        week.forEach(function(w){if(w.weekday===d)h+='<div style="background:'+w.color+'15;border-left:3px solid '+w.color+';padding:3px 5px;margin:1px 0;border-radius:3px;font-size:10px"><b>'+esc(w.class_name)+'</b><br>'+esc(w.time)+' ('+w.students.length+'人)</div>'});
+        h+='</div>';
+      });
+      h+='</div></div>';el.innerHTML=h;
+    });
+  });
+}
+// ====== Tab 2: 排课表 (placeholder) =====
+function renderScheduleTab(){
+  var el=document.getElementById('editorBody');if(!el)return;
+  fetch(API+'/dashboard/weekly').then(function(r){return r.json()}).then(function(week){
+    var h='<div style="padding:16px"><h3>排课表</h3><div style="font-size:11px;color:var(--sb);margin-bottom:12px">当周课表 · 预留 API 接入</div>';
+    var days=['周一','周二','周三','周四','周五','周六','周日'];
+    h+='<div style="display:grid;grid-template-columns:repeat(7,minmax(100px,1fr));gap:2px;background:#e2e8f0;border-radius:8px;overflow:hidden">';
+    days.forEach(function(d){h+='<div style="background:#f8fafc;padding:8px;text-align:center;font-size:12px;font-weight:700">'+d+'</div>'});
+    days.forEach(function(d){
+      h+='<div style="background:#fff;padding:8px;min-height:80px;font-size:11px">';
+      week.forEach(function(w){if(w.weekday===d)h+='<div style="border-left:4px solid '+w.color+';padding:4px 6px;margin:2px 0;border-radius:4px;background:'+w.color+'10"><b>'+esc(w.class_name)+'</b><br><span style="color:var(--sb)">'+esc(w.time)+'</span><br><span style="font-size:10px;color:var(--sb)">'+w.students.join(', ')+'</span></div>'});
+      h+='</div>';
+    });
+    h+='</div></div>';el.innerHTML=h;
+  });
+}
+// ====== Tab 4: 销课 =====
+function renderAttendanceTab(){
+  var el=document.getElementById('editorBody');if(!el)return;
+  var h='<div style="padding:16px"><h3>销课记录</h3><select id="attClassFilter" onchange="loadAttLessons()" style="width:auto;padding:4px 8px;margin:8px 0;font-size:12px"><option value="">全部班级</option></select><div id="attLessonList" style="font-size:12px">加载中...</div></div>';
+  el.innerHTML=h;
+  // Populate class filter
+  var sel=document.getElementById('attClassFilter');
+  Object.keys(cfgInfo).forEach(function(c){sel.innerHTML+='<option value=\"'+c+'\">'+c+'</option>'});
+  loadAttLessons();
+}
+function loadAttLessons(){
+  var cls=document.getElementById('attClassFilter')?document.getElementById('attClassFilter').value:'';
+  fetch(API+'/attendance/by-lesson?class='+encodeURIComponent(cls)+'&limit=50').then(function(r){return r.json()}).then(function(rows){
+    var el=document.getElementById('attLessonList');if(!el)return;
+    if(!rows.length){el.innerHTML='<div class="st">暂无记录</div>';return}
+    var h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="border-bottom:2px solid #e2e8f0;color:var(--sb)"><th>班级</th><th>课节</th><th>日期</th><th>出席/总数</th><th>出勤率</th></tr>';
+    rows.forEach(function(r){var pct=r.total>0?Math.round(r.present/r.total*100):0;h+='<tr style="border-bottom:1px solid #f1f5f9"><td>'+esc(r.class_name)+'</td><td>'+esc(r.lesson_title)+' #'+r.lesson_num+'</td><td style="font-size:10px">'+(r.lesson_date||'').slice(0,10)+'</td><td><b>'+r.present+'</b>/'+r.total+'</td><td><div style="height:4px;background:#e2e8f0;border-radius:2px;width:60px"><div style="height:100%;width:'+pct+'%;background:'+(pct>70?'#16a34a':(pct>40?'#d97706':'#dc2626'))+';border-radius:2px"></div></div><span style="font-size:10px;margin-left:4px">'+pct+'%</span></td></tr>'});
+    h+='</table></div>';el.innerHTML=h;
+  });
+}
+// ====== Tab 6: 缴费记录 =====
+var payPage=1;
+function renderPaymentTab(){
+  var el=document.getElementById('editorBody');if(!el)return;payPage=1;
+  el.innerHTML='<div style="padding:16px"><h3>缴费记录</h3><div id="payTable" style="font-size:12px">加载中...</div><div id="payPager" style="text-align:center;margin-top:12px"></div></div>';
+  loadPayments();
+}
+function loadPayments(){
+  fetch(API+'/purchases?page='+payPage+'&limit=100').then(function(r){return r.json()}).then(function(d){
+    var el=document.getElementById('payTable');var pg=document.getElementById('payPager');if(!el)return;
+    var h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="border-bottom:2px solid #e2e8f0;color:var(--sb)"><th>学生</th><th>分段</th><th>课型</th><th>方式</th><th>优惠</th><th>课次</th><th>金额</th><th>日期</th><th>操作</th></tr>';
+    d.rows.forEach(function(r){h+='<tr style="border-bottom:1px solid #f1f5f9"><td><b>'+esc(r.student_name)+'</b></td><td>'+esc(r.segment||'')+'</td><td>'+esc(r.course_type||'')+'</td><td>'+esc(r.method||'')+'</td><td>'+esc(r.discount_type||'')+'</td><td>'+r.lesson_count+'</td><td>¥'+(r.amount||0)+'</td><td style="font-size:10px">'+(r.actual_pay_date||'').slice(0,10)+'</td><td><button onclick="deletePay(\''+r.id+'\')" style="border:none;background:none;color:var(--rd);cursor:pointer;font-size:11px">删除</button></td></tr>'});
+    h+='</table></div>';el.innerHTML=h;
+    var totalPages=Math.ceil(d.total/100);
+    pg.innerHTML='<button onclick="payPage=Math.max(1,payPage-1);loadPayments()" style="padding:4px 10px;margin:0 2px">←</button><span style="font-size:12px;margin:0 8px">'+payPage+'/'+totalPages+' (共'+d.total+'条)</span><button onclick="payPage=Math.min('+totalPages+',payPage+1);loadPayments()" style="padding:4px 10px;margin:0 2px">→</button>';
+  });
+}
+function deletePay(id){if(!confirm('删除此缴费记录？'))return;fetch(API+'/finance/delete-purchase',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(function(r){return r.json()}).then(function(){loadPayments()})}
+// ====== Tab 7: 分账 =====
+function renderRevenueSplitTab(){
+  var el=document.getElementById('editorBody');if(!el)return;
+  fetch(API+'/teacher-coefficients').then(function(r){return r.json()}).then(function(coefs){
+    fetch(API+'/revenue-splits').then(function(r2){return r2.json()}).then(function(rows){
+      var h='<div style="padding:16px"><h3>分账管理</h3>';
+      h+='<div style="display:flex;gap:8px;margin:8px 0;flex-wrap:wrap"><b>教研系数：</b>';
+      coefs.forEach(function(c){h+='<span style="font-size:11px">'+esc(c.teacher_name)+' <input value="'+c.coefficient+'" style="width:40px;padding:2px 4px;font-size:11px" onchange="saveTeacherCoef(\''+esc(c.teacher_name)+'\',this.value,\''+c.hourly_rate+'\')"> 课时费<input value="'+c.hourly_rate+'" style="width:50px;padding:2px 4px;font-size:11px" onchange="saveTeacherCoef(\''+esc(c.teacher_name)+'\',\''+c.coefficient+'\',this.value)"></span>'});
+      h+='</div>';
+      h+='<div style="overflow-x:auto;margin-top:12px"><table style="width:100%;border-collapse:collapse;font-size:11px"><tr style="border-bottom:2px solid #e2e8f0;color:var(--sb)"><th>周期</th><th>内容</th><th>收入</th><th>课时50%</th><th>欣</th><th>童</th><th>饼</th><th>生源20%</th></tr>';
+      rows.forEach(function(r){h+='<tr style="border-bottom:1px solid #f1f5f9"><td>'+esc(r.cycle)+'</td><td>'+esc(r.content)+'</td><td>'+r.expected_revenue+'</td><td>'+r.lesson_50pct+'</td><td>'+r.research_xinxin+'</td><td>'+r.research_sitong+'</td><td>'+r.research_biscuit+'</td><td>'+r.source_20pct+'</td></tr>'});
+      h+='</table></div></div>';el.innerHTML=h;
+    });
+  });
+}
+function saveTeacherCoef(name,coef,rate){fetch(API+'/teacher-coefficients',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({teacher_name:name,coefficient:parseFloat(coef),hourly_rate:parseFloat(rate)})})}
 var financeSubTab='revenue';
 function renderFinanceTab(){
   var el=document.getElementById('editorBody');if(!el)return;

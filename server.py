@@ -948,6 +948,59 @@ def students_upsert():
     db.student_ext_upsert(data.get("student_name", ""), data)
     return jsonify({"status": "ok"})
 
+# ====== 总览 Dashboard ======
+
+@app.route("/api/dashboard/summary")
+def dashboard_summary():
+    return jsonify(db.dashboard_summary())
+
+@app.route("/api/dashboard/weekly")
+def dashboard_weekly():
+    return jsonify(db.dashboard_weekly())
+
+# ====== 销课 by Lesson ======
+
+@app.route("/api/attendance/by-lesson")
+def attendance_by_lesson():
+    cls = request.args.get("class", "")
+    limit = int(request.args.get("limit", 50))
+    return jsonify(db.attendance_by_lesson(class_name=cls or None, limit=limit))
+
+# ====== 缴费分页 ======
+
+@app.route("/api/purchases")
+def purchases_paginated():
+    page = int(request.args.get("page", 1))
+    limit = int(request.args.get("limit", 100))
+    offset = (page - 1) * limit
+    db2 = db.get_db()
+    total = db2.execute("SELECT COUNT(*) as cnt FROM purchases").fetchone()
+    rows = db2.execute("SELECT * FROM purchases ORDER BY actual_pay_date DESC, id DESC LIMIT ? OFFSET ?", [limit, offset]).fetchall()
+    cols = ["id","student_name","student_code","charge_code","segment","course_type","method","discount_type","lesson_count","amount","refund_amount","actual_pay_date","order_id","xiaohongshu_received","notes"]
+    return jsonify({"total": int(total["cnt"]) if total else 0, "page": page, "limit": limit, "rows": [dict(zip(cols, [r[c] for c in cols])) for r in rows]})
+
+# ====== 分账 ======
+
+@app.route("/api/revenue-splits")
+def revenue_splits_list():
+    cycle = request.args.get("cycle", "")
+    return jsonify(db.revenue_split_list(cycle=cycle or None))
+
+@app.route("/api/revenue-splits", methods=["POST"])
+def revenue_splits_save():
+    db.revenue_split_upsert(request.json)
+    return jsonify({"status": "ok"})
+
+@app.route("/api/teacher-coefficients")
+def teacher_coefficients_list():
+    return jsonify(db.teacher_coefficients_all())
+
+@app.route("/api/teacher-coefficients", methods=["POST"])
+def teacher_coefficients_save():
+    data = request.json
+    db.teacher_coefficient_set(data["teacher_name"], data["coefficient"], data["hourly_rate"])
+    return jsonify({"status": "ok"})
+
 if __name__ == "__main__":
     print(f"追光π 课后素材 → http://localhost:{_PORT}")
     if not os.environ.get("DEEPSEEK_API_KEY"):
