@@ -713,7 +713,7 @@ function savePriceByInputs(pInp,mInp){
 function showPricing(){activeMainTab='pricing';renderMainTabs();switchMainTab()}
 
 // Render main tabs on page load + pre-fetch all tab data
-setTimeout(function(){renderMainTabs()},100);
+setTimeout(function(){renderMainTabs();switchMainTab()},100);
 setTimeout(function(){
   cachedFetch(API+'/dashboard/summary');cachedFetch(API+'/dashboard/weekly');
   cachedFetch(API+'/students');cachedFetch(API+'/pricing');
