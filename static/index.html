@@ -138,7 +138,7 @@ function renderClassList(){
   });
 }
 var cfgInfo={},allLessons={},zgUser='';
-function fetchConfig(){fetch(API+'/config').then(function(r){return r.json()}).then(function(d){cfgInfo=d.classes||d;allLessons=d.lessons||{};zgUser=d.zg_user||'';renderClassList()}).catch(function(){})}
+function fetchConfig(){fetch(API+'/config').then(function(r){return r.json()}).then(function(d){cfgInfo=d.classes||d;allLessons=d.lessons||{};zgUser=d.zg_user||'';renderClassList()}).catch(function(e){console.log('Config load failed, retrying...');setTimeout(fetchConfig,1000)})}
 fetchConfig();
 
 function newClass(){
