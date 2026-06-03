@@ -1002,4 +1002,4 @@ if __name__ == "__main__":
         print("  Tip: export DEEPSEEK_API_KEY=sk-xxx  → 启用 AI 课后反馈")
     else:
         print("  AI 课后反馈: 已启用 (DeepSeek)")
-    app.run(host="127.0.0.1", port=_PORT, debug=False)
+    app.run(host="127.0.0.1", port=_PORT, debug=False, threaded=True)
