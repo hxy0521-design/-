@@ -185,7 +185,7 @@ function renderClassList(){
   });
 }
 var cfgInfo={},allLessons={},zgUser='';
-function fetchConfig(retry){retry=retry||0;fetch(API+'/config').then(function(r){return r.json()}).then(function(d){cfgInfo=d.classes||d;allLessons=d.lessons||{};zgUser=d.zg_user||'';renderClassList();renderMainTabs();switchMainTab()}).catch(function(e){if(retry<5)setTimeout(function(){fetchConfig(retry+1)},1000*retry)})}
+function fetchConfig(retry){retry=retry||0;fetch(API+'/config').then(function(r){return r.json()}).then(function(d){cfgInfo=d.classes||d;allLessons=d.lessons||{};zgUser=d.zg_user||'';window._summary=d.summary||{};window._weekly=d.weekly||[];renderClassList();renderMainTabs();switchMainTab()}).catch(function(e){if(retry<5)setTimeout(function(){fetchConfig(retry+1)},1000*retry)})}
 fetchConfig();
 
 function newClass(){
@@ -512,26 +512,24 @@ window.addEventListener('beforeunload',saveAll);
 // ====== Tab 1: 总览 ======
 function renderOverviewTab(){
   var el=document.getElementById('editorBody');if(!el)return;
-  cachedFetch(API+'/dashboard/summary').then(function(r){return r.json()}).then(function(s){
-    cachedFetch(API+'/dashboard/weekly').then(function(r2){return r2.json()}).then(function(week){
-      var h='<div style="padding:16px">';
-      h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">';
-      h+='<div class="kpi-card" style="border-top-color:#16a34a"><div class="kpi-label">在读学生</div><div class="kpi-val">'+s.active_students+'<span class="kpi-u">人</span></div></div>';
-      h+='<div class="kpi-card" style="border-top-color:#3b82f6"><div class="kpi-label">本月已销课</div><div class="kpi-val">'+s.month_present+'<span class="kpi-u">次</span></div></div>';
-      h+='<div class="kpi-card" style="border-top-color:#8b5cf6"><div class="kpi-label">本月待销课</div><div class="kpi-val">'+(s.month_lessons - s.month_present)+'<span class="kpi-u">次</span></div></div>';
-      h+='<div class="kpi-card" style="border-top-color:#d97706"><div class="kpi-label">本月收入</div><div class="kpi-val">¥'+s.month_revenue.toFixed(0)+'</div></div>';
-      h+='</div>';
-      h+='<h3 style="margin:12px 0 8px">当周课表</h3><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:#e2e8f0;border-radius:8px;overflow:hidden">';
-      var days=['周一','周二','周三','周四','周五','周六','周日'];
-      days.forEach(function(d){h+='<div style="background:#f8fafc;padding:6px;text-align:center;font-size:11px;font-weight:600;color:var(--sb)">'+d+'</div>'});
-      days.forEach(function(d){
-        h+='<div style="background:var(--surface);padding:6px;min-height:60px;font-size:10px">';
-        week.forEach(function(w){if(w.weekday===d)h+='<div style="background:'+w.color+'15;border-left:3px solid '+w.color+';padding:3px 5px;margin:1px 0;border-radius:3px;font-size:10px"><b>'+esc(w.class_name)+'</b><br>'+esc(w.time)+' ('+w.students.length+'人)</div>'});
-        h+='</div>';
-      });
-      h+='</div></div>';el.innerHTML=h;
-    });
+  // Use preloaded data from config response
+  var s=window._summary||{};var week=window._weekly||[];
+  var h='<div style="padding:16px">';
+  h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">';
+  h+='<div class="kpi-card" style="border-top-color:var(--green)"><div class="kpi-label">在读学生</div><div class="kpi-val">'+(s.active_students||0)+'<span class="kpi-u">人</span></div></div>';
+  h+='<div class="kpi-card" style="border-top-color:var(--accent)"><div class="kpi-label">本月已销课</div><div class="kpi-val">'+(s.month_present||0)+'<span class="kpi-u">次</span></div></div>';
+  h+='<div class="kpi-card" style="border-top-color:var(--sky)"><div class="kpi-label">本月待销课</div><div class="kpi-val">'+((s.month_lessons||0)-(s.month_present||0))+'<span class="kpi-u">次</span></div></div>';
+  h+='<div class="kpi-card" style="border-top-color:var(--orange)"><div class="kpi-label">本月收入</div><div class="kpi-val">¥'+(s.month_revenue||0).toFixed(0)+'</div></div>';
+  h+='</div>';
+  h+='<h3 style="margin:12px 0 8px">当周课表</h3><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border-radius:var(--radius);overflow:hidden">';
+  var days=['周一','周二','周三','周四','周五','周六','周日'];
+  days.forEach(function(d){h+='<div style="background:var(--surface2);padding:8px;text-align:center;font-size:11px;font-weight:700;color:var(--tx2)">'+d+'</div>'});
+  days.forEach(function(d){
+    h+='<div style="background:var(--surface);padding:6px;min-height:60px;font-size:10px">';
+    week.forEach(function(w){if(w.weekday===d)h+='<div style="background:'+w.color+'20;border-left:3px solid '+w.color+';padding:4px 6px;margin:2px 0;border-radius:4px;font-size:10px"><b>'+esc(w.class_name)+'</b><br>'+esc(w.time)+' ('+w.students.length+'人)</div>'});
+    h+='</div>';
   });
+  h+='</div></div>';el.innerHTML=h;
 }
 // ====== Tab 2: 排课表 (placeholder) =====
 function renderScheduleTab(){

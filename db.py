@@ -304,17 +304,27 @@ def lesson_list(cls_name, unit_code):
     return lesson_list_batch().get(cls_name, {}).get(unit_code, [])
 
 def config_and_lessons():
-    """一次查询返回 config 和 lessons 全量数据"""
+    """一次查询返回 config、lessons、dashboard summary、weekly 全量数据"""
     db = get_db()
+    now = __import__('datetime').datetime.now()
+    month_str = now.strftime("%Y-%m")
     req = {"requests": [
         {"type": "execute", "stmt": {"sql": "SELECT class_name, unit_code, unit_name, path, created_by, class_time FROM config ORDER BY class_name"}},
         {"type": "execute", "stmt": {"sql": "SELECT class_name, unit_code, lesson_num, title, updated_at FROM lessons ORDER BY class_name, unit_code, lesson_num"}},
+        {"type": "execute", "stmt": {"sql": "SELECT COUNT(*) as cnt FROM student_ext WHERE status='在读中'"}},
+        {"type": "execute", "stmt": {"sql": f"SELECT COUNT(*) as cnt, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE lesson_date LIKE '{month_str}%'"}},
+        {"type": "execute", "stmt": {"sql": f"SELECT COALESCE(SUM(amount),0) as t FROM purchases WHERE actual_pay_date LIKE '{month_str}%'"}},
         {"type": "close"}
     ]}
     raw = db._req(req)
     results = raw.get('results', [])
 
-    # Parse config result
+    def _v(val, default=0):
+        if not val: return default
+        if isinstance(val, dict): val = val.get("value", default)
+        return int(val) if val and str(val).replace('-','').isdigit() else (float(val) if val else default)
+
+    # Parse config
     cfg = {}
     cfg_rows = db._parse_result({"results": [results[0]]})
     for r in cfg_rows:
@@ -325,7 +335,7 @@ def config_and_lessons():
             "created_by": r["created_by"], "class_time": r["class_time"]
         }
 
-    # Parse lessons result
+    # Parse lessons
     lessons = {}
     lesson_rows = db._parse_result({"results": [results[1]]})
     for r in lesson_rows:
@@ -340,7 +350,37 @@ def config_and_lessons():
             "date": (r["updated_at"] or "")[:10],
             "unit_name": unit_name
         })
-    return cfg, lessons
+
+    # Parse dashboard summary
+    active = db._parse_result({"results": [results[2]]}).fetchone()
+    month_att = db._parse_result({"results": [results[3]]}).fetchone()
+    month_rev = db._parse_result({"results": [results[4]]}).fetchone()
+    summary = {
+        "active_students": _v(active["cnt"]) if active else 0,
+        "month_lessons": _v(month_att["cnt"]) if month_att else 0,
+        "month_present": _v(month_att["present"]) if month_att else 0,
+        "month_revenue": float(month_rev["t"]) if month_rev and month_rev["t"] else 0.0
+    }
+
+    # Build weekly schedule from config
+    from datetime import datetime, timedelta
+    now_dt = datetime.now()
+    monday = now_dt - timedelta(days=now_dt.weekday())
+    _DAY_MAP = {"一":"周一","二":"周二","三":"周三","四":"周四","五":"周五","六":"周六","日":"周日"}
+    weekly = []
+    for cn, units in cfg.items():
+        ct = list(units.values())[0].get("class_time", "")
+        cb = list(units.values())[0].get("created_by", "")
+        weekday_cn = cn[1] if len(cn) > 1 else ""
+        weekday = _DAY_MAP.get(weekday_cn, "")
+        roster = roster_get(cn)
+        weekly.append({
+            "class_name": cn, "time": ct, "teacher": cb,
+            "weekday": weekday, "students": roster,
+            "color": "#8b5cf6" if cb == "欣欣" else "#3b82f6"
+        })
+
+    return cfg, lessons, summary, weekly
 
 def lesson_list_batch():
     """一次查询返回所有课节 {class_name: {unit_code: [{lesson_dict}, ...]}}"""

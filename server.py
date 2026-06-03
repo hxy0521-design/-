@@ -100,12 +100,12 @@ def test_page():
 @app.route("/api/config")
 def get_config_api():
     from collections import OrderedDict
-    cfg, all_lessons = db.config_and_lessons()
+    cfg, all_lessons, summary, weekly = db.config_and_lessons()
     out = OrderedDict()
     for k in sort_class_names(cfg.keys()):
         out[k] = cfg[k]
     zg_user = os.environ.get("ZG_USER", "")
-    return jsonify({"classes": out, "lessons": all_lessons, "zg_user": zg_user})
+    return jsonify({"classes": out, "lessons": all_lessons, "zg_user": zg_user, "summary": summary, "weekly": weekly})
 
 @app.route("/api/pick-folder")
 def pick_folder():
