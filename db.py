@@ -717,7 +717,7 @@ def attendance_by_lesson(class_name=None, limit=50):
     def _v(val, default=0):
         if isinstance(val, dict): val = val.get("value", default)
         return int(val) if val else default
-    sql = "SELECT class_name, unit_code, lesson_num, lesson_title, lesson_date, COUNT(*) as total, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE 1=1 AND lesson_num > 0"
+    sql = "SELECT class_name, unit_code, lesson_num, lesson_title, lesson_date, COUNT(*) as total, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE 1=1"
     params = []
     if class_name:
         sql += " AND class_name=?"
