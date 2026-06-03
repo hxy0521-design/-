@@ -197,6 +197,14 @@ def attendance_by_lesson(class_name=None, limit=50):
     result = []
     for r in rows:
         cn = r["class_name"]
+        # Clean title: take first segment before comma or 【
+        raw_title = r["lesson_title"] or ""
+        if "," in raw_title: raw_title = raw_title.split(",")[0]
+        # Extract lesson number from end like "-5" or "-4"
+        import re
+        lesson_num_match = re.search(r'-(\d+)$', raw_title)
+        lesson_num = lesson_num_match.group(1) if lesson_num_match else ""
+        display_title = raw_title
         cls_cfg = cfg.get(cn, {})
         unit_info = list(cls_cfg.values())[0] if cls_cfg else {}
         segment_name = unit_info.get("name", "")
@@ -222,7 +230,7 @@ def attendance_by_lesson(class_name=None, limit=50):
                 break
         lesson_revenue = present * price
         result.append({
-            "class_name": cn, "lesson_title": r["lesson_title"],
+            "class_name": cn, "lesson_title": display_title, "lesson_num": lesson_num,
             "lesson_date": r["lesson_date"], "weekday": weekday,
             "segment": seg_display, "time": class_time,
             "total": total, "present": present,
