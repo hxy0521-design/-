@@ -544,8 +544,17 @@ function renderAttendanceTab(){
   el.innerHTML=h;
   var sel=document.getElementById('attClassFilter');
   Object.keys(cfgInfo).forEach(function(c){sel.innerHTML+='<option value=\"'+c+'\">'+c+'</option>'});
-  // Populate cycle filter after first load
+  // Populate cycle filter from all data (unfiltered)
+  fetch(API+'/attendance/by-lesson?limit=500').then(function(r){return r.json()}).then(function(allRows){
+    var cycSel=document.getElementById('attCycleFilter');if(!cycSel)return;
+    var cycles={};allRows.forEach(function(r){if(r.cycle)cycles[r.cycle]=1});
+    Object.keys(cycles).sort().forEach(function(c){cycSel.innerHTML+='<option value=\"'+c+'\">'+c+'</option>'});
+  });
   loadAttLessons();
+}
+function cycleColor(c){
+  var colors={'2509试听期':'#94a3b8','2510正式课':'#3b82f6','2511正式课':'#6366f1','2512正式课':'#8b5cf6','2601正式课':'#14b8a6','2602寒假班':'#f59e0b','2603春季班':'#22c55e','2604春季班':'#ec4899','2605春季班':'#38bdf8','2606春季班':'#f97316'};
+  return colors[c]||'#94a3b8';
 }
 function loadAttLessons(){
   var cls=document.getElementById('attClassFilter')?document.getElementById('attClassFilter').value:'';
@@ -561,7 +570,7 @@ function loadAttLessons(){
       var pct=r.total>0?Math.round(r.present/r.total*100):0;
       h+='<div class="section-card" style="padding:16px">';
       h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
-      h+='<div><b style="font-size:14px">'+esc(r.class_name)+'</b> <span style="color:var(--tx3);font-size:12px">'+esc(r.segment)+' · '+esc(r.time)+' · '+esc(r.weekday)+'</span>'+(r.cycle?' <span class="tag tag-blue" style="font-size:10px">'+esc(r.cycle)+'</span>':'')+'</div>';
+      h+='<div><b style="font-size:14px">'+esc(r.class_name)+'</b> <span style="color:var(--tx3);font-size:12px">'+esc(r.segment)+' · '+esc(r.time)+' · '+esc(r.weekday)+'</span>'+(r.cycle?' <span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:600;color:#fff;background:'+cycleColor(r.cycle)+'">'+esc(r.cycle)+'</span>':'')+'</div>';
       h+='<div style="text-align:right"><span style="font-weight:700;font-size:16px">'+r.present+'/'+r.total+'人</span> <span style="color:var(--tx3);font-size:11px">出席</span></div>';
       h+='</div>';
       h+='<div style="font-size:13px;color:var(--tx);margin-bottom:4px"><b>'+esc(r.lesson_title)+'</b></div>';
