@@ -971,6 +971,13 @@ def dashboard_weekly():
 
 # ====== 销课 by Lesson ======
 
+@app.route("/api/attendance/cycles")
+def attendance_cycles():
+    db2 = db.get_db()
+    cur = db2.cursor()
+    cur.execute("SELECT DISTINCT cycle FROM attendance WHERE cycle!='' ORDER BY cycle")
+    return jsonify([r[0] for r in cur.fetchall()])
+
 @app.route("/api/attendance/by-lesson")
 def attendance_by_lesson():
     cls = request.args.get("class", "")

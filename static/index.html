@@ -544,11 +544,11 @@ function renderAttendanceTab(){
   el.innerHTML=h;
   var sel=document.getElementById('attClassFilter');
   Object.keys(cfgInfo).forEach(function(c){sel.innerHTML+='<option value=\"'+c+'\">'+c+'</option>'});
-  // Populate cycle filter from all data (unfiltered)
-  fetch(API+'/attendance/by-lesson?limit=500').then(function(r){return r.json()}).then(function(allRows){
+  // Populate cycle filter
+  fetch(API+'/attendance/cycles').then(function(r){return r.json()}).then(function(cycles){
     var cycSel=document.getElementById('attCycleFilter');if(!cycSel)return;
-    var cycles={};allRows.forEach(function(r){if(r.cycle)cycles[r.cycle]=1});
-    Object.keys(cycles).sort().forEach(function(c){cycSel.innerHTML+='<option value=\"'+c+'\">'+c+'</option>'});
+    cycSel.innerHTML='<option value=\"\">全部周期</option>';
+    cycles.forEach(function(c){cycSel.innerHTML+='<option value=\"'+c+'\">'+c+'</option>'});
   });
   loadAttLessons();
 }
@@ -579,12 +579,6 @@ function loadAttLessons(){
       if(r.leave_notes)h+='<div style="font-size:10px;color:var(--coral)">备注: '+esc(r.leave_notes)+'</div>';
       h+='</div>';
     });
-    // Populate cycle filter if not yet populated
-    var cycSel=document.getElementById('attCycleFilter');
-    if(cycSel&&cycSel.options.length<=1){
-      var cycles={};rows.forEach(function(r){if(r.cycle)cycles[r.cycle]=1});
-      Object.keys(cycles).sort().forEach(function(c){cycSel.innerHTML+='<option value=\"'+c+'\">'+c+'</option>'});
-    }
     el.innerHTML=h;
   });
 }
