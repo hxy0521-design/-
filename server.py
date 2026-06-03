@@ -1013,4 +1013,19 @@ if __name__ == "__main__":
         print("  Tip: export DEEPSEEK_API_KEY=sk-xxx  → 启用 AI 课后反馈")
     else:
         print("  AI 课后反馈: 已启用 (DeepSeek)")
+    # 预热 TiDB 连接和缓存
+    print("  预热中...")
+    try:
+        db.get_db()
+        from collections import OrderedDict
+        cfg, all_lessons, summary, weekly = db.config_and_lessons()
+        out = OrderedDict()
+        for k in sort_class_names(cfg.keys()): out[k] = cfg[k]
+        zg_user = os.environ.get("ZG_USER", "")
+        import time
+        _CONFIG_CACHE["data"] = {"classes": out, "lessons": all_lessons, "zg_user": zg_user, "summary": summary, "weekly": weekly}
+        _CONFIG_CACHE["ts"] = time.time()
+        print("  数据库就绪 ✓")
+    except Exception as e:
+        print(f"  预热跳过: {e}")
     app.run(host="127.0.0.1", port=_PORT, debug=False, threaded=True)
