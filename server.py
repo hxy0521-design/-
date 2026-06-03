@@ -97,15 +97,26 @@ def index():
 def test_page():
     return send_from_directory(os.path.join(BASE_DIR, "static"), "test.html")
 
+_CONFIG_CACHE = {"data": None, "ts": 0}
+def _clear_config_cache():
+    _CONFIG_CACHE["ts"] = 0
+
 @app.route("/api/config")
 def get_config_api():
+    import time
+    now = time.time()
+    if _CONFIG_CACHE["data"] and (now - _CONFIG_CACHE["ts"]) < 60:
+        return jsonify(_CONFIG_CACHE["data"])
     from collections import OrderedDict
     cfg, all_lessons, summary, weekly = db.config_and_lessons()
     out = OrderedDict()
     for k in sort_class_names(cfg.keys()):
         out[k] = cfg[k]
     zg_user = os.environ.get("ZG_USER", "")
-    return jsonify({"classes": out, "lessons": all_lessons, "zg_user": zg_user, "summary": summary, "weekly": weekly})
+    data = {"classes": out, "lessons": all_lessons, "zg_user": zg_user, "summary": summary, "weekly": weekly}
+    _CONFIG_CACHE["data"] = data
+    _CONFIG_CACHE["ts"] = now
+    return jsonify(data)
 
 @app.route("/api/pick-folder")
 def pick_folder():
@@ -157,7 +168,7 @@ def create_class():
     created_by = data.get("created_by", "").strip()
     class_time = data.get("class_time", "").strip()
     db.config_add_class(name, created_by, class_time)
-    return jsonify({"status": "ok", "name": name})
+    _clear_config_cache(); return jsonify({"status": "ok", "name": name})
 
 @app.route("/api/classes/<cls_name>", methods=["DELETE"])
 def delete_class(cls_name):
@@ -348,7 +359,7 @@ def save_lesson():
         content_lines.append("\n")
     content = ''.join(content_lines)
     db.lesson_save(cls_name, unit_code, int(lesson_num), meta.get('title',''), content)
-    return jsonify({"status":"ok","folder":folder})
+    _clear_config_cache(); return jsonify({"status":"ok","folder":folder})
 
 @app.route("/api/parse", methods=["POST"])
 def parse_text():
@@ -753,7 +764,7 @@ def attendance_save():
             "status": r.get("status", "出席"), "note": r.get("note", "")
         })
     db.attendance_batch(batch)
-    return jsonify({"status": "ok", "count": len(batch)})
+    _clear_config_cache(); return jsonify({"status": "ok", "count": len(batch)})
 
 # ====== 财务 ======
 
