@@ -193,31 +193,42 @@ def attendance_by_lesson(class_name=None, cycle=None, limit=50):
     sql += " GROUP BY class_name, lesson_title, lesson_date ORDER BY lesson_date DESC, class_name LIMIT %s"
     params.append(limit)
     rows = _execute(db, sql, params).fetchall()
+    if not rows: return []
+    # One bulk query for all student details
+    detail_sql = "SELECT class_name, lesson_title, lesson_date, student_name, status, note FROM attendance WHERE (class_name, lesson_title, lesson_date) IN ("
+    detail_params = []
+    for r in rows:
+        detail_sql += "(%s,%s,%s),"
+        detail_params.extend([r["class_name"], r["lesson_title"], r["lesson_date"]])
+    detail_sql = detail_sql[:-1] + ")"
+    all_students = _execute(db, detail_sql, detail_params).fetchall()
+    # Group students by lesson key
+    from collections import defaultdict
+    student_map = defaultdict(list)
+    for s in all_students:
+        key = (s["class_name"], s["lesson_title"], s["lesson_date"])
+        student_map[key].append(s)
     cfg = config_all()
     _DAY_MAP = {"一":"周一","二":"周二","三":"周三","四":"周四","五":"周五","六":"周六","日":"周日"}
     result = []
     for r in rows:
         cn = r["class_name"]
-        # Clean title: take first segment before comma or 【
         raw_title = r["lesson_title"] or ""
         if "," in raw_title: raw_title = raw_title.split(",")[0]
-        # Extract lesson number from end like "-5" or "-4"
         import re
         lesson_num_match = re.search(r'-(\d+)$', raw_title)
         lesson_num = lesson_num_match.group(1) if lesson_num_match else ""
         display_title = raw_title
         cls_cfg = cfg.get(cn, {})
         unit_info = list(cls_cfg.values())[0] if cls_cfg else {}
-        segment_name = unit_info.get("name", "")
         class_time = unit_info.get("class_time", "")
-        # Derive weekday from class name
         weekday_cn = cn[1] if len(cn) > 1 else ""
         weekday = _DAY_MAP.get(weekday_cn, "")
         total = int(r["total"] or 0)
         present = int(r["present"] or 0)
-        # Get students and notes for this lesson
-        students_sql = "SELECT student_name, status, note FROM attendance WHERE class_name=%s AND lesson_title=%s AND lesson_date=%s"
-        students = _execute(db, students_sql, [cn, r["lesson_title"], r["lesson_date"]]).fetchall()
+        # Get students from the bulk-loaded map
+        key = (cn, r["lesson_title"], r["lesson_date"])
+        students = student_map.get(key, [])
         student_names = [s["student_name"] for s in students if s["status"] == "出席"]
         # Deduplicate notes
         notes_seen = set()
@@ -226,8 +237,7 @@ def attendance_by_lesson(class_name=None, cycle=None, limit=50):
             raw = str(s["note"]).strip() if s["note"] else ""
             if raw and raw != "None" and raw not in notes_seen:
                 notes_seen.add(raw)
-                # Count how many students have this exact note
-                same_count = sum(1 for s2 in students if str(s2.get("note","")).strip() == raw)
+                same_count = sum(1 for s2 in students if str(s2["note"] or "").strip() == raw)
                 if same_count == len(students):
                     unique_notes.append(raw)
                 else:
