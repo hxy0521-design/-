@@ -517,9 +517,9 @@ function loadAttLessons(){
   fetch(API+'/attendance/by-lesson?class='+encodeURIComponent(cls)+'&limit=50').then(function(r){return r.json()}).then(function(rows){
     var el=document.getElementById('attLessonList');if(!el)return;
     if(!rows.length){el.innerHTML='<div class="st">暂无记录</div>';return}
-    var h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="border-bottom:2px solid #e2e8f0;color:var(--sb)"><th>班级</th><th>课节</th><th>日期</th><th>出席/总数</th><th>出勤率</th></tr>';
-    rows.forEach(function(r){var pct=r.total>0?Math.round(r.present/r.total*100):0;h+='<tr style="border-bottom:1px solid #f1f5f9"><td>'+esc(r.class_name)+'</td><td>'+esc(r.lesson_title)+' #'+r.lesson_num+'</td><td style="font-size:10px">'+(r.lesson_date||'').slice(0,10)+'</td><td><b>'+r.present+'</b>/'+r.total+'</td><td><div style="height:4px;background:#e2e8f0;border-radius:2px;width:60px"><div style="height:100%;width:'+pct+'%;background:'+(pct>70?'#16a34a':(pct>40?'#d97706':'#dc2626'))+';border-radius:2px"></div></div><span style="font-size:10px;margin-left:4px">'+pct+'%</span></td></tr>'});
-    h+='</table></div>';el.innerHTML=h;
+    var h='<div style="overflow-x:auto;border-radius:8px;border:1px solid #f1f5f9"><table class="datatable"><thead><tr><th>班级</th><th>课节</th><th>日期</th><th>出席/总数</th><th>出勤率</th></tr></thead><tbody>';
+    rows.forEach(function(r){var pct=r.total>0?Math.round(r.present/r.total*100):0;h+='<tr><td>'+esc(r.class_name)+'</td><td>'+esc(r.lesson_title||'')+' #'+r.lesson_num+'</td><td style="font-size:11px">'+(r.lesson_date||'').slice(0,10)+'</td><td><b>'+r.present+'</b>/'+r.total+'</td><td><div style="height:4px;background:#e2e8f0;border-radius:2px;width:60px;display:inline-block;vertical-align:middle"><div style="height:100%;width:'+pct+'%;background:'+(pct>70?'#16a34a':(pct>40?'#d97706':'#dc2626'))+';border-radius:2px"></div></div> <span style="font-size:10px;color:var(--sb)">'+pct+'%</span></td></tr>'});
+    h+='</tbody></table></div>';el.innerHTML=h;
   });
 }
 // ====== Tab 6: 缴费记录 =====
