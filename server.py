@@ -972,12 +972,7 @@ def attendance_by_lesson():
 def purchases_paginated():
     page = int(request.args.get("page", 1))
     limit = int(request.args.get("limit", 100))
-    offset = (page - 1) * limit
-    db2 = db.get_db()
-    total = db2.execute("SELECT COUNT(*) as cnt FROM purchases").fetchone()
-    rows = db2.execute("SELECT * FROM purchases ORDER BY actual_pay_date DESC, id DESC LIMIT ? OFFSET ?", [limit, offset]).fetchall()
-    cols = ["id","student_name","student_code","charge_code","segment","course_type","method","discount_type","lesson_count","amount","refund_amount","actual_pay_date","order_id","xiaohongshu_received","notes"]
-    return jsonify({"total": int(total["cnt"]) if total else 0, "page": page, "limit": limit, "rows": [dict(zip(cols, [r[c] for c in cols])) for r in rows]})
+    return jsonify(db.purchases_paginated(page, limit))
 
 # ====== 分账 ======
 

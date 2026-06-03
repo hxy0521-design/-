@@ -630,16 +630,26 @@ def finance_summary():
 
 def dashboard_summary():
     db = get_db()
+    def _v(row, key, default=0):
+        if not row: return default
+        val = row[key]
+        if isinstance(val, dict): val = val.get("value", default)
+        return int(val) if val else default
+    def _f(row, key, default=0.0):
+        if not row: return default
+        val = row[key]
+        if isinstance(val, dict): val = val.get("value", default)
+        return float(val) if val else default
     active = db.execute("SELECT COUNT(*) as cnt FROM student_ext WHERE status='在读中'").fetchone()
     now = __import__('datetime').datetime.now()
-    month_start = now.strftime("%Y-%m") + "-01"
-    month_att = db.execute("SELECT COUNT(*) as cnt, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE lesson_date >= ?", [month_start]).fetchone()
-    total_purchases = db.execute("SELECT COALESCE(SUM(amount),0) as t FROM purchases WHERE actual_pay_date >= ?", [month_start]).fetchone()
+    month_str = now.strftime("%Y-%m")
+    month_att = db.execute("SELECT COUNT(*) as cnt, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE lesson_date LIKE ?", [month_str + "%"]).fetchone()
+    total_purchases = db.execute("SELECT COALESCE(SUM(amount),0) as t FROM purchases WHERE actual_pay_date LIKE ?", [month_str + "%"]).fetchone()
     return {
-        "active_students": int(active["cnt"]) if active else 0,
-        "month_lessons": int(month_att["cnt"]) if month_att else 0,
-        "month_present": int(month_att["present"]) if month_att else 0,
-        "month_revenue": float(total_purchases["t"]) if total_purchases else 0
+        "active_students": _v(active, "cnt"),
+        "month_lessons": _v(month_att, "cnt"),
+        "month_present": _v(month_att, "present"),
+        "month_revenue": _f(total_purchases, "t")
     }
 
 def dashboard_weekly():
@@ -704,7 +714,10 @@ def revenue_split_upsert(data):
 
 def attendance_by_lesson(class_name=None, limit=50):
     db = get_db()
-    sql = "SELECT class_name, unit_code, lesson_num, lesson_title, lesson_date, COUNT(*) as total, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE 1=1"
+    def _v(val, default=0):
+        if isinstance(val, dict): val = val.get("value", default)
+        return int(val) if val else default
+    sql = "SELECT class_name, unit_code, lesson_num, lesson_title, lesson_date, COUNT(*) as total, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE 1=1 AND lesson_num > 0"
     params = []
     if class_name:
         sql += " AND class_name=?"
@@ -712,7 +725,21 @@ def attendance_by_lesson(class_name=None, limit=50):
     sql += " GROUP BY class_name, lesson_num, lesson_date ORDER BY lesson_date DESC, class_name LIMIT ?"
     params.append(limit)
     rows = db.execute(sql, params).fetchall()
-    return [{"class_name": r["class_name"], "lesson_num": r["lesson_num"], "lesson_title": r["lesson_title"], "lesson_date": r["lesson_date"], "total": r["total"], "present": r["present"]} for r in rows]
+    return [{"class_name": r["class_name"], "lesson_num": _v(r["lesson_num"]), "lesson_title": r["lesson_title"], "lesson_date": r["lesson_date"], "total": _v(r["total"]), "present": _v(r["present"])} for r in rows]
+
+# ------- Purchases paginated -------
+def purchases_paginated(page=1, limit=100):
+    db = get_db()
+    def _v(val, default=""):
+        if val is None: return default
+        if isinstance(val, dict): val = val.get("value", default)
+        return val
+    offset = (page - 1) * limit
+    total = db.execute("SELECT COUNT(*) as cnt FROM purchases").fetchone()
+    tc = _v(total["cnt"], 0) if total else 0
+    rows = db.execute("SELECT * FROM purchases ORDER BY COALESCE(actual_pay_date,'0000') DESC, id DESC LIMIT ? OFFSET ?", [limit, offset]).fetchall()
+    cols = ["id","student_name","student_code","charge_code","segment","course_type","method","discount_type","lesson_count","amount","refund_amount","actual_pay_date","order_id","xiaohongshu_received","notes"]
+    return {"total": int(tc), "page": page, "limit": limit, "rows": [dict(zip(cols, [_v(r[c]) for c in cols])) for r in rows]}
 
 # ------- Init -------
 init_db()
