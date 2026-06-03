@@ -39,6 +39,7 @@ textarea{min-height:120px;font-family:monospace;resize:vertical}
 .tag-green{background:#dcfce7;color:#16a34a}.tag-yellow{background:#fef3c7;color:#d97706}.tag-red{background:#fee2e2;color:#dc2626}.tag-blue{background:#dbeafe;color:#2563eb}
 .filter-btn{padding:4px 10px;border-radius:999px;border:1px solid #e2e8f0;font-size:11px;cursor:pointer;transition:all .15s;background:#fff;color:#64748b;font-weight:500}
 .filter-btn.active{background:var(--bl);color:#fff;border-color:var(--bl)}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style></head><body>
 <div class="panel pl" style="display:none"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkXinxin" onchange="onUserChange()" style="width:auto;margin:0 2px">只看欣欣</label><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkBiscuit" onchange="onUserChange()" style="width:auto;margin:0 2px">只看饼干</label></div><h2>班级 <span style="font-size:10px;float:right"><a href="#" onclick="expandAll(event)" style="color:var(--sb)">展开</a> | <a href="#" onclick="collapseAll(event)" style="color:var(--sb)">折叠</a></span></h2><div id="classList"></div><button class="btn bo" style="margin-top:4px;width:100%" onclick="newUnitAll()">+ 新建单元</button><button class="btn bo" style="margin-top:4px;width:100%" onclick="newClass()">+ 新建班级</button><h3 style="margin-top:18px">输出文件</h3><div id="outputList"></div><div style="margin-top:8px;font-size:10px;color:var(--sb)"><input type="file" id="xlsxUpload" accept=".xlsx" style="display:none" onchange="uploadExcel(this.files[0])"><a href="#" onclick="document.getElementById('xlsxUpload').click();return false">导入Excel</a></div></div>
 <div class="panel pc"><div class="tabs" id="tabBar"></div><div id="mainTabs" style="display:flex;gap:4px;padding:4px 8px;border-bottom:2px solid #e2e8f0;margin-bottom:0;overflow-x:auto;flex-shrink:0"></div><div class="ed-body" id="editorBody"><div style="color:var(--sb);text-align:center;padding:60px 0">加载中...</div></div></div>
@@ -46,6 +47,26 @@ textarea{min-height:120px;font-family:monospace;resize:vertical}
 <script>
 var API=window.location.origin+'/api';
 var tabs={},activeTab=null,activeMainTab='overview',cfgReady=false;
+var cache={};
+function cachedFetch(url,force){return new Promise(function(resolve){if(!force&&cache[url])return resolve(cache[url]);fetch(url).then(function(r){return r.json()}).then(function(d){cache[url]=d;resolve(d)})})}
+function switchMainTab(){
+  var el=document.getElementById('editorBody');if(!el)return;
+  var pl=document.querySelector('.pl');var pr=document.getElementById('previewPanel');
+  var isEdit=activeMainTab==='edit';
+  if(pl)pl.style.display=isEdit?'block':'none';
+  if(pr)pr.style.display=isEdit?'block':'none';
+  document.querySelector('.pc').style.width=isEdit?'':'100%';
+  el.innerHTML='<div style="text-align:center;padding:60px 0;color:var(--sb)"><div style="display:inline-block;width:24px;height:24px;border:3px solid #e2e8f0;border-top-color:var(--bl);border-radius:50%;animation:spin .6s linear infinite"></div></div>';
+  if(activeMainTab==='overview')renderOverviewTab();
+  else if(activeMainTab==='schedule')renderScheduleTab();
+  else if(activeMainTab==='edit'){if(activeTab)renderEditor();else el.innerHTML='<div style=\"color:var(--sb);text-align:center;padding:60px 0\">请从左侧选择班级</div>'}
+  else if(activeMainTab==='attendance')renderAttendanceTab();
+  else if(activeMainTab==='students')renderStudentTab();
+  else if(activeMainTab==='payments')renderPaymentTab();
+  else if(activeMainTab==='splits')renderRevenueSplitTab();
+  else if(activeMainTab==='pricing')renderPricingTab();
+  else el.innerHTML='<div style=\"color:var(--sb);text-align:center;padding:60px 0\">请从左侧选择班级</div>';
+}
 function renderMainTabs(){
   var tb=document.getElementById('mainTabs');if(!tb)return;
   var items=[{id:'overview',label:'总览'},{id:'schedule',label:'排课'},{id:'edit',label:'编辑'},{id:'attendance',label:'销课'},{id:'students',label:'学生'},{id:'payments',label:'缴费'},{id:'splits',label:'分账'},{id:'pricing',label:'定价'}];
@@ -57,24 +78,6 @@ function renderMainTabs(){
     tb.appendChild(t);
   });
 }
-function switchMainTab(){
-  var el=document.getElementById('editorBody');if(!el)return;
-  var pl=document.querySelector('.pl');var pr=document.getElementById('previewPanel');
-  var isEdit=activeMainTab==='edit';
-  if(pl)pl.style.display=isEdit?'block':'none';
-  if(pr)pr.style.display=isEdit?'block':'none';
-  document.querySelector('.pc').style.width=isEdit?'':'100%';
-  if(activeMainTab==='overview')renderOverviewTab();
-  else if(activeMainTab==='schedule')renderScheduleTab();
-  else if(activeMainTab==='edit'){if(activeTab)renderEditor();else el.innerHTML='<div style=\"color:var(--sb);text-align:center;padding:60px 0\">请从左侧选择班级</div>'}
-  else if(activeMainTab==='attendance')renderAttendanceTab();
-  else if(activeMainTab==='students')renderStudentTab();
-  else if(activeMainTab==='payments')renderPaymentTab();
-  else if(activeMainTab==='splits')renderRevenueSplitTab();
-  else if(activeMainTab==='pricing')renderPricingTab();
-  else el.innerHTML='<div style=\"color:var(--sb);text-align:center;padding:60px 0\">请从左侧选择班级</div>';
-}
-
 function getCheckedUsers(){var u=[];if(document.getElementById('chkXinxin')&&document.getElementById('chkXinxin').checked)u.push('欣欣');if(document.getElementById('chkBiscuit')&&document.getElementById('chkBiscuit').checked)u.push('饼干');return u}
 function onUserChange(){renderClassList()}
 
@@ -462,8 +465,8 @@ window.addEventListener('beforeunload',saveAll);
 // ====== Tab 1: 总览 ======
 function renderOverviewTab(){
   var el=document.getElementById('editorBody');if(!el)return;
-  fetch(API+'/dashboard/summary').then(function(r){return r.json()}).then(function(s){
-    fetch(API+'/dashboard/weekly').then(function(r2){return r2.json()}).then(function(week){
+  cachedFetch(API+'/dashboard/summary').then(function(r){return r.json()}).then(function(s){
+    cachedFetch(API+'/dashboard/weekly').then(function(r2){return r2.json()}).then(function(week){
       var h='<div style="padding:16px">';
       h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">';
       h+='<div class="kpi-card" style="border-top-color:#16a34a"><div class="kpi-label">在读学生</div><div class="kpi-val">'+s.active_students+'<span class="kpi-u">人</span></div></div>';
@@ -486,7 +489,7 @@ function renderOverviewTab(){
 // ====== Tab 2: 排课表 (placeholder) =====
 function renderScheduleTab(){
   var el=document.getElementById('editorBody');if(!el)return;
-  fetch(API+'/dashboard/weekly').then(function(r){return r.json()}).then(function(week){
+  cachedFetch(API+'/dashboard/weekly').then(function(r){return r.json()}).then(function(week){
     var h='<div style="padding:16px"><h3>排课表</h3><div style="font-size:11px;color:var(--sb);margin-bottom:12px">当周课表 · 预留 API 接入</div>';
     var days=['周一','周二','周三','周四','周五','周六','周日'];
     h+='<div style="display:grid;grid-template-columns:repeat(7,minmax(100px,1fr));gap:2px;background:#e2e8f0;border-radius:8px;overflow:hidden">';
@@ -619,7 +622,7 @@ function deleteCost(id){if(!confirm('确定删除此成本记录？'))return;fet
 var studentFilter={status:['在读中'],segment:'',class:''};
 function renderStudentTab(){
   var el=document.getElementById('editorBody');if(!el)return;
-  fetch(API+'/students').then(function(r){return r.json()}).then(function(rows){
+  cachedFetch(API+'/students').then(function(r){return r.json()}).then(function(rows){
     var h='<div style="padding:16px"><h3 style="margin:0 0 8px">学生管理</h3>';
     h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">';
     var sts=['在读中','暂时停课','终止课程','仅试听'];
@@ -709,8 +712,14 @@ function savePriceByInputs(pInp,mInp){
 }
 function showPricing(){activeMainTab='pricing';renderMainTabs();switchMainTab()}
 
-// Render main tabs on page load
+// Render main tabs on page load + pre-fetch all tab data
 setTimeout(function(){renderMainTabs()},100);
+setTimeout(function(){
+  cachedFetch(API+'/dashboard/summary');cachedFetch(API+'/dashboard/weekly');
+  cachedFetch(API+'/students');cachedFetch(API+'/pricing');
+  cachedFetch(API+'/purchases?page=1&limit=100');
+  cachedFetch(API+'/attendance/by-lesson?limit=50');
+},200);
 
 function savePrice(seg,ct,dt,price,mult){
   fetch(API+'/pricing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({segment:seg,course_type:ct,discount_type:dt,unit_price:parseFloat(price),discount_multiplier:parseFloat(mult)})});
