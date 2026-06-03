@@ -974,8 +974,9 @@ def dashboard_weekly():
 @app.route("/api/attendance/by-lesson")
 def attendance_by_lesson():
     cls = request.args.get("class", "")
+    cycle = request.args.get("cycle", "")
     limit = int(request.args.get("limit", 50))
-    return jsonify(db.attendance_by_lesson(class_name=cls or None, limit=limit))
+    return jsonify(db.attendance_by_lesson(class_name=cls or None, cycle=cycle or None, limit=limit))
 
 # ====== 缴费分页 ======
 

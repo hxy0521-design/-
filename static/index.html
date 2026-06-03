@@ -540,16 +540,20 @@ function renderOverviewTab(){
 // ====== Tab 4: 销课 =====
 function renderAttendanceTab(){
   var el=document.getElementById('editorBody');if(!el)return;
-  var h='<div style="padding:16px"><h3>销课记录</h3><select id="attClassFilter" onchange="loadAttLessons()" style="width:auto;padding:4px 8px;margin:8px 0;font-size:12px"><option value="">全部班级</option></select><div id="attLessonList" style="font-size:12px">加载中...</div></div>';
+  var h='<div style="padding:16px"><h3>销课记录</h3><div style="display:flex;gap:8px;margin:8px 0"><select id="attClassFilter" onchange="loadAttLessons()" style="width:auto;padding:4px 8px;font-size:12px"><option value="">全部班级</option></select><select id="attCycleFilter" onchange="loadAttLessons()" style="width:auto;padding:4px 8px;font-size:12px"><option value="">全部周期</option></select></div><div id="attLessonList" style="font-size:12px">加载中...</div></div>';
   el.innerHTML=h;
-  // Populate class filter
   var sel=document.getElementById('attClassFilter');
   Object.keys(cfgInfo).forEach(function(c){sel.innerHTML+='<option value=\"'+c+'\">'+c+'</option>'});
+  // Populate cycle filter after first load
   loadAttLessons();
 }
 function loadAttLessons(){
   var cls=document.getElementById('attClassFilter')?document.getElementById('attClassFilter').value:'';
-  fetch(API+'/attendance/by-lesson?class='+encodeURIComponent(cls)+'&limit=50').then(function(r){return r.json()}).then(function(rows){
+  var cyc=document.getElementById('attCycleFilter')?document.getElementById('attCycleFilter').value:'';
+  var url=API+'/attendance/by-lesson?limit=50';
+  if(cls)url+='&class='+encodeURIComponent(cls);
+  if(cyc)url+='&cycle='+encodeURIComponent(cyc);
+  fetch(url).then(function(r){return r.json()}).then(function(rows){
     var el=document.getElementById('attLessonList');if(!el)return;
     if(!rows.length){el.innerHTML='<div class="section-card" style="text-align:center;padding:40px">暂无销课记录</div>';return}
     var h='';
@@ -557,7 +561,7 @@ function loadAttLessons(){
       var pct=r.total>0?Math.round(r.present/r.total*100):0;
       h+='<div class="section-card" style="padding:16px">';
       h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
-      h+='<div><b style="font-size:14px">'+esc(r.class_name)+'</b> <span style="color:var(--tx3);font-size:12px">'+esc(r.segment)+' · '+esc(r.time)+' · '+esc(r.weekday)+'</span></div>';
+      h+='<div><b style="font-size:14px">'+esc(r.class_name)+'</b> <span style="color:var(--tx3);font-size:12px">'+esc(r.segment)+' · '+esc(r.time)+' · '+esc(r.weekday)+'</span>'+(r.cycle?' <span class="tag tag-blue" style="font-size:10px">'+esc(r.cycle)+'</span>':'')+'</div>';
       h+='<div style="text-align:right"><span style="font-weight:700;font-size:16px">'+r.present+'/'+r.total+'人</span> <span style="color:var(--tx3);font-size:11px">出席</span></div>';
       h+='</div>';
       h+='<div style="font-size:13px;color:var(--tx);margin-bottom:4px"><b>'+esc(r.lesson_title)+'</b></div>';
@@ -566,6 +570,12 @@ function loadAttLessons(){
       if(r.leave_notes)h+='<div style="font-size:10px;color:var(--coral)">备注: '+esc(r.leave_notes)+'</div>';
       h+='</div>';
     });
+    // Populate cycle filter if not yet populated
+    var cycSel=document.getElementById('attCycleFilter');
+    if(cycSel&&cycSel.options.length<=1){
+      var cycles={};rows.forEach(function(r){if(r.cycle)cycles[r.cycle]=1});
+      Object.keys(cycles).sort().forEach(function(c){cycSel.innerHTML+='<option value=\"'+c+'\">'+c+'</option>'});
+    }
     el.innerHTML=h;
   });
 }

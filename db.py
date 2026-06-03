@@ -184,11 +184,12 @@ def attendance_stats(class_name=None):
     rows = _execute(db, sql, params).fetchall()
     return {r["status"]: r["cnt"] for r in rows}
 
-def attendance_by_lesson(class_name=None, limit=50):
+def attendance_by_lesson(class_name=None, cycle=None, limit=50):
     db = get_db()
-    sql = "SELECT class_name, lesson_title, lesson_date, COUNT(*) as total, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE 1=1"
+    sql = "SELECT class_name, lesson_title, lesson_date, ANY_VALUE(cycle) as cycle, COUNT(*) as total, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE 1=1"
     params = []
     if class_name: sql += " AND class_name=%s"; params.append(class_name)
+    if cycle: sql += " AND cycle=%s"; params.append(cycle)
     sql += " GROUP BY class_name, lesson_title, lesson_date ORDER BY lesson_date DESC, class_name LIMIT %s"
     params.append(limit)
     rows = _execute(db, sql, params).fetchall()
@@ -232,7 +233,7 @@ def attendance_by_lesson(class_name=None, limit=50):
         result.append({
             "class_name": cn, "lesson_title": display_title, "lesson_num": lesson_num,
             "lesson_date": r["lesson_date"], "weekday": weekday,
-            "segment": seg_display, "time": class_time,
+            "cycle": r["cycle"] or "", "segment": seg_display, "time": class_time,
             "total": total, "present": present,
             "price": price, "lesson_revenue": round(lesson_revenue, 1),
             "per_person": round(lesson_revenue / present, 1) if present > 0 else 0,
