@@ -17,6 +17,8 @@
   --shadow-lg:0 10px 15px rgba(0,0,0,.05),0 4px 6px rgba(0,0,0,.04);
   --radius:12px; --radius-sm:8px; --radius-xs:6px;
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",system-ui,sans-serif;
+  /* legacy compat */
+  --bl:var(--accent); --go:var(--lime); --rd:var(--coral); --sb:var(--tx3); --bd:var(--border); --p:var(--surface);
 }
 [data-theme="dark"]{
   --bg:#0f1119; --surface:#1a1d2b; --surface2:#222636;
@@ -30,6 +32,7 @@
   --green:#4ade80; --green-light:#0a2e12;
   --amber:#fcd34d; --amber-light:#2d2006;
   --shadow:0 1px 3px rgba(0,0,0,.2); --shadow-md:0 4px 6px rgba(0,0,0,.25); --shadow-lg:0 10px 15px rgba(0,0,0,.3);
+  --bl:var(--accent); --go:var(--lime); --rd:var(--coral); --sb:var(--tx3); --bd:var(--border); --p:var(--surface);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font:14px/1.6 var(--font);background:var(--bg);color:var(--tx);display:flex;height:100vh;overflow:hidden;transition:background .3s,color .3s}
@@ -100,7 +103,7 @@ function switchMainTab(){
   if(pl)pl.style.display=isEdit?'block':'none';
   if(pr)pr.style.display=isEdit?'block':'none';
   document.querySelector('.pc').style.width=isEdit?'':'100%';
-  el.innerHTML='<div style="text-align:center;padding:60px 0;color:var(--sb)"><div style="display:inline-block;width:24px;height:24px;border:3px solid #e2e8f0;border-top-color:var(--bl);border-radius:50%;animation:spin .6s linear infinite"></div></div>';
+  el.innerHTML='<div style="text-align:center;padding:60px 0;color:var(--sb)"><div style="display:inline-block;width:24px;height:24px;border:3px solid #e2e8f0;border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite"></div></div>';
   if(activeMainTab==='overview')renderOverviewTab();
   else if(activeMainTab==='schedule')renderScheduleTab();
   else if(activeMainTab==='edit'){if(activeTab)renderEditor();else el.innerHTML='<div style=\"color:var(--sb);text-align:center;padding:60px 0\">请从左侧选择班级</div>'}
@@ -117,7 +120,7 @@ function renderMainTabs(){
   tb.innerHTML='';
   items.forEach(function(it){
     var t=document.createElement('button');t.textContent=it.label;
-    t.className='maintab';t.style.cssText='padding:6px 14px;border-radius:8px 8px 0 0;border:none;background:'+(activeMainTab===it.id?'var(--bl)':'transparent')+';color:'+(activeMainTab===it.id?'#fff':'var(--sb)')+';font-size:12px;cursor:pointer;font-weight:'+(activeMainTab===it.id?'600':'400');
+    t.className='maintab';t.style.cssText='padding:6px 14px;border-radius:8px 8px 0 0;border:none;background:'+(activeMainTab===it.id?'var(--accent)':'transparent')+';color:'+(activeMainTab===it.id?'#fff':'var(--sb)')+';font-size:12px;cursor:pointer;font-weight:'+(activeMainTab===it.id?'600':'400');
     t.onclick=function(){activeMainTab=it.id;renderMainTabs();switchMainTab()};
     tb.appendChild(t);
   });
@@ -335,7 +338,7 @@ function loadInheritTopics(folder){
     if(!ts.length){panel.style.display='none';return}
     var h='<div style="font-size:11px;color:var(--sb);margin-bottom:4px">选择要复制的话题：</div>';
     ts.forEach(function(t,i){h+='<label style="display:block;font-size:12px;cursor:pointer;padding:2px 0"><input type="checkbox" value="'+esc(t)+'" style="width:auto;margin-right:6px">'+esc(t)+'</label>'});
-    h+='<div style="display:flex;gap:6px;margin-top:4px"><a href="#" onclick="toggleAllInherit(event)" style="font-size:11px;color:var(--bl);padding:2px 0">全选</a> <button class="btn bo" style="padding:2px 12px;font-size:11px" onclick="applyInherit()">应用选中话题</button></div>';
+    h+='<div style="display:flex;gap:6px;margin-top:4px"><a href="#" onclick="toggleAllInherit(event)" style="font-size:11px;color:var(--accent);padding:2px 0">全选</a> <button class="btn bo" style="padding:2px 12px;font-size:11px" onclick="applyInherit()">应用选中话题</button></div>';
     panel.innerHTML=h;panel.style.display='block';
     lbl.textContent='已加载 '+folder;lbl.style.display='inline';
   }).catch(function(){alert('加载话题失败')});
@@ -370,7 +373,7 @@ function setGenderMode(mode){var d=tabs[activeTab];if(!d)return;var names=[];d.t
 function saveGender(){var d=tabs[activeTab];if(!d)return;var mode=d._genderMode;var names=[];d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s,j){if(names.indexOf(s.name)<0)names.push(s.name)})});var checked=[];document.querySelectorAll('#genderPicker input[type=checkbox]:checked').forEach(function(c){checked.push(c.value)});if(mode==='girlMore'){d.meta.gender=checked.length?'Male '+checked.join(' '):''}else if(mode==='boyMore'){var boys=names.filter(function(n){return checked.indexOf(n)<0});d.meta.gender='Male '+boys.join(' ')}else{d.meta.gender=checked.length?'Male '+checked.join(' '):''}}
 
 window._gk={};
-function renderPreview(){var el=document.getElementById('previewContent'),d=tabs[activeTab];if(!d||!d.topics.length){el.innerHTML='<span class="st">粘贴发言后在此预览</span>';return}if(!d._golden)d._golden={};window._gk={};var h='<div style="font-size:11px;color:var(--sb);margin-bottom:8px">点击切换金句 | <button class="btn bo" style="padding:2px 8px;font-size:11px;margin:0 4px" onclick="detectGoldenAsync();return false">自动标记</button> | <a href="#" onclick="clearGolden();return false">清除</a></div>';h+='<div class="pt">';d.topics.forEach(function(t,i){console.log('preview topic'+i,'_images:',t._images?t._images.length:0);h+='<div style="font-weight:700;color:var(--bl);font-size:14px;margin:12px 0 4px">'+esc(t.title)+'</div><div style="color:var(--bd);margin-bottom:8px">'+Array(30).join('-')+'</div>';(t.speeches||[]).forEach(function(s,j){var key=s.name+':'+s.content;var isGold=d._golden[key];var bg=isGold?'background:#fff3cd;':'',gid='g_'+i+'_'+j;window._gk[gid]=key;h+='<div id="'+gid+'" style="margin:2px 0;padding:2px 4px;border-radius:3px;cursor:pointer;'+bg+'" onclick="toggleGolden(\''+gid+'\')"><b style="color:var(--rd)">'+esc(s.name)+'</b>: '+esc(s.content).replace(/\[img:\d+\]/g,'[图]')+'</div>'});var timgs=t._images||[];if(timgs.length){h+='<div style="display:flex;gap:4px;flex-wrap:wrap;padding:4px 0">';timgs.forEach(function(img,idx){h+='<img src=\"'+img+'\" style=\"max-height:60px;border-radius:4px;border:1px solid var(--bd)\">'});h+='</div>'}if(i<d.topics.length-1)h+='<div style="margin:16px 0 4px;color:var(--bd)">'+Array(30).join('=')+'</div>'});h+='</div>';el.innerHTML=h}
+function renderPreview(){var el=document.getElementById('previewContent'),d=tabs[activeTab];if(!d||!d.topics.length){el.innerHTML='<span class="st">粘贴发言后在此预览</span>';return}if(!d._golden)d._golden={};window._gk={};var h='<div style="font-size:11px;color:var(--sb);margin-bottom:8px">点击切换金句 | <button class="btn bo" style="padding:2px 8px;font-size:11px;margin:0 4px" onclick="detectGoldenAsync();return false">自动标记</button> | <a href="#" onclick="clearGolden();return false">清除</a></div>';h+='<div class="pt">';d.topics.forEach(function(t,i){console.log('preview topic'+i,'_images:',t._images?t._images.length:0);h+='<div style="font-weight:700;color:var(--accent);font-size:14px;margin:12px 0 4px">'+esc(t.title)+'</div><div style="color:var(--bd);margin-bottom:8px">'+Array(30).join('-')+'</div>';(t.speeches||[]).forEach(function(s,j){var key=s.name+':'+s.content;var isGold=d._golden[key];var bg=isGold?'background:#fff3cd;':'',gid='g_'+i+'_'+j;window._gk[gid]=key;h+='<div id="'+gid+'" style="margin:2px 0;padding:2px 4px;border-radius:3px;cursor:pointer;'+bg+'" onclick="toggleGolden(\''+gid+'\')"><b style="color:var(--rd)">'+esc(s.name)+'</b>: '+esc(s.content).replace(/\[img:\d+\]/g,'[图]')+'</div>'});var timgs=t._images||[];if(timgs.length){h+='<div style="display:flex;gap:4px;flex-wrap:wrap;padding:4px 0">';timgs.forEach(function(img,idx){h+='<img src=\"'+img+'\" style=\"max-height:60px;border-radius:4px;border:1px solid var(--bd)\">'});h+='</div>'}if(i<d.topics.length-1)h+='<div style="margin:16px 0 4px;color:var(--bd)">'+Array(30).join('=')+'</div>'});h+='</div>';el.innerHTML=h}
 function toggleGolden(gid){var el=document.getElementById(gid);if(!el)return;var d=tabs[activeTab];if(!d._golden)d._golden={};var key=window._gk[gid];if(!key)return;if(d._golden[key]){delete d._golden[key];el.style.background='transparent'}else{d._golden[key]=true;el.style.background='#fff3cd'}}
 function clearGolden(){if(tabs[activeTab])tabs[activeTab]._golden={};renderPreview();renderPosterSectionUI()}
 function getGoldenQuotes(){var d=tabs[activeTab];if(!d||!d._golden)return{};var quotes={};Object.keys(d._golden).forEach(function(key){var m=key.match(/^([^:：]+)[：:](.+)$/);if(m){if(!quotes[m[1]])quotes[m[1]]=[];quotes[m[1]].push(m[2])}});return quotes}
@@ -380,7 +383,7 @@ function searchTMDB(btn){
   fetch(API+'/tmdb/search?q='+encodeURIComponent(q)).then(function(r){return r.json()}).then(function(results){
     if(results.error){alert(results.error);return}
     if(!results.length){alert('No results');return}
-    var list=row.querySelector('.tmdbResults');list.innerHTML=results.map(function(r,i){return'<span style="cursor:pointer;font-size:11px;color:var(--bl);margin-right:8px" onclick="pickTMDB(this)" data-poster="'+esc(r.poster||'')+'" data-rating="'+esc(r.rating||'')+'" data-overview="'+esc(r.overview||'').substring(0,100)+'" data-title="'+esc(r.title)+'">'+esc(r.title)+' ('+esc(r.year)+')</span>'}).join('');list.style.display='block'}).catch(function(){alert('Search failed')})}
+    var list=row.querySelector('.tmdbResults');list.innerHTML=results.map(function(r,i){return'<span style="cursor:pointer;font-size:11px;color:var(--accent);margin-right:8px" onclick="pickTMDB(this)" data-poster="'+esc(r.poster||'')+'" data-rating="'+esc(r.rating||'')+'" data-overview="'+esc(r.overview||'').substring(0,100)+'" data-title="'+esc(r.title)+'">'+esc(r.title)+' ('+esc(r.year)+')</span>'}).join('');list.style.display='block'}).catch(function(){alert('Search failed')})}
 function pickTMDB(el){
   var row=el.closest('[data-name]');row.querySelector('.pposter').value=el.getAttribute('data-poster')||'';row.querySelector('.prating').value=el.getAttribute('data-rating')||'';var ov=el.getAttribute('data-overview')||'';row.querySelector('.pline').value=ov.length>40?ov.substring(0,40):ov;row.querySelector('.pmovie').value=el.getAttribute('data-title')||'';row.querySelector('.tmdbResults').style.display='none'}
 function renderPosterSection(){
@@ -436,7 +439,7 @@ function showAttendanceModal(genPromise,d,gs,gw){
       var bg=r.status==='出席'?'#e8f5e9':(r.isNew?'#e3f2fd':'#fff8e1');
       h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;margin:2px 0;border-radius:6px;background:'+bg+'">';
       h+='<input type="checkbox" id="attChk'+i+'" '+(r.status==='出席'?'checked':'')+' onchange="var s=document.getElementById(\'attSel'+i+'\');s.style.display=this.checked&&\''+esc(r.name)+'\'!==\'\'?\'none\':\'inline\';if(!this.checked)document.getElementById(\'attChk'+i+'\').checked=false" style="width:auto;margin:0">';
-      h+='<span style="flex:1;font-size:13px">'+esc(r.name)+(r.isNew?' <span style="font-size:10px;color:var(--bl)">新</span>':'')+'</span>';
+      h+='<span style="flex:1;font-size:13px">'+esc(r.name)+(r.isNew?' <span style="font-size:10px;color:var(--accent)">新</span>':'')+'</span>';
       h+='<select id="attSel'+i+'" style="display:'+(r.status==='出席'?'none':'inline')+';width:auto;padding:2px 4px;font-size:11px"><option value="">缺席</option><option value="请假">请假</option></select>';
       h+='<input id="attNote'+i+'" placeholder="备注" style="width:80px;padding:2px 4px;font-size:11px;display:'+(r.status==='出席'?'none':'inline')+'">';
       h+='</div>';
@@ -614,7 +617,7 @@ function renderFinanceTab(){
     h+='</div>';
     h+='<div style="display:flex;gap:6px;margin-bottom:12px;border-bottom:1px solid #e2e8f0;padding-bottom:8px">';
     var sts=[{id:'revenue',label:'收费记录'},{id:'attendance',label:'销课记录'},{id:'cost',label:'成本记录'}];
-    sts.forEach(function(st){h+='<button style="padding:5px 14px;border-radius:6px;border:none;font-size:12px;cursor:pointer;font-weight:'+(financeSubTab===st.id?'600':'400')+';background:'+(financeSubTab===st.id?'var(--bl)':'#f1f5f9')+';color:'+(financeSubTab===st.id?'#fff':'var(--sb)')+'" onclick="financeSubTab=\''+st.id+'\';renderFinanceTab()">'+st.label+'</button>'});
+    sts.forEach(function(st){h+='<button style="padding:5px 14px;border-radius:6px;border:none;font-size:12px;cursor:pointer;font-weight:'+(financeSubTab===st.id?'600':'400')+';background:'+(financeSubTab===st.id?'var(--accent)':'#f1f5f9')+';color:'+(financeSubTab===st.id?'#fff':'var(--sb)')+'" onclick="financeSubTab=\''+st.id+'\';renderFinanceTab()">'+st.label+'</button>'});
     h+='<span style="flex:1"></span>';
     if(financeSubTab==='revenue')h+='<button class="btn bg" style="padding:5px 12px;font-size:11px" onclick="showAddRevenueModal()">+ 新增收费</button>';
     if(financeSubTab==='cost')h+='<button class="btn bg" style="padding:5px 12px;font-size:11px" onclick="showAddCostModal()">+ 新增成本</button>';
