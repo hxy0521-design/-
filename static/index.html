@@ -713,13 +713,7 @@ function savePriceByInputs(pInp,mInp){
 function showPricing(){activeMainTab='pricing';renderMainTabs();switchMainTab()}
 
 // Render main tabs on page load + pre-fetch all tab data
-setTimeout(function(){renderMainTabs();switchMainTab()},100);
-setTimeout(function(){
-  cachedFetch(API+'/dashboard/summary');cachedFetch(API+'/dashboard/weekly');
-  cachedFetch(API+'/students');cachedFetch(API+'/pricing');
-  cachedFetch(API+'/purchases?page=1&limit=100');
-  cachedFetch(API+'/attendance/by-lesson?limit=50');
-},200);
+setTimeout(function(){renderMainTabs();switchMainTab()},300);
 
 function savePrice(seg,ct,dt,price,mult){
   fetch(API+'/pricing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({segment:seg,course_type:ct,discount_type:dt,unit_price:parseFloat(price),discount_multiplier:parseFloat(mult)})});
