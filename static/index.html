@@ -576,7 +576,7 @@ function loadAttLessons(){
       h+='<div style="font-size:13px;color:var(--tx);margin-bottom:4px"><b>'+esc(r.lesson_title)+'</b></div>';
       h+='<div style="font-size:11px;color:var(--tx3);margin-bottom:8px">'+esc(r.lesson_date||'')+' · ¥'+(r.price||0)+'/节 · 课销¥'+(r.lesson_revenue||0)+' · 人均¥'+(r.per_person||0)+'</div>';
       h+='<div style="font-size:11px;color:var(--tx2);margin-bottom:4px">销课: '+r.students.join(', ')+'</div>';
-      if(r.leave_notes)h+='<div style="font-size:10px;color:var(--coral)">备注: '+esc(r.leave_notes)+'</div>';
+      if(r.leave_notes)h+='<div style="font-size:10px;color:var(--sky)">备注: '+esc(r.leave_notes)+'</div>';
       h+='</div>';
     });
     el.innerHTML=h;

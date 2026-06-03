@@ -219,7 +219,18 @@ def attendance_by_lesson(class_name=None, cycle=None, limit=50):
         students_sql = "SELECT student_name, status, note FROM attendance WHERE class_name=%s AND lesson_title=%s AND lesson_date=%s"
         students = _execute(db, students_sql, [cn, r["lesson_title"], r["lesson_date"]]).fetchall()
         student_names = [s["student_name"] for s in students if s["status"] == "出席"]
-        leave_notes = [f"{s['student_name']}:{s['note']}" for s in students if s["note"] and str(s["note"]).strip()]
+        # Deduplicate notes: group by note content, list students sharing each note
+        note_map = {}
+        for s in students:
+            note = str(s["note"]).strip() if s["note"] else ""
+            if note and note != "None":
+                if note not in note_map: note_map[note] = []
+                note_map[note].append(s["student_name"])
+        all_have_same = len(note_map) == 1 and sum(len(v) for v in note_map.values()) == len(students)
+        if all_have_same:
+            leave_notes = list(note_map.keys())[0]
+        else:
+            leave_notes = "; ".join([f"{n}（{', '.join(names)}）" for n, names in note_map.items()])
         # Price: detect segment from class name
         price = 0; seg_display = ""
         seg_map = [("探索段","探索"),("启航段","启航"),("先锋段","先锋"),("领航1V1","领航"),("领航1V2","领航"),("成人班","成人")]
