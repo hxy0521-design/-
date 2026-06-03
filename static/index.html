@@ -48,7 +48,7 @@ textarea{min-height:120px;font-family:monospace;resize:vertical}
 var API=window.location.origin+'/api';
 var tabs={},activeTab=null,activeMainTab='overview',cfgReady=false;
 var cache={};
-function cachedFetch(url,force){return new Promise(function(resolve){if(!force&&cache[url])return resolve(cache[url]);fetch(url).then(function(r){return r.json()}).then(function(d){cache[url]=d;resolve(d)})})}
+function cachedFetch(url,force){return new Promise(function(resolve){if(!force&&cache[url])return resolve({json:function(){return Promise.resolve(cache[url])}});fetch(url).then(function(r){return r.json()}).then(function(d){cache[url]=d;resolve({json:function(){return Promise.resolve(d)}})})})}
 function switchMainTab(){
   var el=document.getElementById('editorBody');if(!el)return;
   var pl=document.querySelector('.pl');var pr=document.getElementById('previewPanel');
