@@ -532,7 +532,7 @@ function renderPaymentTab(){
 function loadPayments(){
   fetch(API+'/purchases?page='+payPage+'&limit=100').then(function(r){return r.json()}).then(function(d){
     var el=document.getElementById('payTable');var pg=document.getElementById('payPager');if(!el)return;
-    h+='<div style="overflow-x:auto;border-radius:8px;border:1px solid #f1f5f9"><table class="datatable"><thead><tr><th>学生</th><th>分段</th><th>课型</th><th>方式</th><th>优惠</th><th>课次</th><th>金额</th><th>日期</th><th></th></tr></thead><tbody>';
+    var h='<div style="overflow-x:auto;border-radius:8px;border:1px solid #f1f5f9"><table class="datatable"><thead><tr><th>学生</th><th>分段</th><th>课型</th><th>方式</th><th>优惠</th><th>课次</th><th>金额</th><th>日期</th><th></th></tr></thead><tbody>';
     d.rows.forEach(function(r){
     h+='<tr><td><b>'+esc(r.student_name)+'</b></td><td>'+esc(r.segment||'')+'</td><td>'+esc(r.course_type||'')+'</td><td>'+esc(r.method||'')+'</td><td>'+esc(r.discount_type||'')+'</td><td>'+r.lesson_count+'</td><td>¥'+(r.amount||0)+'</td><td style="font-size:11px">'+(r.actual_pay_date||'').slice(0,10)+'</td><td><button onclick="deletePay(\''+r.id+'\')" style="border:none;background:none;color:var(--rd);cursor:pointer;font-size:11px">删</button></td></tr>'});
     h+='</tbody></table></div>';el.innerHTML=h;
