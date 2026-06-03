@@ -105,7 +105,6 @@ function switchMainTab(){
   document.querySelector('.pc').style.width=isEdit?'':'100%';
   el.innerHTML='<div style="text-align:center;padding:60px 0;color:var(--sb)"><div style="display:inline-block;width:24px;height:24px;border:3px solid #e2e8f0;border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite"></div></div>';
   if(activeMainTab==='overview')renderOverviewTab();
-  else if(activeMainTab==='schedule')renderScheduleTab();
   else if(activeMainTab==='edit'){if(activeTab)renderEditor();else el.innerHTML='<div style=\"color:var(--sb);text-align:center;padding:60px 0\">请从左侧选择班级</div>'}
   else if(activeMainTab==='attendance')renderAttendanceTab();
   else if(activeMainTab==='students')renderStudentTab();
@@ -116,7 +115,7 @@ function switchMainTab(){
 }
 function renderMainTabs(){
   var tb=document.getElementById('mainTabs');if(!tb)return;
-  var items=[{id:'overview',label:'总览'},{id:'schedule',label:'排课'},{id:'edit',label:'编辑'},{id:'attendance',label:'销课'},{id:'students',label:'学生'},{id:'payments',label:'缴费'},{id:'splits',label:'分账'},{id:'pricing',label:'定价'}];
+  var items=[{id:'overview',label:'总览'},{id:'edit',label:'编辑'},{id:'attendance',label:'销课'},{id:'students',label:'学生'},{id:'payments',label:'缴费'},{id:'splits',label:'分账'},{id:'pricing',label:'定价'}];
   tb.innerHTML='';
   items.forEach(function(it){
     var t=document.createElement('button');t.textContent=it.label;
@@ -526,27 +525,12 @@ function renderOverviewTab(){
   days.forEach(function(d){h+='<div style="background:var(--surface2);padding:8px;text-align:center;font-size:11px;font-weight:700;color:var(--tx2)">'+d+'</div>'});
   days.forEach(function(d){
     h+='<div style="background:var(--surface);padding:6px;min-height:60px;font-size:10px">';
-    week.forEach(function(w){if(w.weekday===d)h+='<div style="background:'+w.color+'20;border-left:3px solid '+w.color+';padding:4px 6px;margin:2px 0;border-radius:4px;font-size:10px"><b>'+esc(w.class_name)+'</b><br>'+esc(w.time)+' ('+w.students.length+'人)</div>'});
+    week.forEach(function(w){if(w.weekday===d)h+='<div style="background:'+w.color+'20;border-left:3px solid '+w.color+';padding:5px 7px;margin:2px 0;border-radius:5px;font-size:10px"><b>'+esc(w.class_name)+'</b> <span style="color:var(--tx3)">'+esc(w.time)+'</span><br><span style="color:var(--tx3)">'+esc(w.teacher||'')+' · '+w.students.length+'人</span></div>'});
     h+='</div>';
   });
   h+='</div></div>';el.innerHTML=h;
 }
 // ====== Tab 2: 排课表 (placeholder) =====
-function renderScheduleTab(){
-  var el=document.getElementById('editorBody');if(!el)return;
-  cachedFetch(API+'/dashboard/weekly').then(function(r){return r.json()}).then(function(week){
-    var h='<div style="padding:16px"><h3>排课表</h3><div style="font-size:11px;color:var(--sb);margin-bottom:12px">当周课表 · 预留 API 接入</div>';
-    var days=['周一','周二','周三','周四','周五','周六','周日'];
-    h+='<div style="display:grid;grid-template-columns:repeat(7,minmax(100px,1fr));gap:2px;background:#e2e8f0;border-radius:8px;overflow:hidden">';
-    days.forEach(function(d){h+='<div style="background:#f8fafc;padding:8px;text-align:center;font-size:12px;font-weight:700">'+d+'</div>'});
-    days.forEach(function(d){
-      h+='<div style="background:var(--surface);padding:8px;min-height:80px;font-size:11px">';
-      week.forEach(function(w){if(w.weekday===d)h+='<div style="border-left:4px solid '+w.color+';padding:4px 6px;margin:2px 0;border-radius:4px;background:'+w.color+'10"><b>'+esc(w.class_name)+'</b><br><span style="color:var(--sb)">'+esc(w.time)+'</span><br><span style="font-size:10px;color:var(--sb)">'+w.students.join(', ')+'</span></div>'});
-      h+='</div>';
-    });
-    h+='</div></div>';el.innerHTML=h;
-  });
-}
 // ====== Tab 4: 销课 =====
 function renderAttendanceTab(){
   var el=document.getElementById('editorBody');if(!el)return;
