@@ -186,13 +186,51 @@ def attendance_stats(class_name=None):
 
 def attendance_by_lesson(class_name=None, limit=50):
     db = get_db()
-    sql = "SELECT class_name, ANY_VALUE(unit_code) as unit_code, lesson_num, ANY_VALUE(lesson_title) as lesson_title, lesson_date, COUNT(*) as total, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE 1=1"
+    sql = "SELECT class_name, lesson_title, lesson_date, COUNT(*) as total, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE 1=1"
     params = []
     if class_name: sql += " AND class_name=%s"; params.append(class_name)
-    sql += " GROUP BY class_name, lesson_num, lesson_date ORDER BY lesson_date DESC, class_name LIMIT %s"
+    sql += " GROUP BY class_name, lesson_title, lesson_date ORDER BY lesson_date DESC, class_name LIMIT %s"
     params.append(limit)
     rows = _execute(db, sql, params).fetchall()
-    return [{"class_name": r["class_name"], "lesson_num": r["lesson_num"], "lesson_title": r["lesson_title"], "lesson_date": r["lesson_date"], "total": int(r["total"] or 0), "present": int(r["present"] or 0)} for r in rows]
+    cfg = config_all()
+    _DAY_MAP = {"一":"周一","二":"周二","三":"周三","四":"周四","五":"周五","六":"周六","日":"周日"}
+    result = []
+    for r in rows:
+        cn = r["class_name"]
+        cls_cfg = cfg.get(cn, {})
+        unit_info = list(cls_cfg.values())[0] if cls_cfg else {}
+        segment_name = unit_info.get("name", "")
+        class_time = unit_info.get("class_time", "")
+        # Derive weekday from class name
+        weekday_cn = cn[1] if len(cn) > 1 else ""
+        weekday = _DAY_MAP.get(weekday_cn, "")
+        total = int(r["total"] or 0)
+        present = int(r["present"] or 0)
+        # Get students and notes for this lesson
+        students_sql = "SELECT student_name, status, note FROM attendance WHERE class_name=%s AND lesson_title=%s AND lesson_date=%s"
+        students = _execute(db, students_sql, [cn, r["lesson_title"], r["lesson_date"]]).fetchall()
+        student_names = [s["student_name"] for s in students if s["status"] == "出席"]
+        leave_notes = [f"{s['student_name']}:{s['note']}" for s in students if s["note"] and str(s["note"]).strip()]
+        # Price: detect segment from class name
+        price = 0; seg_display = ""
+        seg_map = [("探索段","探索"),("启航段","启航"),("先锋段","先锋"),("领航1V1","领航"),("领航1V2","领航"),("成人班","成人")]
+        for seg, kw in seg_map:
+            if kw in cn:
+                seg_display = seg
+                pr = _execute(db, "SELECT unit_price FROM pricing WHERE segment=%s AND course_type='正式课' AND discount_type='一课一销'", [seg]).fetchone()
+                if pr: price = float(pr["unit_price"])
+                break
+        lesson_revenue = present * price
+        result.append({
+            "class_name": cn, "lesson_title": r["lesson_title"],
+            "lesson_date": r["lesson_date"], "weekday": weekday,
+            "segment": seg_display, "time": class_time,
+            "total": total, "present": present,
+            "price": price, "lesson_revenue": round(lesson_revenue, 1),
+            "per_person": round(lesson_revenue / present, 1) if present > 0 else 0,
+            "students": student_names, "leave_notes": "; ".join(leave_notes),
+        })
+    return result
 
 # ------- Roster -------
 

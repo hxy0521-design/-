@@ -551,10 +551,22 @@ function loadAttLessons(){
   var cls=document.getElementById('attClassFilter')?document.getElementById('attClassFilter').value:'';
   fetch(API+'/attendance/by-lesson?class='+encodeURIComponent(cls)+'&limit=50').then(function(r){return r.json()}).then(function(rows){
     var el=document.getElementById('attLessonList');if(!el)return;
-    if(!rows.length){el.innerHTML='<div class="st">暂无记录</div>';return}
-    var h='<div style="overflow-x:auto;border-radius:8px;border:1px solid #f1f5f9"><table class="datatable"><thead><tr><th>班级</th><th>课节</th><th>日期</th><th>出席/总数</th><th>出勤率</th></tr></thead><tbody>';
-    rows.forEach(function(r){var pct=r.total>0?Math.round(r.present/r.total*100):0;h+='<tr><td>'+esc(r.class_name)+'</td><td>'+esc(r.lesson_title||'')+' #'+r.lesson_num+'</td><td style="font-size:11px">'+(r.lesson_date||'').slice(0,10)+'</td><td><b>'+r.present+'</b>/'+r.total+'</td><td><div style="height:4px;background:#e2e8f0;border-radius:2px;width:60px;display:inline-block;vertical-align:middle"><div style="height:100%;width:'+pct+'%;background:'+(pct>70?'#16a34a':(pct>40?'#d97706':'#dc2626'))+';border-radius:2px"></div></div> <span style="font-size:10px;color:var(--sb)">'+pct+'%</span></td></tr>'});
-    h+='</tbody></table></div>';el.innerHTML=h;
+    if(!rows.length){el.innerHTML='<div class="section-card" style="text-align:center;padding:40px">暂无销课记录</div>';return}
+    var h='';
+    rows.forEach(function(r){
+      var pct=r.total>0?Math.round(r.present/r.total*100):0;
+      h+='<div class="section-card" style="padding:16px">';
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
+      h+='<div><b style="font-size:14px">'+esc(r.class_name)+'</b> <span style="color:var(--tx3);font-size:12px">'+esc(r.segment)+' · '+esc(r.time)+' · '+esc(r.weekday)+'</span></div>';
+      h+='<div style="text-align:right"><span style="font-weight:700;font-size:16px">'+r.present+'/'+r.total+'人</span> <span style="color:var(--tx3);font-size:11px">出席</span></div>';
+      h+='</div>';
+      h+='<div style="font-size:13px;color:var(--tx);margin-bottom:4px"><b>'+esc(r.lesson_title)+'</b></div>';
+      h+='<div style="font-size:11px;color:var(--tx3);margin-bottom:8px">'+esc(r.lesson_date||'')+' · ¥'+(r.price||0)+'/节 · 课销¥'+(r.lesson_revenue||0)+' · 人均¥'+(r.per_person||0)+'</div>';
+      h+='<div style="font-size:11px;color:var(--tx2);margin-bottom:4px">销课: '+r.students.join(', ')+'</div>';
+      if(r.leave_notes)h+='<div style="font-size:10px;color:var(--coral)">备注: '+esc(r.leave_notes)+'</div>';
+      h+='</div>';
+    });
+    el.innerHTML=h;
   });
 }
 // ====== Tab 6: 缴费记录 =====
