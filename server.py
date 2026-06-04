@@ -592,35 +592,6 @@ def generate_all():
         else:
             font_warning = "未找到任何中文字体，图片可能无法正常生成"
 
-    # 如果没有手动标记金句，自动用 DeepSeek 检测
-    print(f"[DeepSeek] golden_qs={golden_qs} empty={not golden_qs} key_set={bool(os.environ.get('DEEPSEEK_API_KEY'))}")
-    if not golden_qs and os.environ.get("DEEPSEEK_API_KEY"):
-        print("[DeepSeek] 开始自动金句检测...")
-        try:
-            import requests as _r
-            sents = []
-            for t in topics_data:
-                for s in t.get("speeches",[]):
-                    if s.get("content","").strip():
-                        sents.append({"text": s["content"], "name": s["name"]})
-            if sents:
-                resp = _r.post("https://api.deepseek.com/v1/chat/completions",
-                    headers={"Authorization": "Bearer "+os.environ["DEEPSEEK_API_KEY"], "Content-Type": "application/json"},
-                    json={"model":"deepseek-chat","messages":[
-                        {"role":"system","content":"你是一位专业的语文老师，擅长发现学生作文中的精彩句子（金句）。请为每个学生选择最有价值的句子作为金句标记。对于每个学生，选择1-3个金句。返回严格的JSON格式，不要有任何额外文字：{\"student_name\": [\"金句1\", \"金句2\"]}"},
-                        {"role":"user","content": json.dumps({"topics": topics_data, "title": title}, ensure_ascii=False)}
-                    ],"temperature":0.3,"max_tokens":2000}, timeout=30)
-                if resp.status_code == 200:
-                    result = resp.json()
-                    txt = result["choices"][0]["message"]["content"]
-                    import re as _re2
-                    json_match = _re2.search(r'\{[^{}]*\}', txt, _re2.DOTALL)
-                    if json_match:
-                        golden_qs = json.loads(json_match.group())
-                        print(f"[DeepSeek] 金句检测成功: {len(golden_qs)} 名学生, {sum(len(v) for v in golden_qs.values())} 句")
-        except Exception as e:
-            print(f"[DeepSeek] 金句检测失败: {e}")
-
     # 生成输出到本地目录（unit_path）
     cwd = os.getcwd(); os.chdir(base)
     try:
