@@ -593,6 +593,7 @@ def generate_all():
             font_warning = "未找到任何中文字体，图片可能无法正常生成"
 
     # 如果没有手动标记金句，自动用 DeepSeek 检测
+    print(f"[DeepSeek] golden_qs={golden_qs} empty={not golden_qs} key_set={bool(os.environ.get('DEEPSEEK_API_KEY'))}")
     if not golden_qs and os.environ.get("DEEPSEEK_API_KEY"):
         print("[DeepSeek] 开始自动金句检测...")
         try:
