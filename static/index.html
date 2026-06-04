@@ -578,7 +578,7 @@ function renderOverviewTab(){
     }
     return dates.join('/');
   }
-  h+='<div style="display:flex;align-items:center;margin:12px 0 8px"><h3 style="margin:0;flex:1">周期课表</h3><button class="btn bo" style="padding:2px 10px;font-size:10px" onclick="showOffWeekModal()">停课周设置</button><button class="btn bo" style="padding:2px 10px;font-size:10px;margin-left:6px" onclick="newClass()">+ 新增班级</button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border-radius:var(--radius);overflow:hidden">';
+  h+='<div style="display:flex;align-items:center;margin:12px 0 8px"><h3 style="margin:0;flex:1">周期课表</h3><button class="btn bo" style="padding:2px 10px;font-size:10px" onclick="showCalendarModal()">停课/周期</button><button class="btn bo" style="padding:2px 10px;font-size:10px;margin-left:6px" onclick="newClass()">+ 新增班级</button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border-radius:var(--radius);overflow:hidden">';
   var days=['周一','周二','周三','周四','周五','周六','周日'];
   days.forEach(function(d){h+='<div style="background:var(--surface2);padding:8px;text-align:center;font-size:11px;font-weight:700;color:var(--tx2)">'+d+'</div>'});
   days.forEach(function(d){
@@ -782,14 +782,39 @@ function renderStudentTab(){
     h+='</div></div>';el.innerHTML=h;
   });
 }
-function showOffWeekModal(){
-  var wks=window._tWeeks||[];
+function showCalendarModal(){
+  var nowD=new Date();var y=nowD.getFullYear();var mo=nowD.getMonth();
+  // Build all teaching weeks (Tue-Mon) that touch this month
+  var firstDay=new Date(y,mo,1);var lastDay=new Date(y,mo+1,0);
+  // Go back to find the first Tue that could touch this month
+  var wkStart=new Date(y,mo,1);
+  while(wkStart.getDay()!==2) wkStart.setDate(wkStart.getDate()-1);
+  // Collect all weeks that overlap with this month
+  var weeks=[];
+  for(var w=0;w<7;w++){
+    var ws=new Date(wkStart);ws.setDate(ws.getDate()+w*7);
+    var we=new Date(ws);we.setDate(we.getDate()+6);
+    if(ws>lastDay)break;
+    if(we<firstDay)continue;
+    var lbl=(ws.getMonth()+1)+'/'+ws.getDate()+' - '+(we.getMonth()+1)+'/'+we.getDate();
+    var inMonth=(ws.getMonth()===mo||we.getMonth()===mo);
+    weeks.push({n:w+1,ws:ws,we:we,label:lbl,inMonth:inMonth});
+  }
   var off=window._offWeeks||[];
   var ov=document.createElement('div');ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
-  var h='<div style="background:var(--surface);border-radius:14px;padding:24px;max-width:400px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,.2)"><h3 style="margin:0 0 12px">停课周设置</h3><div style="font-size:10px;color:var(--tx3);margin-bottom:8px">教学周：周二至周一</div>';
-  wks.forEach(function(wk){
-    h+='<label style="display:block;padding:6px 0;cursor:pointer;font-size:13px"><input type="checkbox" '+(off.indexOf(wk.n)>=0?'checked':'')+' onchange="toggleOffWeek('+wk.n+')" style="width:auto;margin-right:8px">第'+wk.n+'周 ('+wk.label+')</label>';
+  var h='<div style="background:var(--surface);border-radius:14px;padding:24px;max-width:440px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,.2)"><h3 style="margin:0 0 4px">教学周历 · '+(mo+1)+'月</h3><div style="font-size:10px;color:var(--tx3);margin-bottom:12px">周次：周二至周一 | 点击切换停课</div>';
+  h+='<div style="display:grid;grid-template-columns:40px 1fr 60px;gap:4px;align-items:center">';
+  h+='<div style="font-size:10px;color:var(--tx3)">周</div><div style="font-size:10px;color:var(--tx3)">日期</div><div style="font-size:10px;color:var(--tx3);text-align:center">状态</div>';
+  var offSet=window._offWeeks||[];
+  weeks.forEach(function(wk,i){
+    var isOff=off.indexOf(wk.n)>=0;
+    var alpha=wk.inMonth?'1':'.5';
+    h+='<div style="font-size:12px;font-weight:600;opacity:'+alpha+'">'+(i+1)+'</div>';
+    h+='<div style="font-size:11px;opacity:'+alpha+'">'+wk.label+'</div>';
+    h+='<div style="text-align:center;cursor:pointer;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:600;'+(isOff?'background:var(--coral-light);color:var(--coral)':'background:var(--green-light);color:var(--green)')+'" onclick="toggleOffWeek('+wk.n+');this.textContent=this.textContent===\'上课\'?\'停课\':\'上课\';var p=this.parentElement.parentElement.parentElement;setTimeout(function(){p.remove();showCalendarModal()},200)">'+(isOff?'停课':'上课')+'</div>';
   });
+  h+='</div>';
+  h+='<div style="font-size:10px;color:var(--tx3);margin-top:12px;text-align:center">灰色 = 跨月周</div>';
   h+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button onclick="closeModal(this)" class="btn bo">关闭</button></div></div>';
   ov.innerHTML=h;document.body.appendChild(ov);
 }
