@@ -243,7 +243,11 @@ def attendance_by_lesson(class_name=None, cycle=None, limit=50):
                 else:
                     names = [s2["student_name"] for s2 in students if str(s2["note"] or "").strip() == raw]
                     unique_notes.append(f"{raw}（{', '.join(names)}）")
-        leave_notes = "; ".join(unique_notes) if unique_notes else ""
+        if isinstance(unique_notes, str): unique_notes = [unique_notes]
+        if unique_notes:
+            if len(unique_notes) == 1: leave_notes = unique_notes[0]
+            else: leave_notes = " | ".join(unique_notes)
+        else: leave_notes = ""
         # Price: detect segment from class name
         price = 0; seg_display = ""
         seg_map = [("探索段","探索"),("启航段","启航"),("先锋段","先锋"),("领航1V1","领航"),("领航1V2","领航"),("成人班","成人")]
