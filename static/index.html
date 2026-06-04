@@ -560,7 +560,7 @@ function loadAttLessons(){
   var st=document.getElementById('attLoadStatus');if(st)st.textContent='加载中...';
   var cls=document.getElementById('attClassFilter')?document.getElementById('attClassFilter').value:'';
   var cyc=document.getElementById('attCycleFilter')?document.getElementById('attCycleFilter').value:'';
-  var url=API+'/attendance/by-lesson?limit=50';
+  var url=API+'/attendance/by-lesson?limit=200';
   if(cls)url+='&class='+encodeURIComponent(cls);
   if(cyc)url+='&cycle='+encodeURIComponent(cyc);
   fetch(url).then(function(r){return r.json()}).then(function(rows){
