@@ -615,7 +615,9 @@ def generate_all():
                     json_match = _re2.search(r'\{[^{}]*\}', txt, _re2.DOTALL)
                     if json_match:
                         golden_qs = json.loads(json_match.group())
-        except: pass
+                        print(f"DeepSeek 金句检测: {len(golden_qs)} 名学生")
+        except Exception as e:
+            print(f"DeepSeek 金句检测失败: {e}")
 
     # 生成输出到本地目录（unit_path）
     cwd = os.getcwd(); os.chdir(base)
