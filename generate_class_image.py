@@ -374,15 +374,10 @@ def parse_input_txt(filepath):
             if current_topic is not None:
                 current_speeches.append((name, content))
         else:
-                # 续行：如果没有匹配到发言模式也不是标记行，追加到上一条发言
-                if current_topic is not None and current_speeches:
-                    name, content = current_speeches[-1]
-                    current_speeches[-1] = (name, content + stripped)
-                else:
-                    if current_topic is not None:
-                        topics.append((current_topic, current_speeches))
-                    current_topic = stripped
-                    current_speeches = []
+                if current_topic is not None:
+                    topics.append((current_topic, current_speeches))
+                current_topic = stripped
+                current_speeches = []
 
     if current_topic is not None:
         topics.append((current_topic, current_speeches))

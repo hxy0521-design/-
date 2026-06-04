@@ -358,7 +358,7 @@ def save_lesson():
     for t in topics_data:
         content_lines.append(t.get("title","") + "\n")
         for s in t.get("speeches",[]):
-            content_lines.append(f"{s.get('name','')}：{s.get('content','')}\n")
+            content_lines.append(f"{s.get('name','')}：{s.get('content','').replace(chr(10),' ').replace(chr(13),' ')}\n")
         content_lines.append("\n")
     content = ''.join(content_lines)
     db.lesson_save(cls_name, unit_code, int(lesson_num), meta.get('title',''), content)
@@ -573,7 +573,7 @@ def generate_all():
     for t in topics_data:
         content_lines.append(t["title"] + "\n")
         for s in t["speeches"]:
-            content_lines.append(f"{s['name']}：{str(s['content'])}\n")
+            content_lines.append(f"{s['name']}：{str(s['content']).replace(chr(10),' ').replace(chr(13),' ')}\n")
         content_lines.append("\n")
     content = ''.join(content_lines)
     # 写本地临时文件供生成脚本读取（生成完后删除）
