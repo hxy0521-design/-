@@ -590,11 +590,16 @@ function loadAttLessons(){
     var totalPages=Math.ceil(attTotal/50);
     if(st)st.textContent=attTotal+'条 · 第'+attPage+'/'+totalPages+'页';
     h+='<div style="text-align:center;margin-top:12px">';
-    if(attPage>1)h+='<a href="#" onclick="attPage=1;loadAttLessons();return false" class="btn bo" style="padding:4px 10px;font-size:11px;text-decoration:none">首页</a> ';
-    if(attPage>1)h+='<a href="#" onclick="attPage--;loadAttLessons();return false" class="btn bo" style="padding:4px 10px;font-size:11px;text-decoration:none">←</a> ';
-    h+='<span style="font-size:11px;color:var(--tx3);margin:0 8px">'+attPage+'/'+totalPages+'</span> ';
-    if(attPage<totalPages)h+='<a href="#" onclick="attPage++;loadAttLessons();return false" class="btn bo" style="padding:4px 10px;font-size:11px;text-decoration:none">→</a> ';
-    if(attPage<totalPages)h+='<a href="#" onclick="attPage='+totalPages+';loadAttLessons();return false" class="btn bo" style="padding:4px 10px;font-size:11px;text-decoration:none">末页</a>';
+    if(attPage>1)h+='<a href="#" onclick="attPage=1;loadAttLessons();return false" class="btn bo" style="padding:4px 8px;font-size:11px;text-decoration:none">首页</a> ';
+    if(attPage>1)h+='<a href="#" onclick="attPage--;loadAttLessons();return false" class="btn bo" style="padding:4px 8px;font-size:11px;text-decoration:none">←</a> ';
+    // Page numbers: show up to 8 pages centered around current page
+    var pStart=Math.max(1,attPage-3);var pEnd=Math.min(totalPages,pStart+7);
+    if(pEnd-pStart<7)pStart=Math.max(1,pEnd-7);
+    for(var p=pStart;p<=pEnd;p++){
+      h+='<a href="#" onclick="attPage='+p+';loadAttLessons();return false" style="display:inline-block;padding:4px 8px;margin:0 1px;border-radius:4px;font-size:11px;text-decoration:none;'+(p===attPage?'background:var(--accent);color:#fff;font-weight:600':'color:var(--tx2)')+'">'+p+'</a>';
+    }
+    if(attPage<totalPages)h+='<a href="#" onclick="attPage++;loadAttLessons();return false" class="btn bo" style="padding:4px 8px;font-size:11px;text-decoration:none">→</a> ';
+    if(attPage<totalPages)h+='<a href="#" onclick="attPage='+totalPages+';loadAttLessons();return false" class="btn bo" style="padding:4px 8px;font-size:11px;text-decoration:none">末页</a>';
     h+='</div>';
     el.innerHTML=h;
   });
