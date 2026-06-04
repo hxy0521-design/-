@@ -263,11 +263,12 @@ function newUnit(cls, unitCode, unitFull){
 }
 function newLesson(cls,unit,unitFull){
   var uname=unitFull||unit;var tabName=cls+'-'+unit+'-new';
-  if(!tabs[tabName])tabs[tabName]={meta:{title:'',unit:'',date:'',class:cls,gender:''},topics:[],_golden:{}};
-  var d=tabs[tabName];d.meta.date=new Date().toISOString().slice(0,10);d.meta.unit=uname;d.meta.class=cls;d.folder='';
+  // Always create fresh blank tab
+  tabs[tabName]={meta:{title:'',unit:uname,date:new Date().toISOString().slice(0,10),class:cls,gender:''},topics:[],_golden:{},folder:''};
+  var d=tabs[tabName];
   fetch(API+'/config').then(function(r){return r.json()}).then(function(cfg){
     var u=cfg[cls]&&cfg[cls][unit];if(u&&u.path)d.basePath=u.path;
-    activeTab=tabName;renderTabs();renderEditor();renderPreview();
+    activeTab=tabName;renderTabs();switchMainTab();renderPreview();
   });
 }
 
