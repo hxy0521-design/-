@@ -635,10 +635,6 @@ def generate_all():
             fb2 = os.path.join(base, f"{label}_{cn}.txt")
             if os.path.exists(fb2):
                 outputs.append({"name": os.path.basename(fb2), "path":f"/api/file/{folder}/{os.path.basename(fb2)}"}); break
-    # 删除生成用的临时 TXT（底表已有持久副本，不留在输出目录）
-    if os.path.exists(txt_path):
-        os.remove(txt_path)
-
     return jsonify({"status":"ok","outputs":outputs,"folder":folder,"font_warning":font_warning})
 
 @app.route("/api/file/<folder>/images/<filename>")
