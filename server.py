@@ -799,6 +799,11 @@ def roster_set(cls_name):
     db.roster_set(cls_name, students)
     return jsonify({"status": "ok"})
 
+@app.route("/api/classes/<cls_name>/off-weeks", methods=["PUT"])
+def set_off_weeks(cls_name):
+    db.execute("UPDATE config SET off_weeks=%s WHERE class_name=%s", [request.json.get("off_weeks",""), cls_name])
+    return jsonify({"status": "ok"})
+
 # ====== Excel 导入 ======
 
 @app.route("/api/import-excel", methods=["POST"])
