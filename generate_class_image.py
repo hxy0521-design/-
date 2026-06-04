@@ -325,12 +325,14 @@ def parse_input_txt(filepath):
     topics = []
     current_topic = None
     current_speeches = []
+    prev_blank = True  # 初始状态视为段首
     in_meta = True
 
     for line in lines:
         stripped = line.strip()
         if not stripped:
             in_meta = False
+            prev_blank = True
             continue
         if stripped.startswith("#"):
             continue  # 注释行，不影响 in_meta 状态
@@ -373,11 +375,18 @@ def parse_input_txt(filepath):
                 content = ' '.join(img_tags) + ' ' + content
             if current_topic is not None:
                 current_speeches.append((name, content))
+            prev_blank = False
         else:
-                if current_topic is not None:
-                    topics.append((current_topic, current_speeches))
-                current_topic = stripped
-                current_speeches = []
+                # Continuation line (no blank before it) vs new topic (blank before it)
+                if not prev_blank and current_topic is not None and current_speeches and len(stripped) > 0:
+                    name, content = current_speeches[-1]
+                    current_speeches[-1] = (name, content + ' ' + stripped)
+                else:
+                    if current_topic is not None:
+                        topics.append((current_topic, current_speeches))
+                    current_topic = stripped
+                    current_speeches = []
+                prev_blank = False
 
     if current_topic is not None:
         topics.append((current_topic, current_speeches))
