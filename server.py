@@ -982,8 +982,10 @@ def attendance_cycles():
 def attendance_by_lesson():
     cls = request.args.get("class", "")
     cycle = request.args.get("cycle", "")
+    page = int(request.args.get("page", 1))
     limit = int(request.args.get("limit", 50))
-    return jsonify(db.attendance_by_lesson(class_name=cls or None, cycle=cycle or None, limit=limit))
+    result, total = db.attendance_by_lesson(class_name=cls or None, cycle=cycle or None, limit=limit, page=page)
+    return jsonify({"rows": result, "total": total, "page": page, "limit": limit})
 
 # ====== 缴费分页 ======
 

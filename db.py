@@ -184,16 +184,22 @@ def attendance_stats(class_name=None):
     rows = _execute(db, sql, params).fetchall()
     return {r["status"]: r["cnt"] for r in rows}
 
-def attendance_by_lesson(class_name=None, cycle=None, limit=50):
+def attendance_by_lesson(class_name=None, cycle=None, limit=50, page=1):
     db = get_db()
-    sql = "SELECT class_name, lesson_title, lesson_date, ANY_VALUE(cycle) as cycle, COUNT(*) as total, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE 1=1"
-    params = []
-    if class_name: sql += " AND class_name=%s"; params.append(class_name)
-    if cycle: sql += " AND cycle=%s"; params.append(cycle)
-    sql += " GROUP BY class_name, lesson_title, lesson_date ORDER BY lesson_date DESC, class_name LIMIT %s"
-    params.append(limit)
-    rows = _execute(db, sql, params).fetchall()
-    if not rows: return []
+    base_where = "WHERE 1=1"
+    w_params = []
+    if class_name: base_where += " AND class_name=%s"; w_params.append(class_name)
+    if cycle: base_where += " AND cycle=%s"; w_params.append(cycle)
+    # Count total
+    count_sql = f"SELECT COUNT(DISTINCT CONCAT(class_name,lesson_title,lesson_date)) as cnt FROM attendance {base_where}"
+    total_row = _execute(db, count_sql, w_params).fetchone()
+    total = int(total_row["cnt"]) if total_row else 0
+    # Paginated grouped query
+    offset = (page - 1) * limit
+    sql = f"SELECT class_name, lesson_title, lesson_date, ANY_VALUE(cycle) as cycle, COUNT(*) as total, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance {base_where}"
+    sql += " GROUP BY class_name, lesson_title, lesson_date ORDER BY lesson_date DESC, class_name LIMIT %s OFFSET %s"
+    rows = _execute(db, sql, w_params + [limit, offset]).fetchall()
+    if not rows: return [], 0
     # One bulk query for all student details
     detail_sql = "SELECT class_name, lesson_title, lesson_date, student_name, status, note FROM attendance WHERE (class_name, lesson_title, lesson_date) IN ("
     detail_params = []
@@ -252,7 +258,7 @@ def attendance_by_lesson(class_name=None, cycle=None, limit=50):
             "per_person": round(lesson_revenue / present, 1) if present > 0 else 0,
             "students": student_names, "leave_notes": leave_notes,
         })
-    return result
+    return result, total
 
 # ------- Roster -------
 
