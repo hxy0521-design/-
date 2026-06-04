@@ -353,13 +353,11 @@ def dashboard_summary():
     from datetime import datetime
     now = datetime.now()
     month_str = now.strftime("%Y-%m")
-    # Current cycle - match the latest cycle starting with current year
-    year_prefix = now.strftime("%y")
-    # Use the latest cycle (most recent in attendance data)
-    cycle_row = _execute(db, "SELECT cycle FROM attendance WHERE cycle LIKE %s ORDER BY lesson_date DESC LIMIT 1", [year_prefix + "%"]).fetchone()
+    # Monthly attendance: count by calendar month (lesson_date), not cycle
+    month_att = _execute(db, "SELECT COUNT(DISTINCT CONCAT(class_name,'-',lesson_title,'-',lesson_date)) as lessons, COUNT(*) as students, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE lesson_date LIKE %s", [month_str + "%"]).fetchone()
+    # Get the most common cycle for this month's records
+    cycle_row = _execute(db, "SELECT cycle, COUNT(*) as cnt FROM attendance WHERE lesson_date LIKE %s GROUP BY cycle ORDER BY cnt DESC LIMIT 1", [month_str + "%"]).fetchone()
     current_cycle = cycle_row["cycle"] if cycle_row else ""
-    # Monthly attendance from this cycle
-    cycle_att = _execute(db, "SELECT COUNT(DISTINCT CONCAT(class_name,'-',lesson_title,'-',lesson_date)) as lessons, COUNT(*) as students, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE cycle=%s", [current_cycle]).fetchone()
     active = _execute(db, "SELECT COUNT(*) as cnt FROM student_ext WHERE status=%s", ["在读中"]).fetchone()
     month_rev = _execute(db, "SELECT COALESCE(SUM(amount),0) as t FROM purchases WHERE actual_pay_date LIKE %s", [month_str + "%"]).fetchone()
     # 待销：已收费未消耗的课时
@@ -389,10 +387,10 @@ def dashboard_summary():
     schedule_remaining = (weeks_left - off_count) * weekly_count
     return {
         "active_students": int(active["cnt"]) if active else 0,
-        "month_lessons": int(cycle_att["lessons"]) if cycle_att else 0,
-        "month_present": int(cycle_att["present"]) if cycle_att else 0,
+        "month_lessons": int(month_att["lessons"]) if month_att else 0,
+        "month_present": int(month_att["present"]) if month_att else 0,
         "cycle": current_cycle,
-        "cycle_students": int(cycle_att["students"]) if cycle_att else 0,
+        "cycle_students": int(month_att["students"]) if month_att else 0,
         "pending_paid": int(pending["pending"]) if pending else 0,
         "schedule_remaining": schedule_remaining,
         "month_revenue": float(month_rev["t"]) if month_rev else 0.0
@@ -501,14 +499,13 @@ def config_and_lessons():
     cur.execute("SELECT COUNT(*) as cnt FROM student_ext WHERE status=%s", ["在读中"])
     active = Row([d[0] for d in cur.description], list(cur.fetchone()))
 
-    # Get current cycle
-    year_prefix = datetime.now().strftime("%y")
-    cur.execute("SELECT cycle FROM attendance WHERE cycle LIKE %s ORDER BY lesson_date DESC LIMIT 1", [year_prefix + "%"])
+    # Monthly attendance by calendar month (not cycle)
+    cur.execute(f"SELECT COUNT(DISTINCT CONCAT(class_name,'-',lesson_title,'-',lesson_date)) as lessons, COUNT(*) as students, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE lesson_date LIKE '{month_str}%'")
+    month_att = Row([d[0] for d in cur.description], list(cur.fetchone()))
+    # Most common cycle for this month
+    cur.execute(f"SELECT cycle FROM attendance WHERE lesson_date LIKE '{month_str}%' GROUP BY cycle ORDER BY COUNT(*) DESC LIMIT 1")
     cycle_row = cur.fetchone()
     current_cycle = cycle_row[0] if cycle_row else ""
-
-    cur.execute(f"SELECT COUNT(DISTINCT CONCAT(class_name,'-',lesson_title,'-',lesson_date)) as lessons, COUNT(*) as students, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE cycle=%s", [current_cycle])
-    cycle_att = Row([d[0] for d in cur.description], list(cur.fetchone()))
 
     cur.execute(f"SELECT COALESCE(SUM(amount),0) as t FROM purchases WHERE actual_pay_date LIKE '{month_str}%'")
     month_rev = Row([d[0] for d in cur.description], list(cur.fetchone()))
@@ -540,10 +537,10 @@ def config_and_lessons():
 
     summary = {
         "active_students": int(active["cnt"] or 0),
-        "month_lessons": int(cycle_att["lessons"] or 0),
-        "month_present": int(cycle_att["present"] or 0),
+        "month_lessons": int(month_att["lessons"] or 0),
+        "month_present": int(month_att["present"] or 0),
         "cycle": current_cycle,
-        "cycle_students": int(cycle_att["students"] or 0),
+        "cycle_students": int(month_att["students"] or 0),
         "pending_paid": pending_count,
         "schedule_remaining": schedule_remaining,
         "month_revenue": float(month_rev["t"] or 0)
