@@ -232,7 +232,7 @@ function newUnitAll(){
     var cfg=raw.classes||raw;var clsList=Object.keys(cfg);
     if(!clsList.length){alert('请先点击 + 新建班级 创建班级');return}
     var input=prompt('新建单元（如 2605 无形的手）：','');if(!input)return;
-    var parts=input.split(/\s+/);var code=parts[0];var name=parts.slice(1).join(' ')||code;
+    var parts=input.split(/\s+/);var code=parts[0];var name=input;
     if(!code)return;
     if(!confirm('请选择 「'+name+'」('+code+') 课后素材的存放文件夹\n\n点「确定」打开文件夹选择器'))return;
     fetch(API+'/pick-folder').then(function(r){return r.json()}).then(function(d){
@@ -252,7 +252,7 @@ function newUnitAll(){
 }
 function newUnit(cls, unitCode, unitFull){
   var input=prompt('为 '+cls+' 新建单元（如 2605 无形的手）：','2606');if(!input)return;
-  var parts=input.split(/\s+/);var code=parts[0];var name=parts.slice(1).join(' ')||code;
+  var parts=input.split(/\s+/);var code=parts[0];var name=input;
   if(!confirm('请选择 「'+name+'」('+code+') 课后素材的存放文件夹\n\n点「确定」打开文件夹选择器'))return;
   fetch(API+'/pick-folder').then(function(r){return r.json()}).then(function(d){
     if(!d.path){alert('未选择文件夹，已取消。');return}
