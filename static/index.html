@@ -590,11 +590,11 @@ function loadAttLessons(){
     var totalPages=Math.ceil(attTotal/50);
     if(st)st.textContent=attTotal+'条 · 第'+attPage+'/'+totalPages+'页';
     h+='<div style="text-align:center;margin-top:12px">';
-    h+='<button class="btn bo" style="padding:4px 12px;font-size:11px" onclick="attPage=1;loadAttLessons()" '+(attPage<=1?'disabled':'')+'>首页</button> ';
-    h+='<button class="btn bo" style="padding:4px 12px;font-size:11px" onclick="attPage=Math.max(1,attPage-1);loadAttLessons()" '+(attPage<=1?'disabled':'')+'>←</button> ';
+    h+='<button type="button" class="btn bo" style="padding:4px 12px;font-size:11px" onclick="attPage=1;loadAttLessons()" '+(attPage<=1?'disabled':'')+'>首页</button> ';
+    h+='<button type="button" class="btn bo" style="padding:4px 12px;font-size:11px" onclick="attPage=Math.max(1,attPage-1);loadAttLessons()" '+(attPage<=1?'disabled':'')+'>←</button> ';
     h+='<span style="font-size:11px;color:var(--tx3)">'+attPage+'/'+totalPages+'</span> ';
-    h+='<button class="btn bo" style="padding:4px 12px;font-size:11px" onclick="attPage=Math.min('+totalPages+',attPage+1);loadAttLessons()" '+(attPage>=totalPages?'disabled':'')+'>→</button> ';
-    h+='<button class="btn bo" style="padding:4px 12px;font-size:11px" onclick="attPage='+totalPages+';loadAttLessons()" '+(attPage>=totalPages?'disabled':'')+'>末页</button>';
+    h+='<button type="button" class="btn bo" style="padding:4px 12px;font-size:11px" onclick="attPage=Math.min('+totalPages+',attPage+1);loadAttLessons()" '+(attPage>=totalPages?'disabled':'')+'>→</button> ';
+    h+='<button type="button" class="btn bo" style="padding:4px 12px;font-size:11px" onclick="attPage='+totalPages+';loadAttLessons()" '+(attPage>=totalPages?'disabled':'')+'>末页</button>';
     h+='</div>';
     el.innerHTML=h;
   });
