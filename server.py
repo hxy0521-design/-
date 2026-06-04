@@ -48,11 +48,14 @@ def get_config():
     return db.config_all()
 
 def cls_from_folder(folder):
-    return folder.split("-2605")[0]
+    import re
+    m = re.match(r'(.+)-(\d{4})-\d+', folder)
+    return m.group(1) if m else folder
 
 def unit_from_folder(folder):
-    parts = folder.split("-")
-    return parts[1] if len(parts) > 1 else "2605"
+    import re
+    m = re.match(r'.+-(\d{4})-\d+', folder)
+    return m.group(1) if m else "2605"
 
 def unit_path(cls_name, unit_code):
     u = db.config_get_unit(cls_name, unit_code)
