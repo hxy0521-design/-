@@ -191,9 +191,9 @@ def attendance_by_lesson(class_name=None, cycle=None, limit=50, page=1):
     if class_name: base_where += " AND class_name=%s"; w_params.append(class_name)
     if cycle: base_where += " AND cycle=%s"; w_params.append(cycle)
     # Count total
-    count_sql = f"SELECT COUNT(DISTINCT CONCAT(class_name,lesson_title,lesson_date)) as cnt FROM attendance {base_where}"
+    count_sql = f"SELECT COUNT(DISTINCT CONCAT(class_name,'-',lesson_title,'-',lesson_date)) as cnt FROM attendance {base_where}"
     total_row = _execute(db, count_sql, w_params).fetchone()
-    total = int(total_row["cnt"]) if total_row else 0
+    total_count = int(total_row["cnt"]) if total_row else 0
     # Paginated grouped query
     offset = (page - 1) * limit
     sql = f"SELECT class_name, lesson_title, lesson_date, ANY_VALUE(cycle) as cycle, COUNT(*) as total, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance {base_where}"
@@ -258,7 +258,7 @@ def attendance_by_lesson(class_name=None, cycle=None, limit=50, page=1):
             "per_person": round(lesson_revenue / present, 1) if present > 0 else 0,
             "students": student_names, "leave_notes": leave_notes,
         })
-    return result, total
+    return result, total_count
 
 # ------- Roster -------
 
