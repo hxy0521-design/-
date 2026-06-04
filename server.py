@@ -809,12 +809,12 @@ def roster_set(cls_name):
 @app.route("/api/classes/<cls_name>/off-weeks", methods=["PUT"])
 def set_off_weeks(cls_name):
     db.execute("UPDATE config SET off_weeks=%s WHERE class_name=%s", [request.json.get("off_weeks",""), cls_name])
-    return jsonify({"status": "ok"})
+    _clear_config_cache(); return jsonify({"status": "ok"})
 
 @app.route("/api/classes/off-weeks", methods=["PUT"])
 def set_off_weeks_global():
     db.execute("UPDATE config SET off_weeks=%s", [request.json.get("off_weeks","")])
-    return jsonify({"status": "ok"})
+    _clear_config_cache(); return jsonify({"status": "ok"})
 
 # ====== Excel 导入 ======
 
