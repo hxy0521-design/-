@@ -210,6 +210,10 @@ def attendance_by_lesson(class_name=None, cycle=None, limit=50):
         student_map[key].append(s)
     cfg = config_all()
     _DAY_MAP = {"一":"周一","二":"周二","三":"周三","四":"周四","五":"周五","六":"周六","日":"周日"}
+    # Pre-load all pricing once
+    price_map = {}
+    for pr in _execute(db, "SELECT segment, unit_price FROM pricing WHERE course_type='正式课' AND discount_type='一课一销'").fetchall():
+        price_map[pr["segment"]] = float(pr["unit_price"])
     result = []
     for r in rows:
         cn = r["class_name"]
@@ -224,39 +228,20 @@ def attendance_by_lesson(class_name=None, cycle=None, limit=50):
         class_time = unit_info.get("class_time", "")
         weekday_cn = cn[1] if len(cn) > 1 else ""
         weekday = _DAY_MAP.get(weekday_cn, "")
+        # Price: detect segment from class name
+        seg_display = ""
+        for seg, kw in [("探索段","探索"),("启航段","启航"),("先锋段","先锋"),("领航1V1","领航"),("领航1V2","领航"),("成人班","成人")]:
+            if kw in cn: seg_display = seg; break
+        price = price_map.get(seg_display, 0)
         total = int(r["total"] or 0)
         present = int(r["present"] or 0)
         # Get students from the bulk-loaded map
         key = (cn, r["lesson_title"], r["lesson_date"])
         students = student_map.get(key, [])
         student_names = [s["student_name"] for s in students if s["status"] == "出席"]
-        # Deduplicate notes
-        notes_seen = set()
-        unique_notes = []
-        for s in students:
-            raw = str(s["note"]).strip() if s["note"] else ""
-            if raw and raw != "None" and raw not in notes_seen:
-                notes_seen.add(raw)
-                same_count = sum(1 for s2 in students if str(s2["note"] or "").strip() == raw)
-                if same_count == len(students):
-                    unique_notes.append(raw)
-                else:
-                    names = [s2["student_name"] for s2 in students if str(s2["note"] or "").strip() == raw]
-                    unique_notes.append(f"{raw}（{', '.join(names)}）")
-        if isinstance(unique_notes, str): unique_notes = [unique_notes]
-        if unique_notes:
-            if len(unique_notes) == 1: leave_notes = unique_notes[0]
-            else: leave_notes = " | ".join(unique_notes)
-        else: leave_notes = ""
-        # Price: detect segment from class name
-        price = 0; seg_display = ""
-        seg_map = [("探索段","探索"),("启航段","启航"),("先锋段","先锋"),("领航1V1","领航"),("领航1V2","领航"),("成人班","成人")]
-        for seg, kw in seg_map:
-            if kw in cn:
-                seg_display = seg
-                pr = _execute(db, "SELECT unit_price FROM pricing WHERE segment=%s AND course_type='正式课' AND discount_type='一课一销'", [seg]).fetchone()
-                if pr: price = float(pr["unit_price"])
-                break
+        # Build notes - just collect unique non-empty notes
+        notes_list = list(set(str(s["note"]).strip() for s in students if s["note"] and str(s["note"]).strip() and str(s["note"]).strip() != "None"))
+        leave_notes = notes_list[0] if len(notes_list) == 1 else (" | ".join(notes_list) if notes_list else "")
         lesson_revenue = present * price
         result.append({
             "class_name": cn, "lesson_title": display_title, "lesson_num": lesson_num,
@@ -265,7 +250,7 @@ def attendance_by_lesson(class_name=None, cycle=None, limit=50):
             "total": total, "present": present,
             "price": price, "lesson_revenue": round(lesson_revenue, 1),
             "per_person": round(lesson_revenue / present, 1) if present > 0 else 0,
-            "students": student_names, "leave_notes": "; ".join(leave_notes),
+            "students": student_names, "leave_notes": leave_notes,
         })
     return result
 
