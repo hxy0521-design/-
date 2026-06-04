@@ -729,14 +729,21 @@ def attendance_suggest():
     # 构建建议
     result = []
     seen = set()
+    # Build fuzzy match map: short name → roster names
+    fuzzy = {}
+    for rn in roster:
+        for sn in speakers:
+            if sn != rn and (sn in rn or rn.startswith(sn)):
+                fuzzy[sn] = rn
     # 花名册中的学生
     for name in roster:
         seen.add(name)
-        status = "出席" if name in speakers else ""
+        status = "出席" if name in speakers or name in fuzzy.values() else ""
+        # If matched via fuzzy, use the roster name
         result.append({"name": name, "status": status, "note": "", "inRoster": True})
     # 在发言中但不在花名册的（新生）
     for name in speakers:
-        if name not in seen:
+        if name not in seen and name not in fuzzy:
             result.append({"name": name, "status": "出席", "note": "", "inRoster": False, "isNew": True})
     return jsonify({"roster": result, "speakers": list(speakers)})
 
