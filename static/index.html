@@ -558,6 +558,7 @@ function cycleColor(c){
 }
 var attPage=1,attTotal=0;
 function loadAttLessons(){
+  var el=document.getElementById('attLessonList');if(el)el.innerHTML='<div style="text-align:center;padding:60px 0;color:var(--tx3)"><div style="display:inline-block;width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite"></div><div style="margin-top:8px;font-size:12px">加载中...</div></div>';
   var st=document.getElementById('attLoadStatus');if(st)st.textContent='加载中...';
   var cls=document.getElementById('attClassFilter')?document.getElementById('attClassFilter').value:'';
   var cyc=document.getElementById('attCycleFilter')?document.getElementById('attCycleFilter').value:'';
