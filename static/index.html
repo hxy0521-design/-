@@ -221,12 +221,15 @@ function newUnitAll(){
     if(!confirm('请选择 「'+name+'」('+code+') 课后素材的存放文件夹\n\n点「确定」打开文件夹选择器'))return;
     fetch(API+'/pick-folder').then(function(r){return r.json()}).then(function(d){
       if(!d.path){alert('未选择文件夹，已取消。');return}
-      var done=0;
+      // Show loading overlay
+      var ov=document.createElement('div');ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.3);z-index:9999;display:flex;align-items:center;justify-content:center';ov.innerHTML='<div style="background:var(--surface);border-radius:14px;padding:32px 48px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.2)"><div style="width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin:0 auto 12px"></div><div style="font-size:14px;color:var(--tx)">正在为 '+clsList.length+' 个班级创建单元...</div></div>';document.body.appendChild(ov);
+      var done=0,errors=0;
       clsList.forEach(function(cls){
         fetch(API+'/classes/'+encodeURIComponent(cls)+'/units',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,name:name,path:d.path,created_by:getCheckedUsers()[0]||''})})
           .then(function(r){return r.json()}).then(function(r2){
-            done++;if(done===clsList.length){fetchConfig()};
-          }).catch(function(){done++;if(done===clsList.length){fetchConfig()}});
+            done++;if(r2.status!=='ok')errors++;
+            if(done===clsList.length){ov.innerHTML='<div style="background:var(--surface);border-radius:14px;padding:32px 48px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.2)"><div style="font-size:32px;margin-bottom:12px">'+(errors?'⚠️':'✅')+'</div><div style="font-size:14px;color:var(--tx)">'+(errors?'完成，'+errors+'个失败':'全部创建成功')+'</div></div>';setTimeout(function(){ov.remove();fetchConfig()},1500)};
+          }).catch(function(){done++;errors++;if(done===clsList.length){ov.innerHTML='<div style="background:var(--surface);border-radius:14px;padding:32px 48px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.2)"><div style="font-size:32px;margin-bottom:12px">⚠️</div><div style="font-size:14px;color:var(--tx)">完成，'+errors+'个失败</div></div>';setTimeout(function(){ov.remove();fetchConfig()},1500)}});
       });
     });
   });
