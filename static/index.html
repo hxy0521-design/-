@@ -437,7 +437,7 @@ function previewPoster(btn){
   var m=row.querySelector('.pmovie'),p=row.querySelector('.pposter'),r=row.querySelector('.prating'),l=row.querySelector('.pline');
   fetch(API+'/preview-poster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:d.meta.title||'',unit:d.meta.unit||'',date:d.meta.date||'',class:d.meta.class||'',quote:q,author:row.getAttribute('data-name'),topic:'',movie:m?m.value:'',poster:p?p.value:'',rating:r?r.value:'',line:l?l.value:''})}).then(function(resp){return resp.json()}).then(function(d){if(d.path)showPreviewImage(d.path,'海报预览 - '+row.getAttribute('data-name'))}).catch(function(){alert('Preview failed')})}
 function savePosterMeta(){}
-function togglePreview(){var p=document.getElementById('previewPanel'),c=document.getElementById('previewContent'),lbl=document.getElementById('pvLabel'),hint=document.getElementById('pvHint');if(c.style.display==='none'){c.style.display='block';p.style.width='420px';lbl.textContent='预览';hint.textContent='点击收起'}else{c.style.display='none';p.style.width='90px';p.style.textAlign='left';lbl.textContent='展开';hint.textContent='预览'}}
+function togglePreview(){var p=document.getElementById('previewPanel'),c=document.getElementById('previewContent'),lbl=document.getElementById('pvLabel'),hint=document.getElementById('pvHint');if(c.style.display==='none'){c.style.display='block';p.style.width='420px';p.style.display='';lbl.textContent='预览';hint.textContent='点击收起'}else{c.style.display='none';p.style.width='90px';p.style.textAlign='left';lbl.textContent='展开';hint.textContent='预览'}}
 function showPreviewImage(path,name){
   var c=document.getElementById('previewContent');
   var p=document.getElementById('previewPanel');
