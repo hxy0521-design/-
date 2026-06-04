@@ -369,7 +369,7 @@ def dashboard_summary():
         from datetime import timedelta
         end_of_month = end_of_month - timedelta(days=1)
         days_left = (end_of_month - now_dt).days + 1
-        weeks_left = max(0, days_left // 7 + (1 if days_left % 7 > 0 else 0))
+        weeks_left = min(4, max(0, days_left // 7 + (1 if days_left % 7 > 0 else 0)))
     except: pass
     total_classes_per_week = _execute(db, "SELECT COUNT(*) as cnt FROM config WHERE class_time != ''").fetchone()
     weekly_count = int(total_classes_per_week["cnt"]) if total_classes_per_week else 10
@@ -519,7 +519,7 @@ def config_and_lessons():
     end_of_month = datetime(now_dt.year, now_dt.month + 1, 1) if now_dt.month < 12 else datetime(now_dt.year + 1, 1, 1)
     end_of_month = end_of_month - timedelta(days=1)
     days_left = (end_of_month - now_dt).days + 1
-    weeks_left = max(0, days_left // 7 + (1 if days_left % 7 > 0 else 0))
+    weeks_left = min(4, max(0, days_left // 7 + (1 if days_left % 7 > 0 else 0)))
     cur.execute("SELECT COUNT(*) as cnt FROM config WHERE class_time != ''")
     weekly_row = cur.fetchone()
     weekly_count = int(weekly_row[0]) if weekly_row else 10
