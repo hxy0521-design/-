@@ -594,6 +594,7 @@ def generate_all():
 
     # 如果没有手动标记金句，自动用 DeepSeek 检测
     if not golden_qs and os.environ.get("DEEPSEEK_API_KEY"):
+        print("[DeepSeek] 开始自动金句检测...")
         try:
             import requests as _r
             sents = []
@@ -615,9 +616,9 @@ def generate_all():
                     json_match = _re2.search(r'\{[^{}]*\}', txt, _re2.DOTALL)
                     if json_match:
                         golden_qs = json.loads(json_match.group())
-                        print(f"DeepSeek 金句检测: {len(golden_qs)} 名学生")
+                        print(f"[DeepSeek] 金句检测成功: {len(golden_qs)} 名学生, {sum(len(v) for v in golden_qs.values())} 句")
         except Exception as e:
-            print(f"DeepSeek 金句检测失败: {e}")
+            print(f"[DeepSeek] 金句检测失败: {e}")
 
     # 生成输出到本地目录（unit_path）
     cwd = os.getcwd(); os.chdir(base)
