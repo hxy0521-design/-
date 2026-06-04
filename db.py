@@ -526,7 +526,17 @@ def config_and_lessons():
     cur.execute("SELECT COUNT(*) as cnt FROM config WHERE class_time != ''")
     weekly_row = cur.fetchone()
     weekly_count = int(weekly_row[0]) if weekly_row else 10
-    schedule_remaining = weeks_left * weekly_count
+    # Get off weeks
+    cur.execute("SELECT off_weeks FROM config WHERE off_weeks != ''")
+    off_weeks_set = set()
+    for r in cur.fetchall():
+        for w in str(r[0] or "").split(","):
+            w = w.strip()
+            if w.isdigit(): off_weeks_set.add(int(w))
+    current_week = (now_dt.day - 1) // 7 + 1
+    weeks_in_range = set(range(current_week, current_week + weeks_left))
+    off_count = len(weeks_in_range & off_weeks_set)
+    schedule_remaining = (weeks_left - off_count) * weekly_count
 
     summary = {
         "active_students": int(active["cnt"] or 0),
