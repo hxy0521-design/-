@@ -375,7 +375,18 @@ def dashboard_summary():
     except: pass
     total_classes_per_week = _execute(db, "SELECT COUNT(*) as cnt FROM config WHERE class_time != ''").fetchone()
     weekly_count = int(total_classes_per_week["cnt"]) if total_classes_per_week else 10
-    schedule_remaining = weeks_left * weekly_count
+    # Get off weeks - count unique week numbers marked as off
+    off_weeks_set = set()
+    off_rows = _execute(db, "SELECT off_weeks FROM config WHERE off_weeks != ''").fetchall()
+    for r in off_rows:
+        for w in str(r["off_weeks"] or "").split(","):
+            w = w.strip()
+            if w.isdigit(): off_weeks_set.add(int(w))
+    # Calculate which weeks from today to EOM are off
+    current_week = (now_dt.day - 1) // 7 + 1
+    weeks_in_range = set(range(current_week, current_week + weeks_left))
+    off_count = len(weeks_in_range & off_weeks_set)
+    schedule_remaining = (weeks_left - off_count) * weekly_count
     return {
         "active_students": int(active["cnt"]) if active else 0,
         "month_lessons": int(cycle_att["lessons"]) if cycle_att else 0,

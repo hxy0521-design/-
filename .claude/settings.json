@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s http://localhost:5888/*)",
+      "Bash(kill $(lsof -ti :5888) *)",
+      "Bash(python3 server.py *)",
+      "Bash(python3 -c *)",
+      "Bash(cd /Users/meowmeow/Claude code test && python3 *)",
+      "Bash(python3 << *)",
+      "Bash(pip3 install *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git log *)",
+      "Bash(find /Users/meowmeow/Claude code test -name *.pyc -delete)",
+      "Bash(rm -f /Users/meowmeow/Claude code test/__pycache__/*)",
+      "Bash(lsof -i :5888 *)",
+      "Bash(ps aux | grep server.py)",
+      "Bash(cat /tmp/*)",
+      "Bash(cat /Users/meowmeow/.claude/projects/*)",
+      "Bash(timeout *)",
+      "Bash(openpyxl *)",
+      "Bash(cp /Users/meowmeow/Claude code test/* /Users/meowmeow/Library/Mobile Documents/*)",
+      "Bash(mv /Users/meowmeow/Library/Mobile Documents/*)"
+    ]
+  }
+}
