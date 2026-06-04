@@ -964,8 +964,14 @@ def generate_image(meta, topics, output_path="output.png", highlights=None, imag
             hl_list = highlights.get(name, [])
             active_hls = []
             for h in hl_list:
-                if (name, h) not in used_highlights and h in clean_content:
+                if (name, h) not in used_highlights:
                     idx = clean_content.find(h)
+                    if idx < 0 and '\n' in h:
+                        idx = clean_content.find(h.replace('\n', ' '))
+                        if idx >= 0: h = h.replace('\n', ' ')
+                    if idx < 0:
+                        idx = clean_content.find(' '.join(h.split()))
+                        if idx >= 0: h = ' '.join(h.split())
                     if idx >= 0:
                         active_hls.append((idx, idx + len(h), h))
 
