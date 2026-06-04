@@ -98,7 +98,7 @@ var tabs={},activeTab=null,activeMainTab='overview',cfgReady=false;
 document.addEventListener('click',function(e){
   var btn=e.target.closest('button');if(!btn)return;
   var act=btn.getAttribute('data-act');if(!act)return;
-  e.preventDefault();
+  console.log('delegation HIT:',act);
   if(act==='format')formatTopic(parseInt(btn.getAttribute('data-idx')));
   else if(act==='addBullet')addBullets(parseInt(btn.getAttribute('data-idx')));
   else if(act==='removeBullet')removeBullets(parseInt(btn.getAttribute('data-idx')));
