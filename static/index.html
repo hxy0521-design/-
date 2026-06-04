@@ -687,7 +687,7 @@ function loadPayments(){
     pg.innerHTML='<button onclick="payPage=Math.max(1,payPage-1);loadPayments()" style="padding:4px 10px;margin:0 2px">←</button><span style="font-size:12px;margin:0 8px">'+payPage+'/'+totalPages+' (共'+d.total+'条)</span><button onclick="payPage=Math.min('+totalPages+',payPage+1);loadPayments()" style="padding:4px 10px;margin:0 2px">→</button>';
   });
 }
-function closeModal(btn){var el=btn;while(el){if(el.style&&el.style.position==='fixed'){el.remove();break}el=el.parentElement}}
+function closeModal(btn){var el=btn;while(el&&el!==document.body){if(el.style&&(el.style.position==='fixed'||el.style.zIndex==='9999')){el.remove();break}el=el.parentElement}}
 function deletePay(id){if(!confirm('删除此缴费记录？'))return;fetch(API+'/finance/delete-purchase',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(function(r){return r.json()}).then(function(){loadPayments()})}
 // ====== Tab 7: 分账 =====
 function renderRevenueSplitTab(){
