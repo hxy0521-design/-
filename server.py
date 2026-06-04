@@ -189,7 +189,7 @@ def delete_class(cls_name):
                 if f.startswith(f"{cls_name}-") and os.path.isdir(os.path.join(p, f)):
                     shutil.move(os.path.join(p, f), os.path.join(dest, f))
     db.config_remove_class(cls_name)
-    return jsonify({"status": "ok"})
+    _clear_config_cache(); return jsonify({"status": "ok"})
 
 @app.route("/api/classes/<cls_name>/units", methods=["POST"])
 def create_unit(cls_name):
@@ -204,7 +204,7 @@ def create_unit(cls_name):
     if unit_code in cfg[cls_name]: return jsonify({"status": "error", "message": "单元已存在"}), 400
     created_by = data.get("created_by", "").strip()
     db.config_add_unit(cls_name, unit_code, unit_name or unit_code, path, created_by)
-    return jsonify({"status": "ok", "code": unit_code})
+    _clear_config_cache(); return jsonify({"status": "ok", "code": unit_code})
 
 @app.route("/api/classes/<cls_name>/units/<unit_code>", methods=["PUT"])
 def update_unit_path(cls_name, unit_code):
