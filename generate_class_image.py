@@ -325,7 +325,7 @@ def parse_input_txt(filepath):
     topics = []
     current_topic = None
     current_speeches = []
-    prev_blank = True  # 初始状态视为段首
+    prev_blank = True
     in_meta = True
 
     for line in lines:
@@ -377,10 +377,10 @@ def parse_input_txt(filepath):
                 current_speeches.append((name, content))
             prev_blank = False
         else:
-                # Continuation line (no blank before it) vs new topic (blank before it)
-                if not prev_blank and current_topic is not None and current_speeches and len(stripped) > 0:
+                # 续行：前一行为非空且不是空行分隔
+                if not prev_blank and current_topic is not None and current_speeches:
                     name, content = current_speeches[-1]
-                    current_speeches[-1] = (name, content + ' ' + stripped)
+                    current_speeches[-1] = (name, content + '\n' + stripped)
                 else:
                     if current_topic is not None:
                         topics.append((current_topic, current_speeches))
