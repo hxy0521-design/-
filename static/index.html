@@ -37,7 +37,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font:14px/1.6 var(--font);background:var(--bg);color:var(--tx);display:flex;height:100vh;overflow:hidden;transition:background .3s,color .3s}
 .pl{width:200px;min-width:200px;max-width:200px;padding:10px;border-right:1px solid var(--border);overflow-y:auto;background:var(--surface);transition:background .3s}
-.pc{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--surface);height:100vh;transition:background .3s,width .3s}
+.pc{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--surface);transition:background .3s,width .3s}
 .pr{width:420px;min-width:420px;padding:16px;border-left:1px solid var(--border);overflow-y:auto;background:var(--surface);transition:background .3s}
 h2{font-size:15px;margin-bottom:8px;color:var(--accent);font-weight:700}h3{font-size:13px;margin:12px 0 6px;color:var(--tx2);font-weight:600}
 .ci{padding:8px 12px;margin:3px 0;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;transition:all .2s;font-weight:500}.ci:hover{background:var(--accent-light);color:var(--accent)}
@@ -86,8 +86,8 @@ hr{border:none;border-top:1.5px dashed var(--border);margin:18px 0;opacity:.6}
 ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}::-webkit-scrollbar-thumb:hover{background:var(--tx3)}
 </style></head><body>
 <button class="theme-toggle" onclick="toggleTheme()" title="切换深色模式">🌙</button>
-<div class="panel pc"><div class="tabs" id="tabBar"></div><div id="mainTabs" style="display:flex;gap:4px;padding:4px 8px;border-bottom:2px solid #e2e8f0;margin-bottom:0;overflow-x:auto;flex-shrink:0;background:var(--surface)"></div><div class="ed-body" id="editorBody"><div style="color:var(--sb);text-align:center;padding:60px 0">加载中...</div></div></div>
-<div class="panel pl" style="display:none"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkXinxin" onchange="onUserChange()" style="width:auto;margin:0 2px">只看欣欣</label><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkBiscuit" onchange="onUserChange()" style="width:auto;margin:0 2px">只看饼干</label></div><h2>班级 <span style="font-size:10px;float:right"><a href="#" onclick="expandAll(event)" style="color:var(--sb)">展开</a> | <a href="#" onclick="collapseAll(event)" style="color:var(--sb)">折叠</a></span></h2><div id="classList"></div><button class="btn bo" style="margin-top:4px;width:100%" onclick="newUnitAll()">+ 新建单元</button><button class="btn bo" style="margin-top:4px;width:100%" onclick="newClass()">+ 新建班级</button><h3 style="margin-top:18px">输出文件</h3><div id="outputList"></div><div style="margin-top:8px;font-size:10px;color:var(--sb)"><input type="file" id="xlsxUpload" accept=".xlsx" style="display:none" onchange="uploadExcel(this.files[0])"><a href="#" onclick="document.getElementById('xlsxUpload').click();return false">导入Excel</a></div></div>
+<div class="panel pc"><div class="ed-body" id="editorBody"><div style="color:var(--sb);text-align:center;padding:60px 0">加载中...</div></div></div>
+<div style="display:flex;flex-direction:column;height:100vh" id="appShell"><div style="display:flex;flex-shrink:0;border-bottom:1px solid var(--border)" id="topBar"><div class="tabs" id="tabBar" style="border-bottom:none;flex-shrink:0"></div><div id="mainTabs" style="display:flex;gap:4px;padding:4px 8px 0;overflow-x:auto;flex-shrink:0;background:var(--surface);margin-left:auto"></div></div><div style="display:flex;flex:1;overflow:hidden" id="mainArea"><div class="panel pl" style="display:none"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkXinxin" onchange="onUserChange()" style="width:auto;margin:0 2px">只看欣欣</label><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkBiscuit" onchange="onUserChange()" style="width:auto;margin:0 2px">只看饼干</label></div><h2>班级 <span style="font-size:10px;float:right"><a href="#" onclick="expandAll(event)" style="color:var(--sb)">展开</a> | <a href="#" onclick="collapseAll(event)" style="color:var(--sb)">折叠</a></span></h2><div id="classList"></div><button class="btn bo" style="margin-top:4px;width:100%" onclick="newUnitAll()">+ 新建单元</button><button class="btn bo" style="margin-top:4px;width:100%" onclick="newClass()">+ 新建班级</button><h3 style="margin-top:18px">输出文件</h3><div id="outputList"></div><div style="margin-top:8px;font-size:10px;color:var(--sb)"><input type="file" id="xlsxUpload" accept=".xlsx" style="display:none" onchange="uploadExcel(this.files[0])"><a href="#" onclick="document.getElementById('xlsxUpload').click();return false">导入Excel</a></div></div>
 <div class="panel pr" id="previewPanel" style="display:none"><h2 style="cursor:pointer" onclick="togglePreview()"><span id="pvLabel">预览</span> <span id="pvHint" style="font-size:11px;color:var(--sb)">点击收起</span></h2><div id="previewContent" style="font-size:12px;color:var(--sb)">粘贴发言后在此预览</div></div>
 <script>
 var API=window.location.origin+'/api';
@@ -98,9 +98,8 @@ var cache={};
 function cachedFetch(url,force){return new Promise(function(resolve){if(!force&&cache[url])return resolve({json:function(){return Promise.resolve(cache[url])}});fetch(url).then(function(r){return r.json()}).then(function(d){cache[url]=d;resolve({json:function(){return Promise.resolve(d)}})})})}
 function switchMainTab(){
   var el=document.getElementById('editorBody');if(!el)return;
-  var ep=document.getElementById('editPanels');var pl=document.querySelector('.pl');var pr=document.getElementById('previewPanel');
+  var pl=document.querySelector('.pl');var pr=document.getElementById('previewPanel');
   var isEdit=activeMainTab==='edit';
-  if(ep)ep.style.display=isEdit?'flex':'none';
   if(pl)pl.style.display=isEdit?'block':'none';
   if(pr)pr.style.display=isEdit?'block':'none';
   el.innerHTML='<div style="text-align:center;padding:60px 0;color:var(--sb)"><div style="display:inline-block;width:24px;height:24px;border:3px solid #e2e8f0;border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite"></div></div>';
@@ -861,4 +860,4 @@ function uploadExcel(file){
     setTimeout(function(){st.remove()},4000);
   }).catch(function(e){st.textContent='导入失败: '+e.message;st.style.color='var(--rd)';setTimeout(function(){st.remove()},4000)});
 }
-</script></body></html>
+</script></div></div></body></html>
