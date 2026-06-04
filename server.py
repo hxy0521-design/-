@@ -608,14 +608,13 @@ def generate_all():
                         {"role":"system","content":"你是一位专业的语文老师，擅长发现学生作文中的精彩句子（金句）。请为每个学生选择最有价值的句子作为金句标记。对于每个学生，选择1-3个金句。返回严格的JSON格式，不要有任何额外文字：{\"student_name\": [\"金句1\", \"金句2\"]}"},
                         {"role":"user","content": json.dumps({"topics": topics_data, "title": title}, ensure_ascii=False)}
                     ],"temperature":0.3,"max_tokens":2000}, timeout=30)
-                    if resp.status_code == 200:
-                        result = resp.json()
-                        txt = result["choices"][0]["message"]["content"]
-                        # Parse JSON from response
-                        import re as _re2
-                        json_match = _re2.search(r'\{[^{}]*\}', txt, _re2.DOTALL)
-                        if json_match:
-                            golden_qs = json.loads(json_match.group())
+                if resp.status_code == 200:
+                    result = resp.json()
+                    txt = result["choices"][0]["message"]["content"]
+                    import re as _re2
+                    json_match = _re2.search(r'\{[^{}]*\}', txt, _re2.DOTALL)
+                    if json_match:
+                        golden_qs = json.loads(json_match.group())
         except: pass
 
     # 生成输出到本地目录（unit_path）
