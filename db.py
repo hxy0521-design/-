@@ -81,13 +81,13 @@ def config_add_class(cls_name, created_by="", class_time=""):
     db = get_db()
     r = _execute(db, "SELECT COUNT(*) as cnt FROM config WHERE class_name=%s AND unit_code!=%s", [cls_name, '']).fetchone()
     if r and r["cnt"] > 0: return
-    _execute(db, "INSERT INTO config VALUES (%s,%s,%s,%s,%s,%s)", [cls_name, "2605", cls_name, "", created_by, class_time])
+    _execute(db, "INSERT INTO config VALUES (%s,%s,%s,%s,%s,%s,%s)", [cls_name, "2605", cls_name, "", created_by, class_time, ""])
 
 def config_remove_class(cls_name):
     _execute(get_db(), "DELETE FROM config WHERE class_name=%s", [cls_name])
 
 def config_add_unit(cls_name, unit_code, unit_name, path, created_by=""):
-    _execute(get_db(), "INSERT INTO config VALUES (%s,%s,%s,%s,%s,%s)", [cls_name, unit_code, unit_name, path, created_by, ""])
+    _execute(get_db(), "INSERT INTO config VALUES (%s,%s,%s,%s,%s,%s,%s)", [cls_name, unit_code, unit_name, path, created_by, "", ""])
 
 def config_remove_unit(cls_name, unit_code):
     _execute(get_db(), "DELETE FROM config WHERE class_name=%s AND unit_code=%s", [cls_name, unit_code])
