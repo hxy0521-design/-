@@ -293,7 +293,7 @@ function formatTopic(idx){var ta=document.querySelectorAll('#topicList .tb texta
 function addBullets(idx){var ta=document.querySelectorAll('#topicList .tb textarea')[idx];if(!ta)return;var lines=ta.value.split('\n');for(var i=0;i<lines.length;i++){var ln=lines[i];var m=ln.match(/^([^：:]+[：:])\s*(.*)/);if(m){if(m[2]&&!m[2].startsWith('- '))lines[i]=m[1]+'- '+m[2]}else if(ln.trim()&&!ln.trim().startsWith('- '))lines[i]='- '+ln.trim()}ta.value=lines.join('\n');saveTopics();renderPreview()}
 function removeBullets(idx){var ta=document.querySelectorAll('#topicList .tb textarea')[idx];if(!ta)return;var lines=ta.value.split('\n');for(var i=0;i<lines.length;i++){var ln=lines[i];var m=ln.match(/^([^：:]+[：:])\s*- (.*)/);if(m){lines[i]=m[1]+m[2]}else if(ln.trim().startsWith('- '))lines[i]=ln.trim().substring(2)}ta.value=lines.join('\n');saveTopics();renderPreview()}
 function clearTopic(idx){var ta=document.querySelectorAll('#topicList .tb textarea')[idx];if(ta){ta.value='';saveTopics();renderPreview()}}
-function formatAll(){document.querySelectorAll('#topicList .tb textarea').forEach(function(ta,i){formatTopic(i)})}
+function formatAll(){alert('formatAll called');document.querySelectorAll('#topicList .tb textarea').forEach(function(ta,i){formatTopic(i)})}
 function addBulletsAll(){document.querySelectorAll('#topicList .tb textarea').forEach(function(ta,i){addBullets(i)})}
 function removeBulletsAll(){document.querySelectorAll('#topicList .tb textarea').forEach(function(ta,i){removeBullets(i)})}
 function insertTopicAfter(idx){if(!activeTab)return;var pos=idx<0?0:idx+1;tabs[activeTab].topics.splice(pos,0,{title:'',speeches:[],_raw:''});renderEditor();renderPreview()}
