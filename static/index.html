@@ -184,7 +184,7 @@ function renderClassList(){
   });
 }
 var cfgInfo={},allLessons={},zgUser='';
-function fetchConfig(retry){retry=retry||0;fetch(API+'/config').then(function(r){return r.json()}).then(function(d){cfgInfo=d.classes||d;allLessons=d.lessons||{};zgUser=d.zg_user||'';window._summary=d.summary||{};window._weekly=d.weekly||[];renderClassList();renderMainTabs();switchMainTab()}).catch(function(e){if(retry<5)setTimeout(function(){fetchConfig(retry+1)},1000*retry)})}
+function fetchConfig(retry){retry=retry||0;fetch(API+'/config').then(function(r){return r.json()}).then(function(d){cfgInfo=d.classes||d;allLessons=d.lessons||{};zgUser=d.zg_user||'';window._summary=d.summary||{};window._weekly=d.weekly||[];var clsKeys=Object.keys(cfgInfo);if(clsKeys.length){var ow=cfgInfo[clsKeys[0]];var uc=Object.keys(ow)[0];window._offWeeks=(ow[uc].off_weeks||'').split(',').filter(function(x){return x}).map(Number)}renderClassList();renderMainTabs();switchMainTab()}).catch(function(e){if(retry<5)setTimeout(function(){fetchConfig(retry+1)},1000*retry)})}
 fetchConfig();
 
 function newClass(){
@@ -526,12 +526,43 @@ function renderOverviewTab(){
   h+='<div class="kpi-card" style="border-top-color:var(--sky)"><div class="kpi-label">本月待销课</div><div class="kpi-val">'+(s.pending_paid||0)+'<span class="kpi-u">课时待销</span> <span style="font-size:14px;color:var(--tx3)">'+(s.schedule_remaining||0)+'节排课</span></div></div>';
   h+='<div class="kpi-card" style="border-top-color:var(--orange)"><div class="kpi-label">本月收入</div><div class="kpi-val">¥'+(s.month_revenue||0).toFixed(0)+'</div></div>';
   h+='</div>';
-  h+='<div style="display:flex;align-items:center;margin:12px 0 8px"><h3 style="margin:0;flex:1">当周课表</h3><button class="btn bo" style="padding:2px 10px;font-size:10px" onclick="newClass()">+ 新增班级</button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border-radius:var(--radius);overflow:hidden">';
+  // Build week date ranges for停课周 selector
+  var nowD=new Date();var y=nowD.getFullYear();var mo=nowD.getMonth();
+  var firstDay=new Date(y,mo,1);var startOff=(firstDay.getDay()+6)%7;
+  var weekLabels='';
+  for(var w=0;w<5;w++){
+    var ws=new Date(y,mo,1+w*7-startOff);
+    if(ws.getMonth()!==mo&&ws>firstDay)continue;
+    var we=new Date(ws);we.setDate(we.getDate()+6);
+    if(ws.getMonth()!==mo)ws=new Date(y,mo,1);
+    if(we.getMonth()!==mo)we=new Date(y,mo+1,0);
+    var lb=(ws.getMonth()+1)+'/'+ws.getDate()+'-'+(we.getMonth()+1)+'/'+we.getDate();
+    var off=window._offWeeks&&window._offWeeks.indexOf(w+1)>=0;
+    weekLabels+='<label style=\"font-size:9px;cursor:pointer;margin-right:4px;white-space:nowrap\"><input type=\"checkbox\" '+(off?'checked':'')+' onchange=\"toggleOffWeek('+(w+1)+')\" style=\"width:auto;margin:0 2px\">第'+(w+1)+'周('+lb+')</label>';
+  }
+  // Compute actual class dates
+  var DAY_TO_NUM={'周一':1,'周二':2,'周三':3,'周四':4,'周五':5,'周六':6,'周日':7};
+  var offSet=window._offWeeks||[];
+  function getDates(wkday){
+    var dates=[];var wks=window._weeks||[];
+    for(var i=0;i<wks.length;i++){
+      if(offSet.indexOf(wks[i].n)>=0)continue;
+      var d=new Date(wks[i].start);
+      var targetDay=DAY_TO_NUM[wkday]||0;
+      var curDay=d.getDay()||7;
+      d.setDate(d.getDate()+(targetDay-curDay));
+      if(d.getMonth()===mo)dates.push((d.getMonth()+1)+'.'+d.getDate());
+    }
+    return dates.join('/');
+  }
+  // Store week data globally
+  window._weeks=[];window._dayNums=DAY_TO_NUM;
+  h+='<div style="display:flex;align-items:center;margin:12px 0 8px"><h3 style="margin:0;flex:1">当周课表</h3>'+weekLabels+'<button class="btn bo" style="padding:2px 10px;font-size:10px;margin-left:8px" onclick="newClass()">+ 新增班级</button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border-radius:var(--radius);overflow:hidden">';
   var days=['周一','周二','周三','周四','周五','周六','周日'];
   days.forEach(function(d){h+='<div style="background:var(--surface2);padding:8px;text-align:center;font-size:11px;font-weight:700;color:var(--tx2)">'+d+'</div>'});
   days.forEach(function(d){
     h+='<div style="background:var(--surface);padding:6px;min-height:60px;font-size:10px">';
-    week.forEach(function(w){if(w.weekday===d)h+='<div style="background:'+w.color+'20;border-left:3px solid '+w.color+';padding:5px 7px;margin:2px 0;border-radius:5px;font-size:10px"><b>'+esc(w.class_name)+'</b> <span style="color:var(--tx3)">'+esc(w.time)+'</span><br><span style="color:var(--tx3)">'+esc(w.teacher||'')+' · '+w.students.length+'人</span><br><span style="font-size:9px;color:var(--tx3)">'+w.students.join(', ')+'</span><br><a href=\"#\" onclick=\"editOffWeeks(\''+esc(w.class_name)+'\');return false\" style=\"font-size:9px;color:var(--accent);text-decoration:none\">停课周</a></div>'});
+    week.forEach(function(w){if(w.weekday===d)h+='<div style="background:'+w.color+'20;border-left:3px solid '+w.color+';padding:5px 7px;margin:2px 0;border-radius:5px;font-size:10px"><b>'+esc(w.class_name)+'</b> <span style="color:var(--tx3)">'+esc(w.time)+'</span><br><span style="font-size:9px;color:var(--tx3)">'+getDates(d)+'</span><br><span style="color:var(--tx3)">'+esc(w.teacher||'')+' · '+w.students.length+'人</span><br><span style="font-size:9px;color:var(--tx3)">'+w.students.join(', ')+'</span></div>'});
     h+='</div>';
   });
   h+='</div></div>';el.innerHTML=h;
@@ -730,7 +761,14 @@ function renderStudentTab(){
     h+='</div></div>';el.innerHTML=h;
   });
 }
-function editOffWeeks(cls){var v=prompt(cls+' 停课周（数字逗号分隔，如 3 或 2,4）:');if(v===null)return;fetch(API+'/classes/'+encodeURIComponent(cls)+'/off-weeks',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({off_weeks:v})}).then(function(r){return r.json()}).then(function(d){if(d.status==='ok')fetchConfig();else alert(d.message)})}
+function toggleOffWeek(wk){
+  if(!window._offWeeks)window._offWeeks=[];
+  var idx=window._offWeeks.indexOf(wk);
+  if(idx>=0)window._offWeeks.splice(idx,1);else window._offWeeks.push(wk);
+  var val=window._offWeeks.sort().join(',');
+  // Save globally (all classes share same停课周)
+  fetch(API+'/classes/off-weeks',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({off_weeks:val})}).then(function(){fetchConfig()});
+}
 function showAddPayForStudent(name){
   var ov=document.createElement('div');ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
   ov.innerHTML='<div style="background:var(--surface);border-radius:12px;padding:20px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)"><h3>新增收费 - '+esc(name)+'</h3><input id="rfName" value="'+esc(name)+'" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:6px"><input id="rfSeg" placeholder="分段" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="rfType" placeholder="课型" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"></div><div style="display:flex;gap:6px"><input id="rfMethod" placeholder="方式" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="rfAmt" type="number" step="0.01" placeholder="金额" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"></div><input id="rfCnt" type="number" placeholder="课次" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="rfDate" type="date" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button onclick="closeModal(this)" style="padding:6px 14px;border:1px solid #e2e8f0;border-radius:6px;background:var(--surface);color:var(--tx2)">取消</button><button onclick="saveRevenue()" class="btn bg" style="padding:6px 14px">保存</button></div></div>';

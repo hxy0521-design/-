@@ -58,14 +58,14 @@ def migrate_from_json():
 
 def config_all():
     db = get_db()
-    rows = _execute(db, "SELECT class_name, unit_code, unit_name, path, created_by, class_time FROM config ORDER BY class_name").fetchall()
+    rows = _execute(db, "SELECT class_name, unit_code, unit_name, path, created_by, class_time, off_weeks FROM config ORDER BY class_name").fetchall()
     cfg = {}
     for r in rows:
         if r["class_name"] not in cfg:
             cfg[r["class_name"]] = {}
         cfg[r["class_name"]][r["unit_code"]] = {
             "name": r["unit_name"], "path": r["path"],
-            "created_by": r["created_by"], "class_time": r["class_time"]
+            "created_by": r["created_by"], "class_time": r["class_time"], "off_weeks": r["off_weeks"] or ""
         }
     return cfg
 
@@ -479,12 +479,12 @@ def config_and_lessons():
     db = get_db()
     cur = db.cursor()
 
-    cur.execute("SELECT class_name, unit_code, unit_name, path, created_by, class_time FROM config ORDER BY class_name")
+    cur.execute("SELECT class_name, unit_code, unit_name, path, created_by, class_time, off_weeks FROM config ORDER BY class_name")
     cfg_rows = [Row([d[0] for d in cur.description], list(r)) for r in cur.fetchall()]
     cfg = {}
     for r in cfg_rows:
         if r["class_name"] not in cfg: cfg[r["class_name"]] = {}
-        cfg[r["class_name"]][r["unit_code"]] = {"name": r["unit_name"], "path": r["path"], "created_by": r["created_by"], "class_time": r["class_time"]}
+        cfg[r["class_name"]][r["unit_code"]] = {"name": r["unit_name"], "path": r["path"], "created_by": r["created_by"], "class_time": r["class_time"], "off_weeks": r["off_weeks"] or ""}
 
     cur.execute("SELECT class_name, unit_code, lesson_num, title, updated_at FROM lessons ORDER BY class_name, unit_code, lesson_num")
     lesson_rows = [Row([d[0] for d in cur.description], list(r)) for r in cur.fetchall()]
