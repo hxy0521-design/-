@@ -581,7 +581,7 @@ def generate_all():
         f.write(content)
     # 保存到 Turso 云端
     lesson_num = folder.split(f"-{unit_code}-")[-1] if f"-{unit_code}-" in folder else "1"
-    db.lesson_save(cls, unit_code, int(lesson_num), title, content)
+    # 只在新建课节或明确保存时才更新 lesson 内容（生成时只写 TXT 文件不覆盖 TiDB 里的课节）
 
     font_path = os.path.expanduser("~/Library/Fonts/荆南麦圆体.ttf")
     font_warning = None
