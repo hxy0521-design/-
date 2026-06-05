@@ -975,6 +975,14 @@ def students_list():
     rows = db.student_ext_all()
     return jsonify(rows)
 
+@app.route("/api/students/next-code")
+def students_next_code():
+    cur = db.get_db().cursor()
+    cur.execute("SELECT MAX(CAST(student_code AS UNSIGNED)) as mx FROM student_ext WHERE student_code REGEXP '^[0-9]+$'")
+    row = cur.fetchone()
+    next_code = str(int(row[0] or 0) + 1).zfill(3) if row and row[0] else "001"
+    return jsonify({"code": next_code})
+
 @app.route("/api/students", methods=["POST"])
 def students_upsert():
     data = request.json

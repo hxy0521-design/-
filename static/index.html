@@ -792,7 +792,7 @@ function renderStudentTab(){
         h+='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px">'+esc(r.student_name)+'</b><span style="font-size:9px;padding:1px 6px;border-radius:999px;background:'+(r.status==='在读中'?'#dcfce7':(r.status==='暂时停课'?'#fef3c7':'#fee2e2'))+';color:'+(r.status==='在读中'?'#16a34a':(r.status==='暂时停课'?'#d97706':'#dc2626'))+'">'+esc(r.status||'?')+'</span></div>';
         h+='<div style="height:4px;background:#e2e8f0;border-radius:2px;margin:6px 0"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:2px"></div></div>';
         h+='<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--sb)"><span>已购'+r.purchased_lessons+'</span><span>已销'+r.used_lessons+'</span><span>余'+(parseInt(r.purchased_lessons)-parseInt(r.used_lessons))+'</span></div>';
-        h+='<div style="display:flex;gap:4px;margin-top:6px"><button onclick="event.stopPropagation();showAddStudentModal();document.getElementById(\'sfName\').value=\''+esc(r.student_name)+'\'" style="padding:1px 6px;border-radius:3px;border:1px solid #bfdbfe;background:#eff6ff;color:#3b82f6;font-size:9px;cursor:pointer">编辑</button><button onclick="event.stopPropagation();showAddPayForStudent(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:#f0fdf4;color:#16a34a;font-size:9px;cursor:pointer">+缴费</button></div>';
+        h+='<div style="display:flex;gap:4px;margin-top:6px"><button onclick="event.stopPropagation();showAddStudentModal(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bfdbfe;background:#eff6ff;color:#3b82f6;font-size:9px;cursor:pointer">编辑</button><button onclick="event.stopPropagation();showAddPayForStudent(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:#f0fdf4;color:#16a34a;font-size:9px;cursor:pointer">+缴费</button></div>';
         h+='<div id="'+sid+'" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);font-size:9px"></div>';
         h+='</div>';
       });
@@ -864,10 +864,28 @@ function toggleStudentDetail(name,card){
     });
   }else{det.style.display='none'}
 }
-function showAddStudentModal(){
+function showAddStudentModal(nameHint){
   var ov=document.createElement('div');ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
-  ov.innerHTML='<div style="background:var(--surface);border-radius:12px;padding:20px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)"><h3>新增/编辑学生</h3><input id="sfName" placeholder="学生姓名" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="sfCode" placeholder="编号" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:6px"><input id="sfSeg" placeholder="分段" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="sfStatus" placeholder="状态(在读中/暂时停课/终止课程)" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"></div><input id="sfClass" placeholder="在班" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:6px"><input id="sfPur" type="number" placeholder="已购课时" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="sfUsed" type="number" placeholder="已销课时" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button onclick="closeModal(this)" style="padding:6px 14px;border:1px solid #e2e8f0;border-radius:6px;background:var(--surface);color:var(--tx2)">取消</button><button onclick="saveStudent()" class="btn bg" style="padding:6px 14px">保存</button></div></div>';
-  document.body.appendChild(ov);
+  // Build class dropdown options
+  var clsOpts='<option value=\"\">选择班级</option>';Object.keys(cfgInfo).forEach(function(c){clsOpts+='<option value=\"'+c+'\">'+c+'</option>'});
+  var h='<div style="background:var(--surface);border-radius:14px;padding:24px;max-width:420px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,.2)"><h3 style="margin:0 0 16px">新增学生</h3>';
+  h+='<input id="sfName" placeholder="学生姓名" value="'+(nameHint||'')+'" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px">';
+  h+='<input id="sfCode" placeholder="编号（自动生成）" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px;color:var(--tx3)">';
+  h+='<div style="display:flex;gap:6px"><select id="sfSeg" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px;background:var(--bg);color:var(--tx)"><option value="">分段</option><option>探索段</option><option>启航段</option><option>先锋段</option><option>领航1V1</option><option>领航1V2</option><option>成人班</option></select>';
+  h+='<select id="sfStatus" onchange="onSFStatusChange()" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px;background:var(--bg);color:var(--tx)"><option value="在读中">在读中</option><option value="仅试听">仅试听</option><option value="暂时停课">暂时停课</option><option value="终止课程">终止课程</option></select></div>';
+  h+='<select id="sfClass" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px;background:var(--bg);color:var(--tx)">'+clsOpts+'</select>';
+  h+='<div style="display:flex;gap:6px"><input id="sfPur" type="number" placeholder="已购课时" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px"><input id="sfUsed" type="number" placeholder="已销课时" value="0" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px"></div>';
+  h+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button onclick="closeModal(this)" class="btn bo">取消</button><button onclick="saveStudent()" class="btn bp">保存</button></div></div>';
+  ov.innerHTML=h;document.body.appendChild(ov);
+  // Auto-generate code
+  fetch(API+'/students/next-code').then(function(r){return r.json()}).then(function(d){document.getElementById('sfCode').value=d.code||''});
+  onSFStatusChange();
+}
+function onSFStatusChange(){
+  var s=document.getElementById('sfStatus').value;
+  var pu=document.getElementById('sfPur');var ue=document.getElementById('sfUsed');
+  if(s==='仅试听'){pu.value='1';ue.value='0';pu.disabled=true;ue.disabled=true}
+  else{pu.disabled=false;ue.disabled=false}
 }
 function saveStudent(){
   var d={student_name:document.getElementById('sfName').value,student_code:document.getElementById('sfCode').value,segment:document.getElementById('sfSeg').value,status:document.getElementById('sfStatus').value,enrolled_class:document.getElementById('sfClass').value,purchased_lessons:parseInt(document.getElementById('sfPur').value)||0,used_lessons:parseInt(document.getElementById('sfUsed').value)||0,remaining_lessons:0,source:'',notes:''};
