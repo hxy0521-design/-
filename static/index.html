@@ -787,11 +787,13 @@ function renderStudentTab(){
       students.forEach(function(r){
         var pct=parseInt(r.purchased_lessons)>0?Math.round(parseInt(r.used_lessons)/parseInt(r.purchased_lessons)*100):0;
         var barColor=pct>80?'#dc2626':(pct>50?'#d97706':'#16a34a');
-        h+='<div style="background:var(--surface2);border-radius:8px;padding:10px;border:1px solid var(--border)">';
+        var sid='studDetail_'+esc(r.student_name).replace(/\\s/g,'_');
+        h+='<div style="background:var(--surface2);border-radius:8px;padding:10px;border:1px solid var(--border);cursor:pointer" onclick="toggleStudentDetail(\''+esc(r.student_name)+'\',this)">';
         h+='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px">'+esc(r.student_name)+'</b><span style="font-size:9px;padding:1px 6px;border-radius:999px;background:'+(r.status==='在读中'?'#dcfce7':(r.status==='暂时停课'?'#fef3c7':'#fee2e2'))+';color:'+(r.status==='在读中'?'#16a34a':(r.status==='暂时停课'?'#d97706':'#dc2626'))+'">'+esc(r.status||'?')+'</span></div>';
         h+='<div style="height:4px;background:#e2e8f0;border-radius:2px;margin:6px 0"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:2px"></div></div>';
         h+='<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--sb)"><span>已购'+r.purchased_lessons+'</span><span>已销'+r.used_lessons+'</span><span>余'+(parseInt(r.purchased_lessons)-parseInt(r.used_lessons))+'</span></div>';
-        h+='<div style="display:flex;gap:4px;margin-top:6px"><button onclick="showAddStudentModal();document.getElementById(\'sfName\').value=\''+esc(r.student_name)+'\'" style="padding:1px 6px;border-radius:3px;border:1px solid #bfdbfe;background:#eff6ff;color:#3b82f6;font-size:9px;cursor:pointer">编辑</button><button onclick="showAddPayForStudent(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:#f0fdf4;color:#16a34a;font-size:9px;cursor:pointer">+缴费</button></div>';
+        h+='<div style="display:flex;gap:4px;margin-top:6px"><button onclick="event.stopPropagation();showAddStudentModal();document.getElementById(\'sfName\').value=\''+esc(r.student_name)+'\'" style="padding:1px 6px;border-radius:3px;border:1px solid #bfdbfe;background:#eff6ff;color:#3b82f6;font-size:9px;cursor:pointer">编辑</button><button onclick="event.stopPropagation();showAddPayForStudent(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:#f0fdf4;color:#16a34a;font-size:9px;cursor:pointer">+缴费</button></div>';
+        h+='<div id="'+sid+'" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);font-size:9px"></div>';
         h+='</div>';
       });
       h+='</div></div>';
@@ -853,9 +855,11 @@ function toggleStudentDetail(name,card){
   if(det.style.display==='none'||!det.style.display){
     det.style.display='block';det.textContent='加载中...';
     fetch(API+'/finance/records?type=revenue&student='+encodeURIComponent(name)+'&limit=20').then(function(r){return r.json()}).then(function(rows){
-      var h='<div style="font-weight:600;margin-bottom:4px">收费记录</div>';
-      if(!rows.length)h+='<span style="color:var(--sb)">暂无</span>';
-      rows.forEach(function(r){h+='<div style="padding:3px 0;font-size:10px">'+esc(r.course_type)+' · '+esc(r.discount_type)+' · '+r.lesson_count+'节 ¥'+(r.amount||0)+' <span style="color:var(--sb)">'+(r.actual_pay_date||'').slice(0,10)+'</span></div>'});
+      var h='<div style="font-weight:600;margin-bottom:4px;font-size:10px;color:var(--tx2)">缴费记录</div>';
+      if(!rows.length)h+='<span style="color:var(--sb);font-size:10px">暂无</span>';
+      else h+='<table style="width:100%;font-size:9px;border-collapse:collapse"><tr style="color:var(--tx3)"><th style="text-align:left;padding:2px 4px">日期</th><th style="text-align:left;padding:2px 4px">方式</th><th style="text-align:left;padding:2px 4px">课次</th><th style="text-align:left;padding:2px 4px">金额</th></tr>';
+      rows.forEach(function(r){h+='<tr><td style="padding:2px 4px">'+(r.actual_pay_date||'').slice(0,10)+'</td><td style="padding:2px 4px">'+esc(r.method||'')+'</td><td style="padding:2px 4px">'+r.lesson_count+'</td><td style="padding:2px 4px">¥'+(r.amount||0)+'</td></tr>'});
+      if(rows.length)h+='</table>';
       det.innerHTML=h;
     });
   }else{det.style.display='none'}
