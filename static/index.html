@@ -874,7 +874,7 @@ function showAddStudentModal(nameHint){
   h+='<div style="display:flex;gap:6px"><select id="sfSeg" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px;background:var(--bg);color:var(--tx)"><option value="">分段</option><option>探索段</option><option>启航段</option><option>先锋段</option><option>领航1V1</option><option>领航1V2</option><option>成人班</option></select>';
   h+='<select id="sfStatus" onchange="onSFStatusChange()" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px;background:var(--bg);color:var(--tx)"><option value="在读中">在读中</option><option value="仅试听">仅试听</option><option value="暂时停课">暂时停课</option><option value="终止课程">终止课程</option></select></div>';
   h+='<select id="sfClass" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px;background:var(--bg);color:var(--tx)">'+clsOpts+'</select>';
-  h+='<div style="display:flex;gap:6px"><input id="sfPur" type="number" placeholder="已购课时" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px"><input id="sfUsed" type="number" placeholder="已销课时" value="0" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px"></div>';
+  h+='<div style="font-size:12px;color:var(--tx2);margin:4px 0;padding:8px;background:var(--bg);border-radius:6px">已购课时：<b>1</b><span style="margin-left:12px;color:var(--tx3)">已销课时：0（新生默认）</span></div>';
   h+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button onclick="closeModal(this)" class="btn bo">取消</button><button onclick="saveStudent()" class="btn bp">保存</button></div></div>';
   ov.innerHTML=h;document.body.appendChild(ov);
   // Auto-generate code
@@ -888,7 +888,7 @@ function onSFStatusChange(){
   else{pu.disabled=false;ue.disabled=false}
 }
 function saveStudent(){
-  var d={student_name:document.getElementById('sfName').value,student_code:document.getElementById('sfCode').value,segment:document.getElementById('sfSeg').value,status:document.getElementById('sfStatus').value,enrolled_class:document.getElementById('sfClass').value,purchased_lessons:parseInt(document.getElementById('sfPur').value)||0,used_lessons:parseInt(document.getElementById('sfUsed').value)||0,remaining_lessons:0,source:'',notes:''};
+  var d={student_name:document.getElementById('sfName').value,student_code:document.getElementById('sfCode').value,segment:document.getElementById('sfSeg').value,status:document.getElementById('sfStatus').value,enrolled_class:document.getElementById('sfClass').value,purchased_lessons:1,used_lessons:0,remaining_lessons:0,source:'',notes:''};
   if(!d.student_name)return alert('请输入学生姓名');
   d.remaining_lessons=d.purchased_lessons-d.used_lessons;
   fetch(API+'/students',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){document.querySelectorAll('#editorBody ~ div').forEach(function(x){if(x.style&&x.style.position==='fixed')x.remove()});renderStudentTab()}else alert(rd.message)});
