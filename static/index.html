@@ -782,17 +782,18 @@ function renderStudentTab(){
     var sortedClasses=Object.keys(cfgInfo);var classOrder=[];sortedClasses.forEach(function(c){if(byClass[c])classOrder.push(c)});Object.keys(byClass).sort().forEach(function(c){if(classOrder.indexOf(c)<0)classOrder.push(c)});
     classOrder.forEach(function(cls){
       var students=byClass[cls];
-      h+='<div class="section-card" style="padding:12px 16px;margin-bottom:12px"><div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:10px">'+esc(cls)+' <span style="font-weight:400;color:var(--tx3);font-size:11px">'+students.length+'人</span></div>';
+      h+='<div class="section-card" style="padding:12px 16px;margin-bottom:12px"><div style="display:flex;align-items:center;margin-bottom:10px"><div style="font-size:13px;font-weight:700;color:var(--tx);flex:1">'+esc(cls)+' <span style="font-weight:400;color:var(--tx3);font-size:11px">'+students.length+'人</span></div><button onclick="expandClassRecords(\''+esc(cls.replace(/'/g,\"\\\\'\").replace(/\"/g,'&quot;'))+'\',\'attendance\')" style="padding:1px 6px;border-radius:3px;border:1px solid var(--border);background:var(--surface);color:var(--tx2);font-size:9px;cursor:pointer;margin-left:4px">课时记录</button><button onclick="expandClassRecords(\''+esc(cls.replace(/'/g,\"\\\\'\").replace(/\"/g,'&quot;'))+'\',\'payment\')" style="padding:1px 6px;border-radius:3px;border:1px solid var(--border);background:var(--surface);color:var(--tx2);font-size:9px;cursor:pointer;margin-left:2px">缴费记录</button></div>';
+      h+='<div id="classRecords_'+esc(cls).replace(/\\s/g,'_')+'" style="display:none;margin-bottom:8px;padding:8px;background:var(--bg);border-radius:6px;font-size:10px"></div>';
       h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">';
       students.forEach(function(r){
         var pct=parseInt(r.purchased_lessons)>0?Math.round(parseInt(r.used_lessons)/parseInt(r.purchased_lessons)*100):0;
         var barColor=pct>80?'#dc2626':(pct>50?'#d97706':'#16a34a');
         var sid='studDetail_'+esc(r.student_name).replace(/\\s/g,'_');
-        h+='<div style="background:var(--surface2);border-radius:8px;padding:10px;border:1px solid var(--border);cursor:pointer" onclick="toggleStudentDetail(\''+esc(r.student_name)+'\',this)">';
+        h+='<div style="background:var(--surface2);border-radius:8px;padding:10px;border:1px solid var(--border)">';
         h+='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px">'+esc(r.student_name)+'</b><span style="font-size:9px;padding:1px 6px;border-radius:999px;background:'+(r.status==='在读中'?'#dcfce7':(r.status==='暂时停课'?'#fef3c7':'#fee2e2'))+';color:'+(r.status==='在读中'?'#16a34a':(r.status==='暂时停课'?'#d97706':'#dc2626'))+'">'+esc(r.status||'?')+'</span></div>';
         h+='<div style="height:4px;background:#e2e8f0;border-radius:2px;margin:6px 0"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:2px"></div></div>';
         h+='<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--sb)"><span>已购'+r.purchased_lessons+'</span><span>已销'+r.used_lessons+'</span><span>余'+(parseInt(r.purchased_lessons)-parseInt(r.used_lessons))+'</span></div>';
-        h+='<div style="display:flex;gap:4px;margin-top:6px"><button onclick="event.stopPropagation();showAddStudentModal(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bfdbfe;background:#eff6ff;color:#3b82f6;font-size:9px;cursor:pointer">编辑</button><button onclick="event.stopPropagation();showAddPayForStudent(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:#f0fdf4;color:#16a34a;font-size:9px;cursor:pointer">+缴费</button></div>';
+        h+='<div style="display:flex;gap:4px;margin-top:6px"><button onclick="showAddStudentModal(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bfdbfe;background:#eff6ff;color:#3b82f6;font-size:9px;cursor:pointer">编辑</button><button onclick="showAddPayForStudent(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:#f0fdf4;color:#16a34a;font-size:9px;cursor:pointer">+缴费</button><button onclick="toggleStudentDetail(\''+esc(r.student_name)+'\',this)" style="padding:1px 6px;border-radius:3px;border:1px solid var(--border);background:var(--surface);color:var(--tx2);font-size:9px;cursor:pointer;margin-left:auto">记录</button></div>';
         h+='<div id="'+sid+'" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);font-size:9px"></div>';
         h+='</div>';
       });
@@ -800,6 +801,26 @@ function renderStudentTab(){
     });
     h+='</div>';el.innerHTML=h;
   });
+}
+function expandClassRecords(cls,type){
+  var el=document.getElementById('classRecords_'+cls.replace(/\\s/g,'_'));
+  if(!el)return;
+  if(el.style.display==='block'){el.style.display='none';return}
+  el.style.display='block';el.textContent='加载中...';
+  var url=type==='attendance'?API+'/attendance/by-lesson?class='+encodeURIComponent(cls)+'&limit=20':API+'/finance/records?type=revenue&limit=100';
+  fetch(url).then(function(r){return r.json()}).then(function(data){
+    var rows=type==='attendance'?(data.rows||data):data;
+    if(!rows.length){el.innerHTML='<span style=\"color:var(--tx3)\">暂无记录</span>';return}
+    var h='<table style=\"width:100%;font-size:9px;border-collapse:collapse\">';
+    if(type==='attendance'){
+      h+='<tr style=\"color:var(--tx3)\"><th style=\"text-align:left;padding:2px 4px\">日期</th><th style=\"text-align:left;padding:2px 4px\">课节</th><th style=\"text-align:left;padding:2px 4px\">出席/总数</th></tr>';
+      rows.forEach(function(r){h+='<tr><td style=\"padding:2px 4px\">'+(r.lesson_date||'').slice(0,10)+'</td><td style=\"padding:2px 4px\">'+esc(r.lesson_title||'')+'</td><td style=\"padding:2px 4px\">'+r.present+'/'+r.total+'</td></tr>'});
+    }else{
+      h+='<tr style=\"color:var(--tx3)\"><th style=\"text-align:left;padding:2px 4px\">学生</th><th style=\"text-align:left;padding:2px 4px\">日期</th><th style=\"text-align:left;padding:2px 4px\">方式</th><th style=\"text-align:left;padding:2px 4px\">课次</th><th style=\"text-align:left;padding:2px 4px\">金额</th></tr>';
+      rows.forEach(function(r){h+='<tr><td style=\"padding:2px 4px\">'+esc(r.student_name)+'</td><td style=\"padding:2px 4px\">'+((r.actual_pay_date||'')?((r.actual_pay_date||'').slice(0,10)):'-')+'</td><td style=\"padding:2px 4px\">'+esc(r.method||'')+'</td><td style=\"padding:2px 4px\">'+r.lesson_count+'</td><td style=\"padding:2px 4px\">¥'+(r.amount||0)+'</td></tr>'});
+    }
+    h+='</table>';el.innerHTML=h;
+  }).catch(function(){el.innerHTML='<span style=\"color:var(--rd)\">加载失败</span>'});
 }
 function showCalendarModal(){
   var nowD=new Date();var y=nowD.getFullYear();var mo=nowD.getMonth();
