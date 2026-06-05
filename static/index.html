@@ -779,7 +779,7 @@ function renderStudentTab(){
     // Filter and group by class
     var filtered=rows.filter(function(r){return studentFilter.status.indexOf(r.status||'在读中')>=0});
     var byClass={};filtered.forEach(function(r){var c=r.enrolled_class||'未分班';if(!byClass[c])byClass[c]=[];byClass[c].push(r)});
-    var sortedClasses=Object.keys(cfgInfo);var classOrder=[];sortedClasses.forEach(function(c){if(byClass[c]){classOrder.push(c);delete byClass[c]}});Object.keys(byClass).sort().forEach(function(c){classOrder.push(c)});
+    var sortedClasses=Object.keys(cfgInfo);var classOrder=[];sortedClasses.forEach(function(c){if(byClass[c])classOrder.push(c)});Object.keys(byClass).sort().forEach(function(c){if(classOrder.indexOf(c)<0)classOrder.push(c)});
     classOrder.forEach(function(cls){
       var students=byClass[cls];
       h+='<div class="section-card" style="padding:12px 16px;margin-bottom:12px"><div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:10px">'+esc(cls)+' <span style="font-weight:400;color:var(--tx3);font-size:11px">'+students.length+'人</span></div>';
