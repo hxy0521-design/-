@@ -86,7 +86,7 @@ hr{border:none;border-top:1.5px dashed var(--border);margin:18px 0;opacity:.6}
 ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}::-webkit-scrollbar-thumb:hover{background:var(--tx3)}
 </style></head><body>
 <button class="theme-toggle" onclick="toggleTheme()" title="切换深色模式">🌙</button>
-<div style="display:flex;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--surface)" id="topBar"><div id="mainTabs" style="display:flex;gap:4px;padding:4px 8px 0;overflow-x:auto;flex-shrink:0;"></div></div><div style="display:flex;flex:1;overflow:hidden" id="mainRow"><div class="panel pl" style="display:none"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkXinxin" onchange="onUserChange()" style="width:auto;margin:0 2px">只看欣欣</label><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkBiscuit" onchange="onUserChange()" style="width:auto;margin:0 2px">只看饼干</label></div><h2>班级 <span style="font-size:10px;float:right"><a href="#" onclick="expandAll(event)" style="color:var(--sb)">展开</a> | <a href="#" onclick="collapseAll(event)" style="color:var(--sb)">折叠</a></span></h2><div id="classList"></div><button class="btn bo" style="margin-top:4px;width:100%" onclick="newUnitAll()">+ 新建单元</button><button class="btn bo" style="margin-top:4px;width:100%" onclick="newClass()">+ 新建班级</button><h3 style="margin-top:18px">输出文件</h3><div id="outputList"></div></div>
+<div style="display:flex;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--surface)" id="topBar"><div id="mainTabs" style="display:flex;gap:4px;padding:4px 8px 0;overflow-x:auto;flex-shrink:0;"></div></div><div style="display:flex;flex:1;overflow:hidden" id="mainRow"><div class="panel pl" style="display:none"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkXinxin" onchange="onUserChange()" style="width:auto;margin:0 2px">只看欣欣</label><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkBiscuit" onchange="onUserChange()" style="width:auto;margin:0 2px">只看饼干</label></div><h2>班级 <span style="font-size:10px;float:right"><a href="#" onclick="expandAll(event)" style="color:var(--sb)">展开</a> | <a href="#" onclick="collapseAll(event)" style="color:var(--sb)">折叠</a></span></h2><div id="classList"></div><button class="btn bo" style="margin-top:4px;width:100%" onclick="newUnitAll()">+ 新建单元</button><button class="btn bo" style="margin-top:4px;width:100%" onclick="newClass()">+ 新建班级</button><h3 style="margin-top:18px">本周课后素材</h3><div id="weeklyMaterial"><div style="font-size:11px;margin:4px 0"><b>启航段</b> <button class="btn bo" style="padding:0 6px;font-size:10px" onclick="uploadWeeklyMaterial(&#39;启航段&#39;)">上传</button> <a id="wmDLQH" href="#" style="font-size:10px;display:none" download>下载</a> <button class="btn bo" style="padding:0 6px;font-size:10px;display:none" id="wmDelQH" onclick="deleteWeeklyMaterial(&#39;启航段&#39;)">删</button></div><div style="font-size:11px;margin:4px 0"><b>探索段</b> <button class="btn bo" style="padding:0 6px;font-size:10px" onclick="uploadWeeklyMaterial(&#39;探索段&#39;)">上传</button> <a id="wmDLTS" href="#" style="font-size:10px;display:none" download>下载</a> <button class="btn bo" style="padding:0 6px;font-size:10px;display:none" id="wmDelTS" onclick="deleteWeeklyMaterial(&#39;探索段&#39;)">删</button></div></div><h3 style="margin-top:18px">输出文件</h3><div id="outputList"></div></div>
 <div class="panel pc"><div class="tabs" id="tabBar"></div><div class="ed-body" id="editorBody"><div style="color:var(--sb);text-align:center;padding:60px 0">加载中...</div></div></div>
 <div class="panel pr" id="previewPanel" style="display:none"><h2 style="cursor:pointer" onclick="togglePreview()"><span id="pvLabel">预览</span> <span id="pvHint" style="font-size:11px;color:var(--sb)">点击收起</span></h2><div id="previewContent" style="font-size:12px;color:var(--sb)">粘贴发言后在此预览</div></div>
 <script>
@@ -141,15 +141,17 @@ function renderMainTabs(){
     tb.appendChild(t);
   });
 }
+function saveSnapshot(d){return JSON.stringify({meta:d.meta||{},topics:(d.topics||[]).map(function(t){return{title:t.title,speeches:t.speeches}}),folder:d.folder||'',basePath:d.basePath||''})}
 function hasUnsaved(){
   if(!activeTab||activeMainTab!=='edit')return false;
   var d=tabs[activeTab];if(!d)return false;
-  return JSON.stringify(d)!==_lastSaved;
+  if(!_lastSaved)return false;
+  return saveSnapshot(d)!==_lastSaved;
 }
 function switchTabWithCheck(targetTab){
   if(activeMainTab==='edit'&&targetTab!=='edit'&&hasUnsaved()){
     var ov=document.createElement('div');ov.className="zg-modal-overlay";ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
-    ov.innerHTML='<div style="background:var(--surface);border-radius:14px;padding:24px;max-width:380px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,.2);text-align:center"><h3 style="margin:0 0 8px">未保存的修改</h3><div style="font-size:13px;color:var(--tx2);margin-bottom:20px">当前课节有未保存的内容，是否保存？</div><div style="display:flex;gap:8px;justify-content:center"><button class="btn bp" style="padding:8px 20px" onclick="var btn=this;btn.textContent=\'保存中...\';btn.disabled=true;saveToServer();var check=setInterval(function(){var st=document.getElementById(\'saveStatus\');if(st&&st.textContent.indexOf(\'已保存\')>=0){clearInterval(check);btn.textContent=\'已保存\';setTimeout(function(){_lastSaved=JSON.stringify(tabs[activeTab]||{});activeMainTab=\''+targetTab+'\';renderMainTabs();switchMainTab()},1000)}},200)">保存</button><button class="btn bo" style="padding:8px 20px" onclick="this.closest(\'div\').parentElement.remove();activeMainTab=\''+targetTab+'\';renderMainTabs();switchMainTab()">放弃</button><button class="btn bo" style="padding:8px 20px" onclick="this.closest(\'div\').parentElement.remove()">取消</button></div></div>';
+    ov.innerHTML='<div style="background:var(--surface);border-radius:14px;padding:24px;max-width:380px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,.2);text-align:center"><h3 style="margin:0 0 8px">未保存的修改</h3><div style="font-size:13px;color:var(--tx2);margin-bottom:20px">当前课节有未保存的内容，是否保存？</div><div style="display:flex;gap:8px;justify-content:center"><button class="btn bp" style="padding:8px 20px" onclick="var btn=this;var ov=btn.closest(\'.zg-modal-overlay\');btn.textContent=\'保存中...\';btn.disabled=true;saveToServer();var check=setInterval(function(){var st=document.getElementById(\'saveStatus\');if(st&&st.textContent.indexOf(\'已保存\')>=0){clearInterval(check);btn.textContent=\'已保存\';setTimeout(function(){if(ov)ov.remove();_lastSaved=saveSnapshot(tabs[activeTab]||{});activeMainTab=\''+targetTab+'\';renderMainTabs();switchMainTab()},500)}},200)">保存</button><button class="btn bo" style="padding:8px 20px" onclick="var ov=this.closest(\'.zg-modal-overlay\');if(ov)ov.remove();activeMainTab=\''+targetTab+'\';renderMainTabs();switchMainTab()">放弃</button><button class="btn bo" style="padding:8px 20px" onclick="var ov=this.closest(\'.zg-modal-overlay\');if(ov)ov.remove()">取消</button></div></div>';
     document.body.appendChild(ov);
   }else{
     activeMainTab=targetTab;renderMainTabs();switchMainTab();
@@ -169,12 +171,16 @@ function collapseAll(e){e.preventDefault();document.querySelectorAll('#classList
 function renderClassList(){
   var el=document.getElementById('classList');el.innerHTML='';
   var filter=getCheckedUsers().length>0;
-  // Build class list from cfgInfo + allLessons (loaded once via /api/config)
-  var hiddenClasses=['周三启航','寒假先锋','寒假启航1班','寒假启航2班','寒假探索','混龄特典','纯试听','周五领航','周六先锋'];
+  // Build class list — 只展示有课节的班级，无内容的班级自动隐藏
   Object.keys(cfgInfo).forEach(function(cls){
-    if(hiddenClasses.indexOf(cls)>=0)return;
     var units=cfgInfo[cls];if(!Object.keys(units).length)return;
     if(filter){var hasMine=Object.values(units).some(function(u){return getCheckedUsers().indexOf(u.created_by)>=0});if(!hasMine)return}
+    // 至少有一个单元有课节才展示
+    var hasLessons=Object.keys(units).some(function(uc){
+      var ls=allLessons[cls]&&allLessons[cls][uc]?allLessons[cls][uc]:[];
+      return ls.length>0;
+    });
+    if(!hasLessons)return;
     var d=document.createElement('div');d.className='ci';d.style.cssText='display:flex;align-items:center;cursor:pointer';
     d.onclick=function(e){if(e.target.tagName==='BUTTON')return;var ul=this.nextElementSibling;if(ul)ul.style.display=ul.style.display==='none'?'block':'none'};
     var cnSpan=document.createElement('span');cnSpan.textContent=cls;cnSpan.style.flex='1';
@@ -217,7 +223,7 @@ function renderClassList(){
   });
 }
 var cfgInfo={},allLessons={},zgUser='';
-function fetchConfig(retry){retry=retry||0;fetch(API+'/config').then(function(r){return r.json()}).then(function(d){cfgInfo=d.classes||d;allLessons=d.lessons||{};zgUser=d.zg_user||'';window._summary=d.summary||{};window._weekly=d.weekly||[];var clsKeys=Object.keys(cfgInfo);if(clsKeys.length){var ow=cfgInfo[clsKeys[0]];var uc=Object.keys(ow)[0];window._offWeeks=(ow[uc].off_weeks||'').split(',').filter(function(x){return x}).map(Number)}renderClassList();renderMainTabs();switchMainTab()}).catch(function(e){if(retry<5)setTimeout(function(){fetchConfig(retry+1)},1000*retry)})}
+function fetchConfig(retry){retry=retry||0;fetch(API+'/config').then(function(r){return r.json()}).then(function(d){cfgInfo=d.classes||d;allLessons=d.lessons||{};zgUser=d.zg_user||'';window._summary=d.summary||{};window._weekly=d.weekly||[];var clsKeys=Object.keys(cfgInfo);if(clsKeys.length){var ow=cfgInfo[clsKeys[0]];var uc=Object.keys(ow)[0];window._offWeeks=(ow[uc].off_weeks||'').split(',').filter(function(x){return x}).map(Number)}renderClassList();renderMainTabs();switchMainTab();refreshWeeklyMaterial()}).catch(function(e){if(retry<5)setTimeout(function(){fetchConfig(retry+1)},1000*retry)})}
 fetchConfig();
 
 function newClass(){
@@ -296,7 +302,7 @@ function openTab(cls){if(!tabs[cls])tabs[cls]={meta:{title:'',unit:'',date:'',cl
 function closeTab(cls,e){e.stopPropagation();delete tabs[cls];if(activeTab===cls)activeTab=Object.keys(tabs)[0]||null;renderTabs();renderMainTabs();if(activeTab){switchMainTab();renderPreview()}else{document.getElementById('editorBody').innerHTML='<div style="color:var(--sb);text-align:center;padding:60px 0">请从左侧选择班级</div>';document.getElementById('previewContent').innerHTML='<span class="st">粘贴发言后在此预览</span>';document.getElementById('outputList').innerHTML=''}}
 function renderOutputs(outputs){var ol=document.getElementById('outputList');ol.innerHTML='';(outputs||[]).forEach(function(o){var op=document.createElement('div');op.className='op';if(o.path){var isPng=o.name&&o.name.toLowerCase().endsWith('.png');if(isPng){op.innerHTML='<a href="#" onclick="showPreviewImage(\''+o.path+'\',\''+esc(o.name)+'\');return false">'+o.name+'</a>'}else{op.innerHTML='<a href="'+o.path+'" target="_blank">'+o.name+'</a>'}}else{op.textContent=o.name}ol.appendChild(op)})}
 function loadAndOpen(folder,cls){var el=document.getElementById('editorBody');if(el)el.innerHTML='<div style="text-align:center;padding:60px 0;color:var(--tx3)"><div style="display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite"></div><div style="margin-top:10px;font-size:13px">加载课节中...</div></div>';fetch(API+'/load/'+folder).then(function(r){return r.json()}).then(function(d){
-d.topics.forEach(function(t,i){t._images=(d.images&&d.images[i])?d.images[i].slice():[]});tabs[cls]={meta:d.meta||{},topics:d.topics||[],_golden:{},folder:folder,basePath:d.base_path||''};_lastSaved=JSON.stringify(tabs[cls]);activeTab=cls;renderTabs();renderEditor();renderPreview();renderOutputs(d.outputs||[])}).catch(function(e){alert('加载失败')})}
+d.topics.forEach(function(t,i){t._images=(d.images&&d.images[i])?d.images[i].slice():[]});tabs[cls]={meta:d.meta||{},topics:d.topics||[],_golden:{},folder:folder,basePath:d.base_path||''};_lastSaved=saveSnapshot(tabs[cls]);activeTab=cls;renderTabs();renderEditor();renderPreview();renderOutputs(d.outputs||[])}).catch(function(e){alert('加载失败')})}
 function renderTabs(){var tb=document.getElementById('tabBar');tb.innerHTML='';Object.keys(tabs).forEach(function(cls){var t=document.createElement('div');t.className='tab'+(cls===activeTab?' ac':'');t.innerHTML=cls+'<span class="close" onclick="closeTab(\''+cls+'\',event)"> x</span>';t.onclick=function(){activeTab=cls;renderTabs();renderMainTabs();switchMainTab();renderPreview()};tb.appendChild(t)})}
 
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
@@ -475,7 +481,7 @@ function showAttendanceModal(genPromise,d,gs,gw){
   var m=unit.match(/(\d{4})/);var unitCode=m?m[1]:'2605';
   var lessonNum='1';if(d.folder){var parts=d.folder.split('-'+unitCode+'-');if(parts.length>1)lessonNum=parts[1]}
   fetch(API+'/attendance/suggest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({class_name:cls,topics:d.topics})})
-  .then(function(r){return r.json()}).then(function(sug){
+  .then(function(r){if(!r.ok)throw new Error('服务器错误 '+r.status);return r.json()}).then(function(sug){
     var overlay=document.createElement('div');overlay.id='attOverlay';overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
     var h='<div style="background:var(--surface);border-radius:12px;padding:20px;max-width:480px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)">';
     h+='<h3 style="margin:0 0 4px">考勤确认 — '+esc(cls)+'</h3><div style="font-size:11px;color:var(--sb);margin-bottom:12px">发言学生已自动勾选，请确认缺席/请假</div>';
@@ -509,6 +515,9 @@ function showAttendanceModal(genPromise,d,gs,gw){
       if(data.folder){if(activeTab.indexOf('-new')>-1){var newTab=data.folder;tabs[newTab]=d;delete tabs[activeTab];activeTab=newTab;d.folder=newTab;renderTabs()}fetchConfig()}
       renderPreview();
     }).catch(function(e){var gsEl=document.getElementById('genStatus');if(gsEl){gsEl.textContent='失败: '+e.message;gsEl.style.color='var(--rd)'}});
+  }).catch(function(e){
+    var gsEl=document.getElementById('genStatus');if(gsEl)gsEl.textContent='考勤加载失败: '+e.message;
+    alert('考勤数据加载失败，请检查班级花名册是否已配置。\n\n'+e.message);
   });
 }
 
@@ -531,8 +540,16 @@ function submitAttendance(cls,unitCode,lessonNum,title,date){
     records.push({name:roster[i].name,status:status,note:n||(sel&&sel.value?sel.value:'')});
   }
   att.newStudents.forEach(function(s){records.push({name:s.name,status:'出席',note:s.note||'新生'})});
-  fetch(API+'/attendance/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({class_name:cls,unit_code:unitCode,lesson_num:parseInt(lessonNum),lesson_title:title,lesson_date:date,records:records,new_students:att.newStudents})}).then(function(r){return r.json()}).then(function(rd){console.log('考勤已保存:',rd.count||0,'条')}).catch(function(e){console.log('考勤保存失败',e)});
-  var o=document.getElementById('attOverlay');if(o)o.remove();
+  // 根据 unit_code 推算周期标签，如 2606 → 2606春季班
+  var cycLabel='';var ucInt=parseInt(unitCode);if(ucInt>=2603)cycLabel=unitCode+'春季班';else if(ucInt>=2602)cycLabel=unitCode+'寒假班';else if(ucInt>=2500)cycLabel=unitCode+'正式课';else cycLabel=unitCode+'试听期';
+  var saveBtn=document.querySelector('#attOverlay .bg');if(saveBtn){saveBtn.textContent='保存中...';saveBtn.disabled=true}
+  fetch(API+'/attendance/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({class_name:cls,unit_code:unitCode,lesson_num:parseInt(lessonNum),lesson_title:title,lesson_date:date,records:records,new_students:att.newStudents,cycle:cycLabel})}).then(function(r){if(!r.ok)throw new Error('服务器错误 '+r.status);return r.json()}).then(function(rd){
+    console.log('考勤已保存:',rd.count||0,'条');
+    var o=document.getElementById('attOverlay');if(o)o.remove();
+  }).catch(function(e){
+    alert('考勤保存失败，请重试。\n\n'+e.message);
+    if(saveBtn){saveBtn.textContent='确认考勤';saveBtn.disabled=false}
+  });
 }
 
 function changeUnitPath(){
@@ -548,7 +565,7 @@ function changeUnitPath(){
       }).catch(function(){alert('更新路径失败')});
   });
 }
-function saveToServer(){if(!activeTab)return;saveMeta();saveTopics();var d=tabs[activeTab];var st=document.getElementById('saveStatus');if(!st){alert('编辑器未加载，请先打开一个课节');return}st.style.display='inline';if(!d.folder||d.folder.indexOf('-new')>=0){var cls=d.meta.class||activeTab;var unitFull=d.meta.unit||'';var m=unitFull.match(/(\d{4})/);var unitCode=m?m[1]:'2605';d.folder=cls+'-'+unitCode+'-new';d.basePath=''}var saveImages={};d.topics.forEach(function(t,i){if(t._images&&t._images.length)saveImages[i]=t._images});st.textContent='保存中...';fetch(API+'/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({meta:d.meta,topics:d.topics,folder:d.folder,images:saveImages})}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){st.textContent='已保存 ✓';_lastSaved=JSON.stringify(d);d.folder=rd.folder||d.folder}else{st.textContent='保存失败'}setTimeout(function(){st.style.display='none'},3000)}).catch(function(){st.textContent='保存失败';setTimeout(function(){st.style.display='none'},3000)})}
+function saveToServer(){if(!activeTab)return;saveMeta();saveTopics();var d=tabs[activeTab];var st=document.getElementById('saveStatus');if(!st){alert('编辑器未加载，请先打开一个课节');return}st.style.display='inline';if(!d.folder||d.folder.indexOf('-new')>=0){var cls=d.meta.class||activeTab;var unitFull=d.meta.unit||'';var m=unitFull.match(/(\d{4})/);var unitCode=m?m[1]:'2605';d.folder=cls+'-'+unitCode+'-new';d.basePath=''}var saveImages={};d.topics.forEach(function(t,i){if(t._images&&t._images.length)saveImages[i]=t._images});st.textContent='保存中...';fetch(API+'/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({meta:d.meta,topics:d.topics,folder:d.folder,images:saveImages})}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){st.textContent='已保存 ✓';_lastSaved=saveSnapshot(d);d.folder=rd.folder||d.folder}else{st.textContent='保存失败'}setTimeout(function(){st.style.display='none'},3000)}).catch(function(){st.textContent='保存失败';setTimeout(function(){st.style.display='none'},3000)})}
 function saveAll(){localStorage.setItem('tabsData',JSON.stringify(tabs))}
 setInterval(saveAll,300000);
 window.addEventListener('beforeunload',saveAll);
@@ -566,23 +583,23 @@ function renderOverviewTab(){
   h+='<div class="kpi-card" style="border-top-color:var(--sky)"><div class="kpi-label">本月待消课</div><div class="kpi-val">'+(s.pending_paid||0)+'<span class="kpi-u">课时待销</span> <span style="font-size:14px;color:var(--tx3)">'+(s.schedule_remaining||0)+'节排课</span></div></div>';
   h+='<div class="kpi-card" style="border-top-color:var(--orange)"><div class="kpi-label">本月收入</div><div class="kpi-val">¥'+(s.month_revenue||0).toFixed(0)+'</div></div>';
   h+='</div>';
-  // Build weeks (Tue-Mon as teaching week)
+  // Build weeks (Tue-Mon) — 与 showCalendarModal 同逻辑、同周次编号
   var nowD=new Date();var y=nowD.getFullYear();var mo=nowD.getMonth();
-  var firstDay=new Date(y,mo,1);
-  // Find first Tuesday of the month as week start
-  var tue=new Date(y,mo,1);while(tue.getDay()!==2)tue.setDate(tue.getDate()+1);
-  var weeks=[];var wkStart=new Date(tue);
-  for(var w=0;w<4;w++){
+  var firstDay=new Date(y,mo,1);var lastDay=new Date(y,mo+1,0);
+  // 找到触及本月的第一个周二（可能在上月）
+  var wkStart=new Date(y,mo,1);while(wkStart.getDay()!==2)wkStart.setDate(wkStart.getDate()-1);
+  var weeks=[];var offSet=window._offWeeks||[];
+  for(var w=0;w<7;w++){
     var ws=new Date(wkStart);ws.setDate(ws.getDate()+w*7);
-    if(ws.getMonth()>mo&&ws.getDate()>7)break;
+    if(ws>lastDay)break;
     var we=new Date(ws);we.setDate(we.getDate()+6);
+    if(we<firstDay)continue;
     var lb=(ws.getMonth()+1)+'/'+ws.getDate()+'-'+(we.getMonth()+1)+'/'+we.getDate();
-    var off=window._offWeeks&&window._offWeeks.indexOf(w+1)>=0;
+    var off=offSet.indexOf(w+1)>=0;
     weeks.push({n:w+1,label:lb,start:ws,end:we,off:off});
   }
   window._tWeeks=weeks;
   // Compute class dates helper
-  var offSet=window._offWeeks||[];
   function getDates(wkday){
     var DAY_TO_NUM={'周一':1,'周二':2,'周三':3,'周四':4,'周五':5,'周六':6,'周日':7};
     var dates=[];
@@ -667,7 +684,7 @@ function loadAttLessons(){
   var url=API+'/attendance/by-lesson?limit=50&page='+attPage;
   if(cls)url+='&class='+encodeURIComponent(cls);
   if(cyc)url+='&cycle='+encodeURIComponent(cyc);
-  fetch(url).then(function(r){return r.json()}).then(function(data){
+  fetch(url).then(function(r){if(!r.ok)throw new Error('服务器错误 '+r.status);return r.json()}).then(function(data){
     var rows=data.rows||data;attTotal=data.total||rows.length;
     var el=document.getElementById('attLessonList');if(!el)return;
     if(!rows.length){el.innerHTML='<div class="section-card" style="text-align:center;padding:40px">暂无消课记录</div>';return}
@@ -684,7 +701,7 @@ function loadAttLessons(){
       h+='<div style="font-size:11px;color:var(--tx2);text-align:right;min-width:120px">'+r.students.join(', ')+'</div></div>';
       // Row 3: pricing (L) | notes (R)
       h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">';
-      h+='<div style="font-size:10px;color:var(--tx3)">¥'+(r.price||0)+'/节 · 课销¥'+(r.lesson_revenue||0)+' · 人均¥'+(r.per_person||0)+'</div>';
+      h+='<div style="font-size:10px;color:var(--tx3)">¥'+(r.price||0)+'/节 · 课销¥'+(r.lesson_revenue||0)+' · 人均¥'+(r.per_person||0)+(r.has_debt?' · <span style="color:var(--rd);font-weight:600">'+r.debt_count+'欠费-'+esc(r.debt_names)+'</span>':'')+'</div>';
       if(r.leave_notes){var n=r.leave_notes;if(Array.isArray(n))n=n.join('; ');h+='<div style="font-size:10px;color:var(--sky);text-align:right">'+esc(n)+'</div>';}
       h+='</div>';
       h+='</div>';
@@ -705,6 +722,8 @@ function loadAttLessons(){
     if(attPage<totalPages)h+='<a href="#" onclick="attPage='+totalPages+';loadAttLessons();return false" class="btn bo" style="padding:4px 8px;font-size:11px;text-decoration:none">末页</a>';
     h+='</div>';
     el.innerHTML=h;
+  }).catch(function(e){
+    var el2=document.getElementById('attLessonList');if(el2)el2.innerHTML='<div class="section-card" style="text-align:center;padding:40px;color:var(--rd)">加载失败: '+esc(e.message)+'<br><button class="btn bo" style="margin-top:8px" onclick="loadAttLessons()">重试</button></div>';
   });
 }
 // ====== Tab 6: 缴费记录 =====
@@ -764,7 +783,7 @@ function renderRevenueSplitTab(){
     s+="<th style=\"text-align:left;padding:4px 8px 4px 2px\">教研童</th>";
     s+="<th style=\"text-align:right;padding:4px 2px 4px 8px\">饼%</th>";
     s+="<th style=\"text-align:left;padding:4px 2px 4px 2px\">教研饼</th>";
-    s+="<th style=\"text-align:left;padding:4px 4px\">欣% 招生欣 饼</th>";
+    s+="<th style=\"text-align:left;padding:4px 4px\">招生欣 | 饼</th>";
     s+="<th style=\"text-align:left;padding:4px 4px\">转化欣 | 饼</th>";
     s+="<th style=\"text-align:left;padding:4px 4px\">续费欣 | 饼</th>";
     s+="<th style=\"text-align:right;padding:4px 8px\">Neukol</th>";
@@ -814,7 +833,7 @@ function renderRevenueSplitTab(){
         h+='<td style="text-align:left;padding:4px 8px 4px 2px">¥'+fv(r.sitong_share).toFixed(0)+'</td>';
         h+='<td style="text-align:right;padding:2px 2px 2px 8px"><input value="'+((r.biscuit_coef||0)*100).toFixed(0)+'" style="width:40px;padding:1px 2px;font-size:13px;border:1px solid #dde1ed;border-radius:3px;text-align:center" onchange="updateSplitCoef('+r.id+',\x27biscuit\x27,this.value)"></td>';
         h+='<td style="text-align:left;padding:4px 2px 4px 2px">¥'+fv(r.biscuit_share).toFixed(0)+'</td>';
-        h+='<td style="text-align:left;padding:2px 2px"><input value="'+((r.recruit_xin_coef!=null?r.recruit_xin_coef:1)*100).toFixed(0)+'" style="width:28px;padding:0 1px;font-size:13px;border:1px solid var(--border);border-radius:3px;text-align:center;vertical-align:middle" onchange="updateRecruitCoef('+r.id+',this.value)"><span style="font-size:12px;margin-left:2px">欣¥'+fv(r.recruit_xin).toFixed(0)+' 饼¥'+fv(r.recruit_bis).toFixed(0)+'</span></td>';
+        h+='<td style="text-align:left;padding:4px 4px">欣¥'+fv(r.recruit_xin).toFixed(0)+' 饼¥'+fv(r.recruit_bis).toFixed(0)+'</td>';
         h+='<td style="text-align:left;padding:4px 4px">欣¥'+fv(r.conversion_xin).toFixed(0)+' 饼¥'+fv(r.conversion_bis).toFixed(0)+'</td>';
         h+='<td style="text-align:left;padding:4px 4px">欣¥'+fv(r.retention_xin).toFixed(0)+' 饼¥'+fv(r.retention_bis).toFixed(0)+'</td>';
         h+='<td style="text-align:right;padding:4px 8px">¥'+fv(r.neukol_fee).toFixed(0)+'</td>';
@@ -912,22 +931,24 @@ function saveCost(){
   fetch(API+'/finance/add-cost',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){document.querySelectorAll('#editorBody ~ div').forEach(function(x){if(x.style&&x.style.position==='fixed')x.remove()});renderFinanceTab()}else alert(rd.message)});
 }
 function deleteCost(id){if(!confirm('确定删除此成本记录？'))return;fetch(API+'/finance/delete-cost',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok')renderFinanceTab()})}
-var studentFilter={status:['在读中'],segment:'',class:''};
+var _cachedStudents=null;
+var studentFilter={status:['在读中','仅试听'],segment:'',class:'',search:''};
 function renderStudentTab(){
   var el=document.getElementById('editorBody');if(!el)return;
   cachedFetch(API+'/students').then(function(r){return r.json()}).then(function(rows){
+    _cachedStudents=rows;
     var h='<div style="padding:16px"><h3 style="margin:0 0 8px">学生管理</h3>';
     h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">';
     var sts=['在读中','暂时停课','终止课程','一课一消','仅试听'];
     sts.forEach(function(s){var active=studentFilter.status.indexOf(s)>=0;h+='<button class="filter-btn'+(active?' active':'')+'" onclick="studentFilter.status.indexOf(\''+s+'\')>=0?studentFilter.status=studentFilter.status.filter(function(x){return x!==\''+s+'\'}):studentFilter.status.push(\''+s+'\');renderStudentTab()">'+s+'</button>'});
-    h+='<span style="flex:1"></span><button class="btn bg" style="padding:3px 10px;font-size:10px" onclick="showAddStudentModal()">+ 新增</button></div>';
+    h+='<input id="studSearch" placeholder="搜索学生..." style="width:120px;padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;margin-left:4px" oninput="studentFilter.search=this.value;clearTimeout(window._studSearchTO);window._studSearchTO=setTimeout(function(){renderStudentTab()},300)"><span style="flex:1"></span><button class="btn bo" style="padding:3px 10px;font-size:10px" onclick="renderStudentTab()">刷新</button><button class="btn bg" style="padding:3px 10px;font-size:10px;margin-left:4px" onclick="showAddStudentModal()">+ 新增</button></div>';
     // Filter and group by class
-    var filtered=rows.filter(function(r){return studentFilter.status.indexOf(r.status||'在读中')>=0});
-    var byClass={};filtered.forEach(function(r){var c=r.enrolled_class||'未分班';if(!byClass[c])byClass[c]=[];byClass[c].push(r)});
-    var sortedClasses=Object.keys(cfgInfo);var classOrder=[];sortedClasses.forEach(function(c){if(byClass[c])classOrder.push(c)});Object.keys(byClass).sort().forEach(function(c){if(classOrder.indexOf(c)<0)classOrder.push(c)});
+    var filtered=rows.filter(function(r){return studentFilter.status.indexOf(r.status||'在读中')>=0});if(studentFilter.search)filtered=filtered.filter(function(r){return r.student_name.indexOf(studentFilter.search)>=0});
+    var byClass={};filtered.forEach(function(r){var c=r.enrolled_class;if(!c&&r.status==='暂时停课')c='暂时停课-待分班';else if(!c)c='未分班';if(!byClass[c])byClass[c]=[];byClass[c].push(r)});
+    var sortedClasses=Object.keys(cfgInfo);var classOrder=[];sortedClasses.forEach(function(c){if(byClass[c])classOrder.push(c)});if(byClass['暂时停课-待分班']){classOrder.push('暂时停课-待分班')}Object.keys(byClass).sort().forEach(function(c){if(c!=='暂时停课-待分班'&&classOrder.indexOf(c)<0)classOrder.push(c)});
     classOrder.forEach(function(cls){
       var students=byClass[cls];
-      h+='<div class="section-card" id="classSection_'+esc(cls).replace(/\\s/g,'_')+'" style="padding:12px 16px;margin-bottom:12px"><div style="display:flex;align-items:center;margin-bottom:10px"><div style="font-size:13px;font-weight:700;color:var(--tx);flex:1">'+esc(cls)+' <span style="font-weight:400;color:var(--tx3);font-size:11px">'+students.length+'人</span></div><button onclick="expandClassRecords(\''+esc(cls)+'\',\'att\')" style="padding:1px 6px;border-radius:3px;border:1px solid #dbeafe;background:var(--surface);color:#2563eb;font-size:9px;cursor:pointer;margin-left:4px">展开消课</button><button onclick="expandClassRecords(\''+esc(cls)+'\',\'pay\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:var(--surface);color:#16a34a;font-size:9px;cursor:pointer;margin-left:2px">展开缴费</button></div>';
+      var clsLabel=cls==='暂时停课-待分班'?'暂时停课':cls;h+='<div class="section-card" id="classSection_'+esc(cls).replace(/\\s/g,'_')+'" style="padding:12px 16px;margin-bottom:12px"><div style="display:flex;align-items:center;margin-bottom:10px"><div style="font-size:13px;font-weight:700;color:var(--tx);flex:1">'+esc(clsLabel)+' <span style="font-weight:400;color:var(--tx3);font-size:11px">'+students.length+'人</span></div><button onclick="expandClassRecords(\''+esc(cls)+'\',\'att\')" style="padding:1px 6px;border-radius:3px;border:1px solid #dbeafe;background:var(--surface);color:#2563eb;font-size:9px;cursor:pointer;margin-left:4px">展开消课</button><button onclick="expandClassRecords(\''+esc(cls)+'\',\'pay\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:var(--surface);color:#16a34a;font-size:9px;cursor:pointer;margin-left:2px">展开缴费</button></div>';
       h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">';
       students.forEach(function(r){
         var pct=parseInt(r.purchased_lessons)>0?Math.min(100,Math.round(parseInt(r.used_lessons)/parseInt(r.purchased_lessons)*100)):0;
@@ -995,7 +1016,10 @@ function toggleOffWeek(wk){
   var idx=window._offWeeks.indexOf(wk);
   if(idx>=0)window._offWeeks.splice(idx,1);else window._offWeeks.push(wk);
   var val=window._offWeeks.sort().join(',');
-  fetch(API+'/classes/off-weeks',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({off_weeks:val})}).then(function(){fetchConfig()});
+  fetch(API+'/classes/off-weeks',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({off_weeks:val})}).then(function(){
+    fetchConfig();
+    if(activeMainTab==='overview')renderOverviewTab();
+  });
 }
 function showAddPayForStudent(name){
   _loadPricing(function(pricing){
@@ -1064,7 +1088,8 @@ function toggleStudPay(name){
 function showAddStudentModal(nameHint){
   var ov=document.createElement('div');ov.className="zg-modal-overlay";ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
   // Build class dropdown options
-  var clsOpts='<option value=\"\">选择班级</option>';Object.keys(cfgInfo).forEach(function(c){clsOpts+='<option value=\"'+c+'\">'+c+'</option>'});
+  var activeClasses={};if(_cachedStudents){_cachedStudents.forEach(function(s){var c=s.enrolled_class;if(c)activeClasses[c]=true})}else{Object.keys(cfgInfo).forEach(function(c){activeClasses[c]=true})}
+  var clsOpts='<option value=\"\">选择班级</option>';Object.keys(cfgInfo).forEach(function(c){if(activeClasses[c])clsOpts+='<option value=\"'+c+'\">'+c+'</option>'});
   var h='<div style="background:var(--surface);border-radius:14px;padding:24px;max-width:420px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,.2)"><h3 style="margin:0 0 16px">新增学生</h3>';
   h+='<input id="sfName" placeholder="学生姓名" value="'+(nameHint||'')+'" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px">';
   h+='<input id="sfCode" placeholder="编号（自动生成）" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px;color:var(--tx3)">';
@@ -1079,15 +1104,21 @@ function showAddStudentModal(nameHint){
   onSFStatusChange();
 }
 function onSFStatusChange(){
-  var s=document.getElementById('sfStatus').value;
   var pu=document.getElementById('sfPur');var ue=document.getElementById('sfUsed');
+  if(!pu||!ue)return;
+  var s=document.getElementById('sfStatus').value;
   if(s==='仅试听'){pu.value='1';ue.value='0';pu.disabled=true;ue.disabled=true}
   else{pu.disabled=false;ue.disabled=false}
 }
 function saveStudent(){
   var btn=event.target; btn.textContent='保存中...'; btn.disabled=true;
-  var d={student_name:document.getElementById('sfName').value,student_code:document.getElementById('sfCode').value,segment:document.getElementById('sfSeg').value,status:document.getElementById('sfStatus').value,enrolled_class:document.getElementById('sfClass').value,purchased_lessons:1,used_lessons:0,remaining_lessons:0,source:'',notes:''};
-  if(!d.student_name){btn.textContent='保存';btn.disabled=false;return alert('请输入学生姓名')}
+  var name=document.getElementById('sfName').value;
+  if(!name){btn.textContent='保存';btn.disabled=false;return alert('请输入学生姓名')}
+  // Check if existing student - preserve lesson counts
+  var existing=_cachedStudents?_cachedStudents.filter(function(s){return s.student_name===name})[0]:null;
+  var pur=existing?parseInt(existing.purchased_lessons)||1:1;
+  var used=existing?parseInt(existing.used_lessons)||0:0;
+  var d={student_name:name,student_code:document.getElementById('sfCode').value,segment:document.getElementById('sfSeg').value,status:document.getElementById('sfStatus').value,enrolled_class:document.getElementById('sfClass').value,purchased_lessons:pur,used_lessons:used,remaining_lessons:pur-used,source:'',notes:''};
   d.remaining_lessons=d.purchased_lessons-d.used_lessons;
   fetch(API+'/students',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(r){return r.json()}).then(function(rd){
     if(rd.status==='ok'){btn.textContent='已保存 ✓';setTimeout(function(){document.querySelectorAll('.zg-modal-overlay').forEach(function(o){o.remove()});renderStudentTab()},500)}
@@ -1221,6 +1252,37 @@ function generateCrossSettlements(){
   fetch(API+'/settlements',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({batch:true,items:items,created_at:now})}).then(function(r){return r.json()}).then(function(d){if(d.status==='ok'){alert('已生成 '+d.count+' 条跨月结算单');renderSettleTab()}else alert('生成失败')});
 }
 function deleteSettlement(id){if(confirm('删除?')){fetch(API+'/settlements/'+id,{method:'DELETE'}).then(function(){renderSettleTab()})}}
+function uploadWeeklyMaterial(seg){
+  var inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+  inp.onchange=function(){
+    var fd=new FormData();fd.append('file',inp.files[0]);fd.append('segment',seg);fd.append('weekly','1');
+    fetch(API+'/class-material',{method:'POST',body:fd}).then(function(r){return r.json()}).then(function(d){
+      if(d.status==='ok')refreshWeeklyMaterial()
+    });
+  };inp.click();
+}
+function deleteWeeklyMaterial(seg){
+  if(!confirm('删除本周'+seg+'课后素材？'))return;
+  fetch(API+'/class-material/'+encodeURIComponent(seg),{method:'DELETE'}).then(function(){refreshWeeklyMaterial()});
+}
+function downloadWeeklyMaterial(seg){
+  var path='static/class-material/本周课后素材-'+seg+'.png';
+  var a=document.createElement('a');a.href=path;a.download='本周课后素材-'+seg+'.png';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+function refreshWeeklyMaterial(){
+  ['启航段','探索段'].forEach(function(seg){
+    var prefix=seg==='启航段'?'QH':'TS';
+    var path='static/class-material/本周课后素材-'+seg+'.png';
+    var img=new Image();
+    img.onload=function(){
+      var dl=document.getElementById('wmDL'+prefix); if(dl){dl.onclick=function(){downloadWeeklyMaterial(seg);return false};dl.style.display='inline';dl.textContent='下载'}
+      var del=document.getElementById('wmDel'+prefix); if(del)del.style.display='inline'
+    };
+    img.onerror=function(){var dl=document.getElementById('wmDL'+prefix);if(dl)dl.style.display='none';var del=document.getElementById('wmDel'+prefix);if(del)del.style.display='none'};
+    img.src=path+'?t='+Date.now();
+  });
+}
 function updateSettleSelection(){}
 
 function showPricing(){activeMainTab='pricing';renderMainTabs();switchMainTab()}

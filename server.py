@@ -158,12 +158,14 @@ def list_classes():
     all_lessons = db.lesson_list_batch()
     cls = OrderedDict()
     for class_name in sort_class_names(cfg.keys()):
-        cls[class_name] = {}
         for unit_code, info in cfg[class_name].items():
             ls = all_lessons.get(class_name, {}).get(unit_code, [])
-            cls[class_name][unit_code] = ls
-            if not ls:
-                cls[class_name][unit_code] = [{"folder":"","lesson":"","title":"","date":"","unit_name": info.get("name", unit_code)}]
+            # 只返回有实际内容的课节，不返回占位项
+            real = [l for l in ls if l.get("folder") and l.get("title")]
+            if real:
+                if class_name not in cls:
+                    cls[class_name] = {}
+                cls[class_name][unit_code] = real
     return jsonify(cls)
 
 @app.route("/api/classes", methods=["POST"])
@@ -260,8 +262,12 @@ def load_lesson(folder):
     if content:
         tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8')
         tmp.write(content); tmp.close()
-        from generate_class_image import parse_input_txt
-        meta, topics = parse_input_txt(tmp.name)
+        try:
+            from generate_class_image import parse_input_txt
+            meta, topics = parse_input_txt(tmp.name)
+        except Exception as e:
+            print(f"⚠ 解析课节失败 ({folder}): {e}")
+            meta, topics = {}, []
         os.unlink(tmp.name)
     else:
         meta, topics = {}, []
@@ -458,7 +464,14 @@ def score_sentences():
 
 @app.route("/api/topics/sources")
 def list_topic_sources():
-    return jsonify(sort_class_names(list(get_config().keys())))
+    # 只返回有课节的班级
+    all_lessons = db.lesson_list_batch()
+    cfg = get_config()
+    names = []
+    for cn in sort_class_names(list(cfg.keys())):
+        if any(all_lessons.get(cn, {}).get(uc, []) for uc in cfg.get(cn, {})):
+            names.append(cn)
+    return jsonify(names)
 
 @app.route("/api/topics/inherit")
 def inherit_topics():
@@ -747,79 +760,87 @@ def attendance_update_cycle():
 
 @app.route("/api/attendance/suggest", methods=["POST"])
 def attendance_suggest():
-    data = request.json
-    cls_name = data.get("class_name", "")
-    topics = data.get("topics", [])
-    # 从发言中提取学生
-    speakers = set()
-    for t in topics:
-        for s in t.get("speeches", []):
-            n = s.get("name", "").strip()
-            if n and n != "图": speakers.add(n)
-    # 取班级花名册
-    roster = db.roster_get(cls_name)
-    # 取学生扩展信息
-    from db import student_ext_all as _se
-    # 构建建议
-    result = []
-    seen = set()
-    # Build fuzzy match map: short name → roster names
-    fuzzy = {}
-    for rn in roster:
-        for sn in speakers:
-            if sn != rn and (sn in rn or rn.startswith(sn)):
-                fuzzy[sn] = rn
-    # 花名册中的学生
-    for name in roster:
-        seen.add(name)
-        status = "出席" if name in speakers or name in fuzzy.values() else ""
-        # If matched via fuzzy, use the roster name
-        result.append({"name": name, "status": status, "note": "", "inRoster": True})
-    # 在发言中但不在花名册的（新生）
-    for name in speakers:
-        if name not in seen and name not in fuzzy:
-            result.append({"name": name, "status": "出席", "note": "", "inRoster": False, "isNew": True})
-    return jsonify({"roster": result, "speakers": list(speakers)})
+    try:
+        data = request.json
+        cls_name = data.get("class_name", "")
+        topics = data.get("topics", [])
+        # 从发言中提取学生
+        speakers = set()
+        for t in topics:
+            for s in t.get("speeches", []):
+                n = s.get("name", "").strip()
+                if n and n != "图": speakers.add(n)
+        # 取班级花名册
+        roster = db.roster_get(cls_name)
+        # 取学生扩展信息
+        from db import student_ext_all as _se
+        # 构建建议
+        result = []
+        seen = set()
+        # Build fuzzy match map: short name → roster names
+        fuzzy = {}
+        for rn in roster:
+            for sn in speakers:
+                if sn != rn and (sn in rn or rn.startswith(sn)):
+                    fuzzy[sn] = rn
+        # 花名册中的学生
+        for name in roster:
+            seen.add(name)
+            status = "出席" if name in speakers or name in fuzzy.values() else ""
+            # If matched via fuzzy, use the roster name
+            result.append({"name": name, "status": status, "note": "", "inRoster": True})
+        # 在发言中但不在花名册的（新生）
+        for name in speakers:
+            if name not in seen and name not in fuzzy:
+                result.append({"name": name, "status": "出席", "note": "", "inRoster": False, "isNew": True})
+        return jsonify({"roster": result, "speakers": list(speakers)})
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({"roster": [], "speakers": [], "error": str(e)})
 
 @app.route("/api/attendance/save", methods=["POST"])
 def attendance_save():
-    data = request.json
-    cls_name = data.get("class_name", "")
-    unit_code = data.get("unit_code", "")
-    lesson_num = int(data.get("lesson_num", 1))
-    lesson_title = data.get("lesson_title", "")
-    lesson_date = data.get("lesson_date", "")
-    records = data.get("records", [])
-    # 如果有新生，也加入花名册
-    new_students = data.get("new_students", [])
-    for ns in new_students:
-        roster = db.roster_get(cls_name)
-        if ns["name"] not in roster:
-            db.roster_set(cls_name, roster + [ns["name"]])
-        # 同时注册到 student_ext，确保学生 tab 可见
+    try:
         from db import get_db, _execute
-        exist = _execute(get_db(), "SELECT student_name FROM student_ext WHERE student_name=%s", [ns["name"]]).fetchone()
-        if not exist:
-            _execute(get_db(), "INSERT INTO student_ext (student_name,student_code,source,status,segment,enrolled_class,purchased_lessons,used_lessons,remaining_lessons,notes) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", [ns["name"], '', '考勤新增', '仅试听', '', cls_name, 0, 0, 0, ns.get("note","")])
-    batch = []
-    cycle = data.get("cycle", "")
-    content_label = data.get("content_label", "")
-    for r in records:
-        batch.append({
-            "class_name": cls_name, "unit_code": unit_code,
-            "lesson_num": lesson_num, "lesson_title": lesson_title,
-            "lesson_date": lesson_date, "student_name": r["name"],
-            "status": r.get("status", "出席"), "note": r.get("note", ""),
-            "cycle": cycle, "content_label": content_label
-        })
-    db.attendance_batch(batch)
-    # 更新 student_ext 的消课计数
-    names = list(set(r["name"] for r in records if r.get("status","出席") == "出席"))
-    for name in names:
-        used = _execute(get_db(), "SELECT COUNT(*) as cnt FROM attendance WHERE student_name=%s AND status='出席'", [name]).fetchone()
-        if used:
-            _execute(get_db(), "UPDATE student_ext SET used_lessons=%s, remaining_lessons=purchased_lessons-%s WHERE student_name=%s", [used["cnt"], used["cnt"], name])
-    _clear_config_cache(); return jsonify({"status": "ok", "count": len(batch)})
+        data = request.json
+        cls_name = data.get("class_name", "")
+        unit_code = data.get("unit_code", "")
+        lesson_num = int(data.get("lesson_num", 1))
+        lesson_title = data.get("lesson_title", "")
+        lesson_date = data.get("lesson_date", "")
+        records = data.get("records", [])
+        # 如果有新生，也加入花名册
+        new_students = data.get("new_students", [])
+        for ns in new_students:
+            roster = db.roster_get(cls_name)
+            if ns["name"] not in roster:
+                db.roster_set(cls_name, roster + [ns["name"]])
+            # 同时注册到 student_ext，确保学生 tab 可见
+            exist = _execute(get_db(), "SELECT student_name FROM student_ext WHERE student_name=%s", [ns["name"]]).fetchone()
+            if not exist:
+                _execute(get_db(), "INSERT INTO student_ext (student_name,student_code,source,status,segment,enrolled_class,purchased_lessons,used_lessons,remaining_lessons,notes) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", [ns["name"], '', '考勤新增', '仅试听', '', cls_name, 0, 0, 0, ns.get("note","")])
+        batch = []
+        cycle = data.get("cycle", "")
+        content_label = data.get("content_label", "")
+        for r in records:
+            batch.append({
+                "class_name": cls_name, "unit_code": unit_code,
+                "lesson_num": lesson_num, "lesson_title": lesson_title,
+                "lesson_date": lesson_date, "student_name": r["name"],
+                "status": r.get("status", "出席"), "note": r.get("note", ""),
+                "cycle": cycle, "content_label": content_label
+            })
+        db.attendance_batch(batch)
+        # 更新 student_ext 的消课计数
+        names = list(set(r["name"] for r in records if r.get("status","出席") == "出席"))
+        for name in names:
+            used = _execute(get_db(), "SELECT COUNT(*) as cnt FROM attendance WHERE student_name=%s AND status='出席'", [name]).fetchone()
+            if used:
+                _execute(get_db(), "UPDATE student_ext SET used_lessons=%s, remaining_lessons=purchased_lessons-%s WHERE student_name=%s", [used["cnt"], used["cnt"], name])
+        _clear_config_cache(); return jsonify({"status": "ok", "count": len(batch)})
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # ====== 财务 ======
 
@@ -1046,6 +1067,11 @@ def students_next_code():
 @app.route("/api/students", methods=["POST"])
 def students_upsert():
     data = request.json
+    # 首次创建时记录添加人
+    from db import get_db, _execute
+    exist = _execute(get_db(), "SELECT added_by FROM student_ext WHERE student_name=%s", [data.get("student_name", "")]).fetchone()
+    if not exist or not (exist["added_by"] or "").strip():
+        data["added_by"] = os.environ.get("ZG_USER", "欣欣")
     db.student_ext_upsert(data.get("student_name", ""), data)
     _clear_config_cache()
     return jsonify({"status": "ok"})
@@ -1071,20 +1097,24 @@ def attendance_cycles():
 
 @app.route("/api/attendance/by-lesson")
 def attendance_by_lesson():
-    cls = request.args.get("class", "")
-    cycle = request.args.get("cycle", "")
-    page = int(request.args.get("page", 1))
-    limit = int(request.args.get("limit", 50))
-    cache_key = f"{cls}|{cycle}|{page}|{limit}"
-    now = __import__('time').time()
-    if cache_key in _ATT_CACHE:
-        cached = _ATT_CACHE[cache_key]
-        if now - cached["ts"] < 30:  # 30秒缓存
-            return jsonify(cached["data"])
-    result, total = db.attendance_by_lesson(class_name=cls or None, cycle=cycle or None, limit=limit, page=page)
-    data = {"rows": result, "total": total, "page": page, "limit": limit}
-    _ATT_CACHE[cache_key] = {"data": data, "ts": now}
-    return jsonify(data)
+    try:
+        cls = request.args.get("class", "")
+        cycle = request.args.get("cycle", "")
+        page = int(request.args.get("page", 1))
+        limit = int(request.args.get("limit", 50))
+        cache_key = f"{cls}|{cycle}|{page}|{limit}"
+        now = __import__('time').time()
+        if cache_key in _ATT_CACHE:
+            cached = _ATT_CACHE[cache_key]
+            if now - cached["ts"] < 30:  # 30秒缓存
+                return jsonify(cached["data"])
+        result, total = db.attendance_by_lesson(class_name=cls or None, cycle=cycle or None, limit=limit, page=page)
+        data = {"rows": result, "total": total, "page": page, "limit": limit}
+        _ATT_CACHE[cache_key] = {"data": data, "ts": now}
+        return jsonify(data)
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({"rows": [], "total": 0, "page": page, "limit": limit, "error": str(e)})
 
 # ====== 缴费分页 ======
 
@@ -1254,6 +1284,7 @@ def revenue_splits_generate():
                 # 生源拆分: 招生 / 转化 / 续费
         trial = int(r['trial_count'])
         converted_cnt = 0
+        trial_names = []
         if trial > 0:
             trial_names = [row['student_name'] for row in _execute(get_db(), """
                 SELECT DISTINCT a.student_name FROM attendance a
@@ -1283,8 +1314,18 @@ def revenue_splits_generate():
                 if t == '饼干': trial_bis += 1
                 elif t == '欣欣': trial_xin += 1
         actual_trial = trial_xin + trial_bis
-        # 招生 = 试听 × 40
-        recruitment = actual_trial * 40
+        # 招生 = 试听 × 40, 按谁添加这个学生分配
+        recruit_xin = recruit_bis = 0
+        if trial_names:
+            placeholders = ','.join(['%s']*len(trial_names))
+            se_rows = _execute(get_db(), f"SELECT student_name, added_by FROM student_ext WHERE student_name IN ({placeholders})", trial_names).fetchall()
+            se_map = {}
+            for sr in se_rows: se_map[sr['student_name']] = (sr['added_by'] or '').strip()
+            for tn in trial_names:
+                adder = se_map.get(tn, '')
+                if adder == '饼干': recruit_bis += 40
+                else: recruit_xin += 40
+        recruitment = recruit_xin + recruit_bis
         # 转化: 每师保底¥20 + 成功¥40（成功按试听老师分配）
         # Use trial_xin/trial_bis counts already computed; for bonus, assume same ratio
         if actual_trial > 0:
@@ -1310,10 +1351,6 @@ def revenue_splits_generate():
         retention_xin = formal_xin * 20
         retention_bis = formal_bis * 20
         retention = retention_xin + retention_bis
-        # 招生拆分: 手动欣%
-        rxc = float(sv.get('rxc', 1.0))
-        recruit_xin = round(recruitment * rxc, 2)
-        recruit_bis = round(recruitment - recruit_xin, 2)
         # Net balance
         s20 = 0  # 生源不再作为固定比例扣除
         nb = round(base-l50-xs-ss-bs-recruitment-conversion-retention-pf-other_val,2)
@@ -1322,7 +1359,7 @@ def revenue_splits_generate():
              lesson_50pct,xinxin_lesson_share,biscuit_lesson_share,teaching_20pct,
              xinxin_coef,xinxin_share,sitong_coef,sitong_share,biscuit_coef,biscuit_share,source_20pct,neukol_fee,other_cost,notes,net_balance)
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-            [r['cycle'], r['content_label'], rev, int(r['trial_count']), int(r['formal_count']), ref, pf, trial, recruitment, rxc, recruit_xin, recruit_bis, conversion, conversion_xin, conversion_bis, retention, retention_xin, retention_bis,
+            [r['cycle'], r['content_label'], rev, int(r['trial_count']), int(r['formal_count']), ref, pf, trial, recruitment, 1.0, recruit_xin, recruit_bis, conversion, conversion_xin, conversion_bis, retention, retention_xin, retention_bis,
              l50, xin_lesson, bis_lesson, t20,
              xc, xs, sc, ss, bc, bs, retention, neukol_val, other_val, notes_val, nb])
     return jsonify({"status":"ok"})
@@ -1441,8 +1478,9 @@ def class_breakdown():
         SELECT cycle, content_label, class_name,
             COUNT(DISTINCT CASE WHEN consumed_price IN (69.9, 99.9) THEN student_name END) as trial,
             COUNT(DISTINCT CASE WHEN consumed_price NOT IN (69.9, 99.9, 0) THEN student_name END) as formal,
-            GROUP_CONCAT(DISTINCT CASE WHEN consumed_price IN (69.9, 99.9) THEN student_name END SEPARATOR ', ') as trial_names
-        FROM attendance WHERE status='出席' AND cycle!='' AND content_label!=''
+            GROUP_CONCAT(DISTINCT CASE WHEN consumed_price IN (69.9, 99.9) THEN CONCAT(student_name, '-', COALESCE(se.added_by,'欣欣')) END SEPARATOR ', ') as trial_names
+        FROM attendance LEFT JOIN student_ext se ON attendance.student_name=se.student_name
+        WHERE status='出席' AND cycle!='' AND content_label!=''
         GROUP BY cycle, content_label, class_name
         ORDER BY cycle, content_label, class_name
     """).fetchall()
@@ -1454,6 +1492,32 @@ def class_breakdown():
     return jsonify(result)
 
 # ====== 课后素材图片 ======
+
+def _segment_units(segment):
+    """返回匹配分段的所有课节文件夹列表（含单元基础路径和班级子文件夹）"""
+    import os as _os
+    kw = "探索" if segment == "探索段" else "启航"
+    units = set()
+    cfg = db.config_all()
+    for cls_name, unit_dict in cfg.items():
+        if kw in cls_name:
+            for unit_code, info in unit_dict.items():
+                p = info.get("path", "")
+                if not p or not _os.path.isdir(p): continue
+                units.add(p)  # 单元基础路径
+                # 扫描该单元下匹配分段的班级课节子文件夹
+                try:
+                    for fn in _os.listdir(p):
+                        fp = _os.path.join(p, fn)
+                        if not _os.path.isdir(fp): continue
+                        # 从文件夹名提取班级名判断分段
+                        # 如 周四探索-2606-1 → 周四探索
+                        cn = fn.rsplit("-", 2)[0] if fn.count("-") >= 2 else ""
+                        if kw in cn:
+                            units.add(fp)
+                except Exception:
+                    pass
+    return list(units)
 
 @app.route("/api/class-material", methods=["POST"])
 def class_material_upload():
@@ -1468,10 +1532,34 @@ def class_material_upload():
     mat_dir = _os.path.join(BASE_DIR, "static", "class-material")
     _os.makedirs(mat_dir, exist_ok=True)
     # 探索段 from 周四探索, 启航段 from 周五启航
-    fname = f"课后素材-{segment}.png"
+    weekly = request.form.get("weekly", "")
+    fname = f"本周课后素材-{segment}.png" if weekly else f"课后素材-{segment}.png"
     fpath = _os.path.join(mat_dir, fname)
     file.save(fpath)
-    return jsonify({"status": "ok", "path": f"/static/class-material/{fname}"})
+    # 同步到匹配分段的各单元文件夹
+    import shutil as _shutil
+    sync_units = _segment_units(segment)
+    synced = []
+    for unit_dir in sync_units:
+        _os.makedirs(unit_dir, exist_ok=True)
+        dest = _os.path.join(unit_dir, fname)
+        _shutil.copy2(fpath, dest)
+        synced.append(dest)
+    return jsonify({"status": "ok", "path": f"/static/class-material/{fname}", "synced": synced})
+
+@app.route("/api/class-material/<name>", methods=["DELETE"])
+def class_material_delete(name):
+    import os as _os
+    segment = name.replace("本周-", "")
+    mat_dir = _os.path.join(BASE_DIR, "static", "class-material")
+    fname = f"本周课后素材-{segment}.png"
+    fpath = _os.path.join(mat_dir, fname)
+    if _os.path.exists(fpath): _os.remove(fpath)
+    # 同步删除匹配分段的各单元文件夹里的副本
+    for unit_dir in _segment_units(segment):
+        uf = _os.path.join(unit_dir, fname)
+        if _os.path.exists(uf): _os.remove(uf)
+    return jsonify({"status": "ok"})
 
 # ====== 结算单 ======
 

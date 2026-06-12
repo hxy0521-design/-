@@ -182,6 +182,9 @@ def lesson_save(cls_name, unit_code, lesson_num, title, content):
     else:
         _execute(db, "INSERT INTO lessons VALUES (%s,%s,%s,%s,%s,%s)", [cls_name, unit_code, lesson_num, title, content, now])
 
+def lesson_delete(cls_name, unit_code, lesson_num):
+    _execute(get_db(), "DELETE FROM lessons WHERE class_name=%s AND unit_code=%s AND lesson_num=%s", [cls_name, unit_code, lesson_num])
+
 # ------- Student Ext -------
 
 def attendance_student_counts():
@@ -215,17 +218,18 @@ def student_ext_cleanup_trial():
 def student_ext_all():
     student_ext_cleanup_trial()  # 先清理超期试听
     rows = _execute(get_db(), "SELECT * FROM student_ext ORDER BY student_name").fetchall()
-    cols = ["student_name","student_code","source","status","segment","enrolled_class","purchased_lessons","used_lessons","remaining_lessons","notes"]
+    cols = ["student_name","student_code","source","status","segment","enrolled_class","purchased_lessons","used_lessons","remaining_lessons","notes","added_by"]
     return [dict(zip(cols, [r[c] for c in cols])) for r in rows]
 
 def student_ext_upsert(name, data):
     db = get_db()
     r = _execute(db, "SELECT student_name FROM student_ext WHERE student_name=%s", [name]).fetchone()
-    vals = [data.get("student_code",""), data.get("source",""), data.get("status",""), data.get("segment",""), data.get("enrolled_class",""), int(data.get("purchased_lessons",0)), int(data.get("used_lessons",0)), int(data.get("remaining_lessons",0)), data.get("notes","")]
+    added_by = data.get("added_by","")
+    vals = [data.get("student_code",""), data.get("source",""), data.get("status",""), data.get("segment",""), data.get("enrolled_class",""), int(data.get("purchased_lessons",0)), int(data.get("used_lessons",0)), int(data.get("remaining_lessons",0)), data.get("notes",""), added_by]
     if r:
-        _execute(db, "UPDATE student_ext SET student_code=%s,source=%s,status=%s,segment=%s,enrolled_class=%s,purchased_lessons=%s,used_lessons=%s,remaining_lessons=%s,notes=%s WHERE student_name=%s", vals + [name])
+        _execute(db, "UPDATE student_ext SET student_code=%s,source=%s,status=%s,segment=%s,enrolled_class=%s,purchased_lessons=%s,used_lessons=%s,remaining_lessons=%s,notes=%s,added_by=%s WHERE student_name=%s", vals + [name])
     else:
-        _execute(db, "INSERT INTO student_ext VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", [name] + vals)
+        _execute(db, "INSERT INTO student_ext VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", [name] + vals)
 
 # ------- Attendance -------
 
@@ -692,11 +696,13 @@ def dashboard_weekly():
     _DAY_MAP = {"一":"周一","二":"周二","三":"周三","四":"周四","五":"周五","六":"周六","日":"周日"}
     weekly = []
     for cn, units in cfg.items():
+        roster = roster_get(cn)
+        # 跳过已关班无学生的班级
+        if not roster: continue
         ct = list(units.values())[0].get("class_time", "")
         cb = list(units.values())[0].get("created_by", "")
         weekday_cn = cn[1] if len(cn) > 1 else ""
         weekday = _DAY_MAP.get(weekday_cn, "")
-        roster = roster_get(cn)
         weekly.append({"class_name": cn, "time": ct, "teacher": cb, "weekday": weekday, "students": roster, "color": "#8b5cf6" if cb == "欣欣" else "#3b82f6"})
     return weekly
 
