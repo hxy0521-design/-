@@ -732,9 +732,10 @@ function renderRevenueSplitTab(){
   var el=document.getElementById('editorBody');if(!el)return;
   Promise.all([
     fetch(API+'/revenue-splits').then(function(r){return r.json()}),
-    fetch(API+'/finance/records?type=cost&limit=500').then(function(r){return r.json()}).catch(function(){return[]})
+    fetch(API+'/finance/records?type=cost&limit=500').then(function(r){return r.json()}).catch(function(){return[]}),
+    fetch(API+'/finance/unconsumed').then(function(r){return r.json()}).catch(function(){return{}})
   ]).then(function(results){
-    var rows=results[0], costs=results[1];
+    var rows=results[0], costs=results[1], unc=results[2];
     var costByCycle={};costs.forEach(function(c){var cyc=c.cycle||'';if(!cyc)return;if(!costByCycle[cyc])costByCycle[cyc]=0;costByCycle[cyc]+=parseFloat(c.amount)||0});
     var byCycle={};rows.forEach(function(r){var c=r.cycle||'未知';if(!byCycle[c])byCycle[c]=[];byCycle[c].push(r)});
     var cycles=Object.keys(byCycle).sort().reverse();
@@ -827,8 +828,9 @@ function renderRevenueSplitTab(){
       for(var k in grand){grand[k]+=cr[k]}
     });
     h+='</table></div>';
+    grand.unconsumed=unc.unconsumed||0;
     h+='<div style="margin-top:16px;padding:12px;background:var(--accent-light);border-radius:8px;font-size:14px"><b>全部分账汇总</b><br>';
-    h+='收入¥'+grand.revenue.toFixed(0)+' | 试听'+grand.trial+'人 正式'+grand.formal+'人 | 转介/补¥'+grand.referral.toFixed(0)+' | 平台费¥'+grand.platform.toFixed(0)+' | 课50% ¥'+grand.lesson50.toFixed(0)+' (欣¥'+grand.xinLesson.toFixed(0)+' 饼¥'+grand.bisLesson.toFixed(0)+') | 研20% ¥'+grand.teaching20.toFixed(0)+' (欣¥'+grand.xinxin.toFixed(0)+' 童¥'+grand.sitong.toFixed(0)+' 饼¥'+grand.biscuit.toFixed(0)+') | 招生¥'+grand.recruit.toFixed(0)+' 转化¥'+grand.conversion.toFixed(0)+' 续费¥'+grand.retention.toFixed(0)+' | Neukol¥'+grand.neukol.toFixed(0)+' | 其他¥'+grand.other.toFixed(0)+' | <b>结余¥'+grand.net.toFixed(0)+'</b></div>';
+    h+='收入¥'+grand.revenue.toFixed(0)+' | 试听'+grand.trial+'人次 正式'+grand.formal+'人次 | 转介/补¥'+grand.referral.toFixed(0)+' | 平台费¥'+grand.platform.toFixed(0)+' | 课50% ¥'+grand.lesson50.toFixed(0)+' (欣¥'+grand.xinLesson.toFixed(0)+' 饼¥'+grand.bisLesson.toFixed(0)+') | 研20% ¥'+grand.teaching20.toFixed(0)+' (欣¥'+grand.xinxin.toFixed(0)+' 童¥'+grand.sitong.toFixed(0)+' 饼¥'+grand.biscuit.toFixed(0)+') | 招生¥'+grand.recruit.toFixed(0)+' 转化¥'+grand.conversion.toFixed(0)+' 续费¥'+grand.retention.toFixed(0)+' | Neukol¥'+grand.neukol.toFixed(0)+' | 其他¥'+grand.other.toFixed(0)+' | <b>结余¥'+grand.net.toFixed(0)+'</b> | 未消课金额¥'+grand.unconsumed.toFixed(0)+'</div>';
     h+='</div>';el.innerHTML=h;
   });
 }
@@ -890,9 +892,13 @@ function showAddRevenueModal(){
   document.body.appendChild(ov);
 }
 function saveRevenue(){
+  var btn=event.target; btn.textContent='保存中...'; btn.disabled=true;
   var d={student_name:document.getElementById('rfName').value,segment:document.getElementById('rfSeg').value,course_type:document.getElementById('rfType').value,method:document.getElementById('rfMethod').value,discount_type:document.getElementById('rfDisc').value,lesson_count:parseInt(document.getElementById('rfCnt').value)||0,amount:parseFloat(document.getElementById('rfAmt').value)||0,actual_pay_date:document.getElementById('rfDate').value,order_id:(document.getElementById('rfOrderId')?document.getElementById('rfOrderId').value:''),xiaohongshu_received:0};
-  if(!d.student_name)return alert('请输入学生姓名');
-  fetch(API+'/finance/add-revenue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){var ovs=document.querySelectorAll('.zg-modal-overlay');ovs.forEach(function(o){o.remove()});if(activeMainTab==='students')renderStudentTab();else renderFinanceTab()}else alert(rd.message)});
+  if(!d.student_name){btn.textContent='保存';btn.disabled=false;return alert('请输入学生姓名')}
+  fetch(API+'/finance/add-revenue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(r){return r.json()}).then(function(rd){
+    if(rd.status==='ok'){btn.textContent='已保存 ✓';setTimeout(function(){var ovs=document.querySelectorAll('.zg-modal-overlay');ovs.forEach(function(o){o.remove()});if(activeMainTab==='students')renderStudentTab();else renderFinanceTab()},500)}
+    else{btn.textContent='保存';btn.disabled=false;alert(rd.message)}
+  }).catch(function(){btn.textContent='保存';btn.disabled=false;alert('保存失败')});
 }
 function deletePurchase(id){if(!confirm('确定删除此收费记录？'))return;fetch(API+'/finance/delete-purchase',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok')renderFinanceTab()})}
 function showAddCostModal(){
@@ -912,7 +918,7 @@ function renderStudentTab(){
   cachedFetch(API+'/students').then(function(r){return r.json()}).then(function(rows){
     var h='<div style="padding:16px"><h3 style="margin:0 0 8px">学生管理</h3>';
     h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">';
-    var sts=['在读中','暂时停课','终止课程','仅试听'];
+    var sts=['在读中','暂时停课','终止课程','一课一消','仅试听'];
     sts.forEach(function(s){var active=studentFilter.status.indexOf(s)>=0;h+='<button class="filter-btn'+(active?' active':'')+'" onclick="studentFilter.status.indexOf(\''+s+'\')>=0?studentFilter.status=studentFilter.status.filter(function(x){return x!==\''+s+'\'}):studentFilter.status.push(\''+s+'\');renderStudentTab()">'+s+'</button>'});
     h+='<span style="flex:1"></span><button class="btn bg" style="padding:3px 10px;font-size:10px" onclick="showAddStudentModal()">+ 新增</button></div>';
     // Filter and group by class
@@ -1079,10 +1085,14 @@ function onSFStatusChange(){
   else{pu.disabled=false;ue.disabled=false}
 }
 function saveStudent(){
+  var btn=event.target; btn.textContent='保存中...'; btn.disabled=true;
   var d={student_name:document.getElementById('sfName').value,student_code:document.getElementById('sfCode').value,segment:document.getElementById('sfSeg').value,status:document.getElementById('sfStatus').value,enrolled_class:document.getElementById('sfClass').value,purchased_lessons:1,used_lessons:0,remaining_lessons:0,source:'',notes:''};
-  if(!d.student_name)return alert('请输入学生姓名');
+  if(!d.student_name){btn.textContent='保存';btn.disabled=false;return alert('请输入学生姓名')}
   d.remaining_lessons=d.purchased_lessons-d.used_lessons;
-  fetch(API+'/students',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){document.querySelectorAll('#editorBody ~ div').forEach(function(x){if(x.style&&x.style.position==='fixed')x.remove()});renderStudentTab()}else alert(rd.message)});
+  fetch(API+'/students',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(r){return r.json()}).then(function(rd){
+    if(rd.status==='ok'){btn.textContent='已保存 ✓';setTimeout(function(){document.querySelectorAll('.zg-modal-overlay').forEach(function(o){o.remove()});renderStudentTab()},500)}
+    else{btn.textContent='保存';btn.disabled=false;alert(rd.message)}
+  }).catch(function(){btn.textContent='保存';btn.disabled=false;alert('保存失败')});
 }
 function renderPricingTab(){
   var el=document.getElementById('editorBody');if(!el)return;
@@ -1149,7 +1159,8 @@ function renderSettleTab(){
       var cycId="settle_"+cyc.replace(/[^a-zA-Z0-9]/g,"_");
       h+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px">';
       h+='<div style="display:flex;align-items:center;cursor:pointer" onclick="var d=document.getElementById(\x27'+cycId+'\x27);if(d)d.style.display=d.style.display==\x27none\x27?\x27block\x27:\x27none\x27">';
-      h+='<b style="font-size:14px;flex:1">'+esc(cyc)+'</b>';
+      var hasAnySettled=settByCycle[cyc]&&settByCycle[cyc].length>0;
+      h+='<b style="font-size:14px;flex:1">'+esc(cyc)+(hasAnySettled?' <span style="font-size:10px;color:var(--green)">已结算</span>':'')+'</b>';
       h+='<a href="#" class="settleSelectAll" data-cyc="'+esc(cyc)+'" style="font-size:10px;color:var(--accent);margin-right:8px;text-decoration:none">全选</a>';
       h+='<span style="font-size:12px">欣¥'+xin.toFixed(0)+' 饼¥'+bis.toFixed(0)+' 童¥'+tong.toFixed(0)+'</span>';
       h+='</div>';
@@ -1162,7 +1173,7 @@ function renderSettleTab(){
       teachers.forEach(function(t){
         var isSettled=settledNames.indexOf(t.n)>=0;
         var cbid=cycId+"_"+t.n;
-        if(isSettled){h+='<label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;opacity:0.5;cursor:default"><input type="checkbox" checked disabled style="width:auto;margin:0">'+t.n+' <b>¥'+t.v.toFixed(0)+'</b> <span style="font-size:9px;color:var(--green)">已结¥'+t.v.toFixed(0)+'</span>'}
+        if(isSettled){h+='<label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;opacity:0.5;cursor:default"><input type="checkbox" checked disabled style="width:auto;margin:0">'+t.n+' <b>¥'+t.v.toFixed(0)+'</b>'}
         else{h+='<label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:13px"><input type="checkbox" id="'+cbid+'" value="'+t.n+'" data-cyc="'+esc(cyc)+'" style="width:auto;margin:0">'+t.n+' <b>¥'+t.v.toFixed(0)+'</b>'}
         if(t.isTong)h+='<span style="font-size:10px">(教研¥'+t.t.toFixed(0)+')</span>';
         else h+='<span style="font-size:10px">(课¥'+t.l.toFixed(0)+' 研¥'+t.t.toFixed(0)+' 招¥'+t.r.toFixed(0)+' 转¥'+t.c.toFixed(0)+' 续¥'+t.re.toFixed(0)+')</span>';
@@ -1172,7 +1183,6 @@ function renderSettleTab(){
       h+='<button class="btn bp" style="padding:2px 10px;font-size:10px" onclick="generateSingleCycleSettlement(\x27'+esc(cyc)+'\x27)">结算</button>';
       h+='</div>';
       h+='<div id="'+cycId+'" style="display:none;margin:6px 0;padding:4px 8px;background:var(--surface2);border-radius:4px;font-size:10px">'+items.map(function(r){return esc(r.content_label||"")}).join(", ")+'</div>';
-      if(cycSetts.length){h+='<div style="margin-top:6px;font-size:11px;color:var(--tx3)">已结算: ';cycSetts.forEach(function(s){h+='<span style="display:inline-block;margin:2px 4px;padding:2px 8px;border-radius:4px;background:var(--green-light);color:var(--green)">'+s.teacher_name+' ¥'+fv(s.amount).toFixed(0)+'</span>'});h+='</div>'}
       h+='</div>';
     });
     if(settlements.length){

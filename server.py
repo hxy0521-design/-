@@ -828,6 +828,13 @@ def finance_summary():
     s = db.finance_summary()
     return jsonify(s)
 
+@app.route("/api/finance/unconsumed")
+def finance_unconsumed():
+    from db import get_db, _execute
+    pur = _execute(get_db(), "SELECT COALESCE(SUM(amount),0) as t FROM purchases WHERE lesson_count>0").fetchone()
+    con = _execute(get_db(), "SELECT COALESCE(SUM(consumed_price),0) as t FROM attendance WHERE status='出席'").fetchone()
+    return jsonify({"purchased": round(float(pur['t'] or 0), 2), "consumed": round(float(con['t'] or 0), 2), "unconsumed": round(float(pur['t'] or 0) - float(con['t'] or 0), 2)})
+
 @app.route("/api/finance/records")
 def finance_records():
     rtype = request.args.get("type", "revenue")
