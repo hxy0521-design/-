@@ -49,6 +49,9 @@ def get_config():
 
 def cls_from_folder(folder):
     import re
+    # 先去掉 -new 后缀
+    if folder.endswith('-new'):
+        folder = folder[:-4]
     m = re.match(r'(.+)-(\d{4})-\d+', folder)
     return m.group(1) if m else folder
 
@@ -101,8 +104,10 @@ def test_page():
     return send_from_directory(os.path.join(BASE_DIR, "static"), "test.html")
 
 _CONFIG_CACHE = {"data": None, "ts": 0}
+_ATT_CACHE = {}
 def _clear_config_cache():
     _CONFIG_CACHE["ts"] = 0
+    _ATT_CACHE.clear()
 
 @app.route("/api/config")
 def get_config_api():
@@ -579,9 +584,13 @@ def generate_all():
     # 写本地临时文件供生成脚本读取（生成完后删除）
     with open(txt_path, 'w', encoding='utf-8') as f:
         f.write(content)
-    # 保存到 Turso 云端
+    # 保存到 TiDB 云端
     lesson_num = folder.split(f"-{unit_code}-")[-1] if f"-{unit_code}-" in folder else "1"
-    # 只在新建课节或明确保存时才更新 lesson 内容（生成时只写 TXT 文件不覆盖 TiDB 里的课节）
+    # 新课（TiDB 中不存在）自动写入；已存在的课节不覆盖（保护手动编辑的内容）
+    existing_title, _ = db.lesson_get(cls, unit_code, int(lesson_num))
+    if not existing_title:
+        db.lesson_save(cls, unit_code, int(lesson_num), title, content)
+    _clear_config_cache()
 
     font_path = os.path.expanduser("~/Library/Fonts/荆南麦圆体.ttf")
     font_warning = None
@@ -710,6 +719,32 @@ def tmdb_search():
 
 # ====== 考勤 ======
 
+@app.route("/api/attendance/student-counts")
+def attendance_student_counts():
+    """返回 {student_name: 实际出勤次数}"""
+    return jsonify(db.attendance_student_counts())
+
+@app.route("/api/attendance/lesson", methods=["DELETE"])
+def attendance_delete():
+    data = request.json
+    db.attendance_delete_lesson(data.get("class_name",""), int(data.get("lesson_num",0)), data.get("lesson_title",""), data.get("lesson_date",""))
+    _clear_config_cache()
+    return jsonify({"status":"ok"})
+
+@app.route("/api/attendance/content-label", methods=["POST"])
+def attendance_update_content_label():
+    data = request.json
+    from db import get_db, _execute
+    _execute(get_db(), "UPDATE attendance SET content_label=%s WHERE class_name=%s AND lesson_title=%s AND lesson_date=%s", [data.get("content_label",""), data.get("class_name",""), data.get("lesson_title",""), data.get("lesson_date","")])
+    _clear_config_cache(); return jsonify({"status":"ok"})
+
+@app.route("/api/attendance/cycle", methods=["POST"])
+def attendance_update_cycle():
+    data = request.json
+    from db import get_db, _execute
+    _execute(get_db(), "UPDATE attendance SET cycle=%s WHERE class_name=%s AND lesson_title=%s AND lesson_date=%s", [data.get("cycle",""), data.get("class_name",""), data.get("lesson_title",""), data.get("lesson_date","")])
+    _clear_config_cache(); return jsonify({"status":"ok"})
+
 @app.route("/api/attendance/suggest", methods=["POST"])
 def attendance_suggest():
     data = request.json
@@ -761,15 +796,29 @@ def attendance_save():
         roster = db.roster_get(cls_name)
         if ns["name"] not in roster:
             db.roster_set(cls_name, roster + [ns["name"]])
+        # 同时注册到 student_ext，确保学生 tab 可见
+        from db import get_db, _execute
+        exist = _execute(get_db(), "SELECT student_name FROM student_ext WHERE student_name=%s", [ns["name"]]).fetchone()
+        if not exist:
+            _execute(get_db(), "INSERT INTO student_ext (student_name,student_code,source,status,segment,enrolled_class,purchased_lessons,used_lessons,remaining_lessons,notes) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", [ns["name"], '', '考勤新增', '仅试听', '', cls_name, 0, 0, 0, ns.get("note","")])
     batch = []
+    cycle = data.get("cycle", "")
+    content_label = data.get("content_label", "")
     for r in records:
         batch.append({
             "class_name": cls_name, "unit_code": unit_code,
             "lesson_num": lesson_num, "lesson_title": lesson_title,
             "lesson_date": lesson_date, "student_name": r["name"],
-            "status": r.get("status", "出席"), "note": r.get("note", "")
+            "status": r.get("status", "出席"), "note": r.get("note", ""),
+            "cycle": cycle, "content_label": content_label
         })
     db.attendance_batch(batch)
+    # 更新 student_ext 的消课计数
+    names = list(set(r["name"] for r in records if r.get("status","出席") == "出席"))
+    for name in names:
+        used = _execute(get_db(), "SELECT COUNT(*) as cnt FROM attendance WHERE student_name=%s AND status='出席'", [name]).fetchone()
+        if used:
+            _execute(get_db(), "UPDATE student_ext SET used_lessons=%s, remaining_lessons=purchased_lessons-%s WHERE student_name=%s", [used["cnt"], used["cnt"], name])
     _clear_config_cache(); return jsonify({"status": "ok", "count": len(batch)})
 
 # ====== 财务 ======
@@ -866,9 +915,12 @@ def import_excel():
                 if oid:
                     stmts.append(f"DELETE FROM purchases WHERE order_id={esc(oid)}")
                     stats["purchases_updated"] += 1
+                    stmts.append(f"INSERT INTO purchases (student_name,student_code,charge_code,segment,course_type,method,discount_type,lesson_count,amount,refund_amount,actual_pay_date,order_id,xiaohongshu_received,notes) VALUES ({vals})")
                 else:
+                    # 检查重复：完全相同的记录不重复插入
+                    dup_check = f"SELECT COUNT(*) as cnt FROM purchases WHERE student_name={esc(str(row[0]))} AND actual_pay_date={esc(str(row[11] or '')[:10])} AND lesson_count={int(row[8] or 0)} AND amount={float(amt) if amt else 0}"
+                    stmts.append(f"INSERT INTO purchases (student_name,student_code,charge_code,segment,course_type,method,discount_type,lesson_count,amount,refund_amount,actual_pay_date,order_id,xiaohongshu_received,notes) SELECT {vals} FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM purchases WHERE student_name={esc(str(row[0]))} AND actual_pay_date={esc(str(row[11] or '')[:10])} AND lesson_count={int(row[8] or 0)} AND amount={float(amt) if amt else 0})")
                     stats["purchases_new"] += 1
-                stmts.append(f"INSERT INTO purchases (student_name,student_code,charge_code,segment,course_type,method,discount_type,lesson_count,amount,refund_amount,actual_pay_date,order_id,xiaohongshu_received,notes) VALUES ({vals})")
                 if len(stmts) >= 80:
                     get_db()._req({"requests": [{"type":"execute","stmt":{"sql":s}} for s in stmts] + [{"type":"close"}]})
                     stmts = []
@@ -953,7 +1005,7 @@ def finance_add_revenue():
 @app.route("/api/finance/delete-purchase", methods=["POST"])
 def finance_delete_purchase():
     data = request.json
-    db.execute("DELETE FROM purchases WHERE id=?", [int(data.get("id", 0))])
+    db.purchase_delete(int(data.get("id", 0)))
     return jsonify({"status": "ok"})
 
 @app.route("/api/finance/add-cost", methods=["POST"])
@@ -965,7 +1017,8 @@ def finance_add_cost():
 @app.route("/api/finance/delete-cost", methods=["POST"])
 def finance_delete_cost():
     data = request.json
-    db.execute("DELETE FROM costs WHERE id=?", [int(data.get("id", 0))])
+    from db import get_db, _execute
+    _execute(get_db(), "DELETE FROM costs WHERE id=%s", [int(data.get("id", 0))])
     return jsonify({"status": "ok"})
 
 # ====== 学生扩展 CRUD ======
@@ -987,6 +1040,7 @@ def students_next_code():
 def students_upsert():
     data = request.json
     db.student_ext_upsert(data.get("student_name", ""), data)
+    _clear_config_cache()
     return jsonify({"status": "ok"})
 
 # ====== 总览 Dashboard ======
@@ -999,7 +1053,7 @@ def dashboard_summary():
 def dashboard_weekly():
     return jsonify(db.dashboard_weekly())
 
-# ====== 销课 by Lesson ======
+# ====== 消课 by Lesson ======
 
 @app.route("/api/attendance/cycles")
 def attendance_cycles():
@@ -1014,8 +1068,16 @@ def attendance_by_lesson():
     cycle = request.args.get("cycle", "")
     page = int(request.args.get("page", 1))
     limit = int(request.args.get("limit", 50))
+    cache_key = f"{cls}|{cycle}|{page}|{limit}"
+    now = __import__('time').time()
+    if cache_key in _ATT_CACHE:
+        cached = _ATT_CACHE[cache_key]
+        if now - cached["ts"] < 30:  # 30秒缓存
+            return jsonify(cached["data"])
     result, total = db.attendance_by_lesson(class_name=cls or None, cycle=cycle or None, limit=limit, page=page)
-    return jsonify({"rows": result, "total": total, "page": page, "limit": limit})
+    data = {"rows": result, "total": total, "page": page, "limit": limit}
+    _ATT_CACHE[cache_key] = {"data": data, "ts": now}
+    return jsonify(data)
 
 # ====== 缴费分页 ======
 
@@ -1023,19 +1085,335 @@ def attendance_by_lesson():
 def purchases_paginated():
     page = int(request.args.get("page", 1))
     limit = int(request.args.get("limit", 100))
-    return jsonify(db.purchases_paginated(page, limit))
+    student = request.args.get("student", "").strip() or None
+    segment = request.args.get("segment", "").strip() or None
+    class_name = request.args.get("class", "").strip() or None
+    search = request.args.get("search", "").strip() or None
+    discount = request.args.get("discount", "").strip() or None
+    return jsonify(db.purchases_paginated(page, limit, student_name=student, segment=segment, class_name=class_name, search=search, discount_type=discount))
 
 # ====== 分账 ======
+
+@app.route("/api/revenue-splits/generate", methods=["POST"])
+def revenue_splits_generate():
+    """从 attendance 自动生成分账行"""
+    from db import get_db, _execute
+    # Save existing coefficients, notes, other_cost, neukol_fee before wiping
+    saved = {}
+    for old in _execute(get_db(), "SELECT cycle, content_label, xinxin_coef, sitong_coef, biscuit_coef, notes, other_cost, neukol_fee FROM revenue_splits").fetchall():
+        saved[(old['cycle'], old['content_label'])] = {
+            'xc': old['xinxin_coef'] if old['xinxin_coef'] is not None else 0.9,
+            'sc': old['sitong_coef'] if old['sitong_coef'] is not None else 0.1,
+            'bc': old['biscuit_coef'] if old['biscuit_coef'] is not None else 0.0,
+            'notes': old['notes'] or '',
+            'other': float(old['other_cost'] or 0),
+            'neukol': float(old['neukol_fee'] or 0),
+            'rxc': float(old['recruit_xin_coef'] if old['recruit_xin_coef'] is not None else 1.0)
+        }
+    _execute(get_db(), "DELETE FROM revenue_splits")
+    # Step 1: 每班正价 = 众数非零价（已是9折后）
+    price_rows = _execute(get_db(), """
+        SELECT class_name, consumed_price, COUNT(*) as cnt
+        FROM attendance WHERE consumed_price>0 AND status='出席'
+        GROUP BY class_name, consumed_price
+    """).fetchall()
+    cls_price = {}  # class_name -> unit_price
+    cls_counts = {}
+    for pr in price_rows:
+        cn, cp, cnt = pr['class_name'], float(pr['consumed_price']), int(pr['cnt'])
+        if cn not in cls_counts or cnt > cls_counts[cn]:
+            cls_counts[cn] = cnt
+            cls_price[cn] = cp
+    ref_sup = {}  # (cycle, content_label) -> {'total': 0, 'xin': 0, 'bis': 0}
+    # Step 2a: 转介绍赠 → consumed_price=0 的消耗记录
+    ref_rows = _execute(get_db(), """
+        SELECT a.cycle, a.content_label, ANY_VALUE(ct.teacher) as teacher, a.class_name, COUNT(DISTINCT a.id) as free_cnt
+        FROM attendance a
+        LEFT JOIN (SELECT class_name, ANY_VALUE(created_by) as teacher FROM config GROUP BY class_name) ct ON a.class_name=ct.class_name
+        WHERE a.status='出席' AND a.consumed_price=0 AND a.cycle!='' AND a.content_label!=''
+          AND a.student_name IN (SELECT DISTINCT student_name FROM purchases WHERE discount_type='转介绍赠')
+        GROUP BY a.cycle, a.content_label, a.class_name
+    """).fetchall()
+    for rr in ref_rows:
+        key = (rr['cycle'], rr['content_label'])
+        if key not in ref_sup: ref_sup[key] = {'total':0,'xin':0,'bis':0}
+        up = cls_price.get(rr['class_name'], 180.0)
+        amt = round(up * int(rr['free_cnt']), 2)
+        ref_sup[key]['total'] += amt
+        t = (rr['teacher'] or '').strip()
+        if t == '欣欣': ref_sup[key]['xin'] += amt
+        elif t == '饼干': ref_sup[key]['bis'] += amt
+    # Step 2b: 已退款 → 已消耗的课节，按消耗记录所在周期
+    refund_rows = _execute(get_db(), """
+        SELECT a.cycle, a.content_label, a.class_name, COUNT(DISTINCT a.id) as cnt
+        FROM attendance a
+        WHERE a.status='出席' AND a.cycle!='' AND a.content_label!=''
+          AND a.student_name IN (SELECT DISTINCT student_name FROM purchases WHERE discount_type='已退款')
+        GROUP BY a.cycle, a.content_label, a.class_name
+    """).fetchall()
+    for rr in refund_rows:
+        key = (rr['cycle'], rr['content_label'])
+        if key not in ref_sup: ref_sup[key] = {'total':0,'xin':0,'bis':0}
+        up = cls_price.get(rr['class_name'], 180.0)
+        amt = round(up * int(rr['cnt']), 2)
+        ref_sup[key]['total'] += amt
+        tchr_row = _execute(get_db(), "SELECT ANY_VALUE(created_by) as t FROM config WHERE class_name=%s GROUP BY class_name", [rr['class_name']]).fetchone()
+        t = (tchr_row['t'].strip() if tchr_row and tchr_row['t'] else '') if tchr_row else ''
+        if t == '欣欣': ref_sup[key]['xin'] += amt
+        elif t == '饼干': ref_sup[key]['bis'] += amt
+    # Step 2c: 平台服务费 → 按缴费日期归入 (cycle, content_label) 的日期范围
+    plat_fees = {}  # (cycle, content_label) -> total
+    all_purchases = _execute(get_db(), "SELECT method, amount, actual_pay_date FROM purchases WHERE method IN ('微信转账','支付宝转账','小红书订单','其他')").fetchall()
+    # Build (cycle, content_label) -> (min_date, max_date) ranges from attendance
+    cl_ranges = _execute(get_db(), """
+        SELECT cycle, content_label, MIN(lesson_date) as d1, MAX(lesson_date) as d2
+        FROM attendance WHERE cycle!='' AND content_label!='' AND status='出席'
+        GROUP BY cycle, content_label
+    """).fetchall()
+    range_list = []
+    for cr in cl_ranges:
+        range_list.append((cr['cycle'], cr['content_label'], cr['d1'], cr['d2']))
+    def find_cl(pd):
+        # Find range where pd falls, or closest range
+        # For each cycle, find the content_label whose d1 is largest among those <= pd
+        best = None
+        for cyc, cl, d1, d2 in range_list:
+            if d1 <= pd and (best is None or d1 > best[0]):
+                best = (d1, cyc, cl)
+        if best: return (best[1], best[2])
+        # pd is before all ranges — use earliest range
+        earliest = min(range_list, key=lambda x: x[2]) if range_list else None
+        return (earliest[0], earliest[1]) if earliest else ('','')
+    for ap in all_purchases:
+        mtd = ap['method'] or ''; amt = float(ap['amount'] or 0); pd = (ap['actual_pay_date'] or '')[:10]
+        if not amt or not pd: continue
+        fee = 0
+        if mtd in ('微信转账','其他'): fee = amt * 0.001
+        elif mtd == '支付宝转账': fee = amt * 0.006
+        elif mtd == '小红书订单': fee = amt * (0.006 if pd < '2026-05-30' else 0.02)
+        if not fee: continue
+        cyc, cl = find_cl(pd)
+        if cyc and cl:
+            key = (cyc, cl)
+            plat_fees[key] = round((plat_fees.get(key, 0) + fee), 2)
+    # Step 3: 新入班数 = 学生首次出勤所在的 (cycle, content_label)
+    first_att = {}
+    fa_rows = _execute(get_db(), """
+        SELECT student_name, cycle, content_label FROM attendance a
+        WHERE status='出席' AND cycle!='' AND content_label!=''
+        AND lesson_date = (SELECT MIN(lesson_date) FROM attendance WHERE student_name=a.student_name AND status='出席')
+    """).fetchall()
+    for fa in fa_rows:
+        key = (fa['cycle'], fa['content_label'])
+        first_att[key] = first_att.get(key, 0) + 1
+    # Step 4: 主汇总查询（用子查询避免 config 多行导致膨胀）
+    rows = _execute(get_db(), """
+        SELECT a.cycle, a.content_label,
+            COALESCE(SUM(CASE WHEN a.status='出席' THEN a.consumed_price ELSE 0 END),0) as revenue,
+            COUNT(DISTINCT CASE WHEN a.status='出席' AND a.consumed_price IN (69.9, 99.9) THEN a.student_name END) as trial_count,
+            COUNT(DISTINCT CASE WHEN a.status='出席' AND a.consumed_price NOT IN (69.9, 99.9, 0) THEN a.student_name END) as formal_count,
+            COALESCE(SUM(CASE WHEN a.status='出席' AND ct.teacher='欣欣' THEN a.consumed_price ELSE 0 END)*0.5,0) as xin_base,
+            COALESCE(SUM(CASE WHEN a.status='出席' AND ct.teacher='饼干' THEN a.consumed_price ELSE 0 END)*0.5,0) as bis_base
+        FROM attendance a
+        LEFT JOIN student_ext se ON a.student_name=se.student_name
+        LEFT JOIN (SELECT class_name, ANY_VALUE(created_by) as teacher FROM config GROUP BY class_name) ct ON a.class_name=ct.class_name
+        WHERE a.status='出席' AND a.cycle!='' AND a.content_label!=''
+        GROUP BY a.cycle, a.content_label ORDER BY a.cycle, a.content_label
+    """).fetchall()
+    for r in rows:
+        rev = float(r['revenue'])
+        key = (r['cycle'], r['content_label'])
+        rs = ref_sup.get(key, {'total':0,'xin':0,'bis':0})
+        ref = rs['total']
+        base = rev + ref  # 收入 + 转介/补
+        xin_lesson = round(float(r['xin_base']) + rs['xin'] * 0.5, 2)
+        bis_lesson = round(float(r['bis_base']) + rs['bis'] * 0.5, 2)
+        l50 = round(base*0.5,2)
+        t20 = round(base*0.2,2)
+        s20 = round(base*0.2,2)
+        sv = saved.get((r['cycle'], r['content_label']), {})
+        xc = float(sv.get('xc', 0.9)); sc = float(sv.get('sc', 0.1)); bc = float(sv.get('bc', 0.0))
+        # Normalize: if sum != 1.0, adjust proportionally
+        coe_sum = xc + sc + bc
+        if coe_sum > 0 and abs(coe_sum - 1.0) > 0.001:
+            xc = round(xc / coe_sum, 2); sc = round(sc / coe_sum, 2); bc = round(1.0 - xc - sc, 2)
+        xs = round(t20*xc,2)
+        ss = round(t20*sc,2)
+        bs = round(t20*bc,2)
+        pf = plat_fees.get((r['cycle'], r['content_label']), 0.0)
+        other_val = sv.get('other', 0.0)
+        neukol_val = sv.get('neukol', 0.0)
+        notes_val = sv.get('notes', '')
+                # 生源拆分: 招生 / 转化 / 续费
+        trial = int(r['trial_count'])
+        converted_cnt = 0
+        if trial > 0:
+            trial_names = [row['student_name'] for row in _execute(get_db(), """
+                SELECT DISTINCT a.student_name FROM attendance a
+                WHERE a.cycle=%s AND a.content_label=%s AND a.status='出席' AND a.consumed_price IN (69.9, 99.9)
+                AND a.lesson_date = (SELECT MIN(lesson_date) FROM attendance WHERE student_name=a.student_name AND status='出席')
+            """, [r['cycle'], r['content_label']]).fetchall()]
+            if trial_names:
+                placeholders = ','.join(['%s']*len(trial_names))
+                later_rows = _execute(get_db(), f"SELECT DISTINCT student_name FROM attendance WHERE student_name IN ({placeholders}) AND status='出席' AND consumed_price>70 AND (cycle!=%s OR content_label!=%s)", trial_names + [r['cycle'], r['content_label']]).fetchall()
+                converted_names = {lr['student_name'] for lr in later_rows}
+                converted_cnt = sum(1 for n in trial_names if n in converted_names)
+        # Teacher split ratio
+        total_les = xin_lesson + bis_lesson
+        les_xin_ratio = xin_lesson / total_les if total_les > 0 else 1.0
+        # Count trial students per teacher for this content
+        trial_xin = trial_bis = 0
+        if trial > 0:
+            t_rows = _execute(get_db(), """
+                SELECT ANY_VALUE(ct.teacher) as t FROM attendance a
+                LEFT JOIN (SELECT class_name, ANY_VALUE(created_by) as teacher FROM config GROUP BY class_name) ct ON a.class_name=ct.class_name
+                WHERE a.cycle=%s AND a.content_label=%s AND a.status='出席' AND a.consumed_price IN (69.9, 99.9)
+                AND a.lesson_date = (SELECT MIN(lesson_date) FROM attendance WHERE student_name=a.student_name AND status='出席')
+                GROUP BY a.student_name
+            """, [r['cycle'], r['content_label']]).fetchall()
+            for tr in t_rows:
+                t = (tr['t'] or '').strip()
+                if t == '饼干': trial_bis += 1
+                elif t == '欣欣': trial_xin += 1
+        actual_trial = trial_xin + trial_bis
+        # 招生 = 试听 × 40
+        recruitment = actual_trial * 40
+        # 转化: 每师保底¥20 + 成功¥40（成功按试听老师分配）
+        # Use trial_xin/trial_bis counts already computed; for bonus, assume same ratio
+        if actual_trial > 0:
+            converted_xin = int(converted_cnt * trial_xin / actual_trial)
+            converted_bis = converted_cnt - converted_xin
+        else:
+            converted_xin = converted_bis = 0
+        conversion_xin = trial_xin * 20 + converted_xin * 40
+        conversion_bis = trial_bis * 20 + converted_bis * 40
+        conversion = conversion_xin + conversion_bis
+        # 续费 = 正式人次 × 20, 按老师实际正式学生数拆分
+        formal_xin = formal_bis = 0
+        f_rows = _execute(get_db(), """
+            SELECT ANY_VALUE(ct.teacher) as t, COUNT(DISTINCT a.student_name) as cnt FROM attendance a
+            LEFT JOIN (SELECT class_name, ANY_VALUE(created_by) as teacher FROM config GROUP BY class_name) ct ON a.class_name=ct.class_name
+            WHERE a.cycle=%s AND a.content_label=%s AND a.status='出席' AND a.consumed_price NOT IN (69.9, 99.9, 0)
+            GROUP BY ct.teacher
+        """, [r['cycle'], r['content_label']]).fetchall()
+        for fr in f_rows:
+            tchr = (fr['t'] or '').strip(); cnt = int(fr['cnt'])
+            if tchr == '欣欣': formal_xin = cnt
+            elif tchr == '饼干': formal_bis = cnt
+        retention_xin = formal_xin * 20
+        retention_bis = formal_bis * 20
+        retention = retention_xin + retention_bis
+        # 招生拆分: 手动欣%
+        rxc = float(sv.get('rxc', 1.0))
+        recruit_xin = round(recruitment * rxc, 2)
+        recruit_bis = round(recruitment - recruit_xin, 2)
+        # Net balance
+        s20 = 0  # 生源不再作为固定比例扣除
+        nb = round(base-l50-xs-ss-bs-recruitment-conversion-retention-pf-other_val,2)
+        _execute(get_db(), """INSERT INTO revenue_splits
+            (cycle,content_label,revenue,trial_count,formal_count,referral_supplement,platform_fee,new_enroll,recruitment,recruit_xin_coef,recruit_xin,recruit_bis,conversion,conversion_xin,conversion_bis,retention,retention_xin,retention_bis,
+             lesson_50pct,xinxin_lesson_share,biscuit_lesson_share,teaching_20pct,
+             xinxin_coef,xinxin_share,sitong_coef,sitong_share,biscuit_coef,biscuit_share,source_20pct,neukol_fee,other_cost,notes,net_balance)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            [r['cycle'], r['content_label'], rev, int(r['trial_count']), int(r['formal_count']), ref, pf, trial, recruitment, rxc, recruit_xin, recruit_bis, conversion, conversion_xin, conversion_bis, retention, retention_xin, retention_bis,
+             l50, xin_lesson, bis_lesson, t20,
+             xc, xs, sc, ss, bc, bs, retention, neukol_val, other_val, notes_val, nb])
+    return jsonify({"status":"ok"})
 
 @app.route("/api/revenue-splits")
 def revenue_splits_list():
     cycle = request.args.get("cycle", "")
     return jsonify(db.revenue_split_list(cycle=cycle or None))
 
+def rebuild_net_balance(rid):
+    """重算单行结余: 收入 - 课时50% - 教研(三师) - 生源20% - Neu - 其他"""
+    from db import get_db, _execute
+    r = _execute(get_db(), "SELECT revenue, lesson_50pct, xinxin_share, sitong_share, biscuit_share, source_20pct, neukol_fee, other_cost, platform_fee FROM revenue_splits WHERE id=%s", [rid]).fetchone()
+    if not r: return
+    nb = round(float(r['revenue']) - float(r['lesson_50pct']) - float(r['xinxin_share']) - float(r['sitong_share']) - float(r['biscuit_share']) - float(r['recruitment'] or 0) - float(r['conversion'] or 0) - float(r['retention'] or 0) - float(r['other_cost'] or 0) - float(r['platform_fee'] or 0), 2)
+    _execute(get_db(), "UPDATE revenue_splits SET net_balance=%s WHERE id=%s", [nb, rid])
+
 @app.route("/api/revenue-splits", methods=["POST"])
 def revenue_splits_save():
-    db.revenue_split_upsert(request.json)
+    data = request.json
+    from db import get_db, _execute
+    rid = data.get("id", 0)
+    if data.get("coef_update"):
+        teacher = data.get("teacher")
+        val = float(data.get("value", 0))
+        if teacher == 'recruit_xin':
+            # 招生欣比例: recruit_xin_coef
+            _execute(get_db(), "UPDATE revenue_splits SET recruit_xin_coef=%s WHERE id=%s", [val, rid])
+            r = _execute(get_db(), "SELECT recruitment FROM revenue_splits WHERE id=%s", [rid]).fetchone()
+            if r:
+                rec = float(r['recruitment'])
+                _execute(get_db(), "UPDATE revenue_splits SET recruit_xin=%s, recruit_bis=%s WHERE id=%s", [round(rec*val,2), round(rec*(1-val),2), rid])
+        else:
+            # 更新教研系数并重算份额: 教研20% × 系数
+            col = teacher + "_coef"
+            _execute(get_db(), f"UPDATE revenue_splits SET {col}=%s WHERE id=%s", [val, rid])
+            r = _execute(get_db(), "SELECT teaching_20pct FROM revenue_splits WHERE id=%s", [rid]).fetchone()
+            if r:
+                t20 = float(r['teaching_20pct'])
+                share = round(t20 * val, 2)
+                share_col = teacher + "_share"
+                _execute(get_db(), f"UPDATE revenue_splits SET {share_col}=%s WHERE id=%s", [share, rid])
+            rebuild_net_balance(rid)
+    elif data.get("num_update"):
+        field = data.get("field")
+        if field == "notes":
+            val = data.get("value", "")
+            _execute(get_db(), f"UPDATE revenue_splits SET notes=%s WHERE id=%s", [val, rid])
+        else:
+            val = float(data.get("value", 0))
+            if field == "neukol": field = "neukol_fee"
+            elif field == "other": field = "other_cost"
+            _execute(get_db(), f"UPDATE revenue_splits SET {field}=%s WHERE id=%s", [val, rid])
+            if field in ("neukol_fee", "other_cost"):
+                rebuild_net_balance(rid)
+        if field in ("neukol_fee", "other_cost"):
+            rebuild_net_balance(rid)
+    else:
+        db.revenue_split_upsert(data)
     return jsonify({"status": "ok"})
+
+@app.route("/api/revenue-splits/import-neukol", methods=["POST"])
+def revenue_splits_import_neukol():
+    """从 Excel 导入 Neukol 服务费，按 cycle + content_label 汇总"""
+    if "file" not in request.files:
+        return jsonify({"status": "error", "message": "请上传文件"}), 400
+    file = request.files["file"]
+    import tempfile, openpyxl
+    tmp = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
+    file.save(tmp.name)
+    tmp.close()
+    from db import get_db, _execute
+    updated = 0
+    try:
+        wb = openpyxl.load_workbook(tmp.name, data_only=True)
+        # Use neukol时长明细 sheet if exists, else active
+        ws = wb['neukol时长明细'] if 'neukol时长明细' in wb.sheetnames else wb.active
+        # Aggregate fees by (cycle, content_label)
+        fees = {}  # (cycle, content_label) -> total
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if not row[0]: continue
+            cycle = str(row[0] or "").strip()
+            content_label = str(row[1] or "").strip()
+            fee = float(str(row[11] or "0").replace("¥","").replace(",","").replace(" ","") or 0)
+            if not cycle or not content_label or not fee: continue
+            key = (cycle, content_label)
+            fees[key] = round(fees.get(key, 0) + fee, 2)
+        for (cycle, cl), fee in fees.items():
+            r = _execute(get_db(), "SELECT id FROM revenue_splits WHERE cycle=%s AND content_label=%s", [cycle, cl]).fetchone()
+            if r:
+                _execute(get_db(), "UPDATE revenue_splits SET neukol_fee=%s WHERE id=%s", [fee, r['id']])
+                # Neukol is informational, no rebuild_net_balance
+                updated += 1
+        return jsonify({"status": "ok", "updated": updated})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        os.unlink(tmp.name)
 
 @app.route("/api/teacher-coefficients")
 def teacher_coefficients_list():
@@ -1045,6 +1423,79 @@ def teacher_coefficients_list():
 def teacher_coefficients_save():
     data = request.json
     db.teacher_coefficient_set(data["teacher_name"], data["coefficient"], data["hourly_rate"])
+    return jsonify({"status": "ok"})
+
+# ====== 班级消课情况 ======
+
+@app.route("/api/attendance/class-breakdown")
+def class_breakdown():
+    from db import get_db, _execute
+    rows = _execute(get_db(), """
+        SELECT cycle, content_label, class_name,
+            COUNT(DISTINCT CASE WHEN consumed_price IN (69.9, 99.9) THEN student_name END) as trial,
+            COUNT(DISTINCT CASE WHEN consumed_price NOT IN (69.9, 99.9, 0) THEN student_name END) as formal,
+            GROUP_CONCAT(DISTINCT CASE WHEN consumed_price IN (69.9, 99.9) THEN student_name END SEPARATOR ', ') as trial_names
+        FROM attendance WHERE status='出席' AND cycle!='' AND content_label!=''
+        GROUP BY cycle, content_label, class_name
+        ORDER BY cycle, content_label, class_name
+    """).fetchall()
+    result = {}
+    for r in rows:
+        key = r['cycle'] + '|' + r['content_label']
+        if key not in result: result[key] = []
+        result[key].append({'class': r['class_name'], 'trial': int(r['trial'] or 0), 'formal': int(r['formal'] or 0), 'trial_names': r['trial_names'] or ''})
+    return jsonify(result)
+
+# ====== 课后素材图片 ======
+
+@app.route("/api/class-material", methods=["POST"])
+def class_material_upload():
+    if "file" not in request.files:
+        return jsonify({"status": "error", "message": "请上传文件"}), 400
+    file = request.files["file"]
+    segment = request.form.get("segment", "")
+    if segment not in ("探索段", "启航段"):
+        return jsonify({"status": "error", "message": "无效分段"}), 400
+    # Store in static/class-material/
+    import os as _os
+    mat_dir = _os.path.join(BASE_DIR, "static", "class-material")
+    _os.makedirs(mat_dir, exist_ok=True)
+    # 探索段 from 周四探索, 启航段 from 周五启航
+    fname = f"课后素材-{segment}.png"
+    fpath = _os.path.join(mat_dir, fname)
+    file.save(fpath)
+    return jsonify({"status": "ok", "path": f"/static/class-material/{fname}"})
+
+# ====== 结算单 ======
+
+@app.route("/api/settlements")
+def settlements_list():
+    return jsonify(db.settlement_list())
+
+@app.route("/api/settlements", methods=["POST"])
+def settlements_create():
+    data = request.json
+    if data.get("batch"):
+        # Batch create from selected cycles
+        results = []
+        for item in data.get("items", []):
+            item["created_at"] = data.get("created_at", "")
+            db.settlement_create(item)
+            results.append(item)
+        return jsonify({"status": "ok", "count": len(results)})
+    else:
+        db.settlement_create(data)
+        return jsonify({"status": "ok"})
+
+@app.route("/api/settlements/<int:sid>", methods=["POST"])
+def settlements_update(sid):
+    data = request.json
+    db.settlement_update_status(sid, data.get("status", "已结算"), data.get("settled_date", ""))
+    return jsonify({"status": "ok"})
+
+@app.route("/api/settlements/<int:sid>", methods=["DELETE"])
+def settlements_delete(sid):
+    db.settlement_delete(sid)
     return jsonify({"status": "ok"})
 
 if __name__ == "__main__":
