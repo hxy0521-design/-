@@ -86,7 +86,7 @@ hr{border:none;border-top:1.5px dashed var(--border);margin:18px 0;opacity:.6}
 ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}::-webkit-scrollbar-thumb:hover{background:var(--tx3)}
 </style></head><body>
 <button class="theme-toggle" onclick="toggleTheme()" title="切换深色模式">🌙</button>
-<div style="display:flex;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--surface)" id="topBar"><div id="mainTabs" style="display:flex;gap:4px;padding:4px 8px 0;overflow-x:auto;flex-shrink:0;"></div></div><div style="display:flex;flex:1;overflow:hidden" id="mainRow"><div class="panel pl" style="display:none"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkXinxin" onchange="onUserChange()" style="width:auto;margin:0 2px">只看欣欣</label><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkBiscuit" onchange="onUserChange()" style="width:auto;margin:0 2px">只看饼干</label></div><h2>班级 <span style="font-size:10px;float:right"><a href="#" onclick="expandAll(event)" style="color:var(--sb)">展开</a> | <a href="#" onclick="collapseAll(event)" style="color:var(--sb)">折叠</a></span></h2><div id="classList"></div><button class="btn bo" style="margin-top:4px;width:100%" onclick="newUnitAll()">+ 新建单元</button><button class="btn bo" style="margin-top:4px;width:100%" onclick="newClass()">+ 新建班级</button><h3 style="margin-top:18px">本周课后素材</h3><div id="weeklyMaterial"><div style="font-size:11px;margin:4px 0"><b>启航段</b> <button class="btn bo" style="padding:0 6px;font-size:10px" onclick="uploadWeeklyMaterial(&#39;启航段&#39;)">上传</button> <a id="wmDLQH" href="#" style="font-size:10px;display:none" download>下载</a> <button class="btn bo" style="padding:0 6px;font-size:10px;display:none" id="wmDelQH" onclick="deleteWeeklyMaterial(&#39;启航段&#39;)">删</button></div><div style="font-size:11px;margin:4px 0"><b>探索段</b> <button class="btn bo" style="padding:0 6px;font-size:10px" onclick="uploadWeeklyMaterial(&#39;探索段&#39;)">上传</button> <a id="wmDLTS" href="#" style="font-size:10px;display:none" download>下载</a> <button class="btn bo" style="padding:0 6px;font-size:10px;display:none" id="wmDelTS" onclick="deleteWeeklyMaterial(&#39;探索段&#39;)">删</button></div></div><h3 style="margin-top:18px">输出文件</h3><div id="outputList"></div></div>
+<div style="display:flex;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--surface)" id="topBar"><div id="mainTabs" style="display:flex;gap:4px;padding:4px 8px 0;overflow-x:auto;flex-shrink:0;"></div><div id="seasonDiv" style="display:flex;align-items:center;gap:0;padding:4px 12px 0;margin-left:auto"><button id="seasonBtnS" onclick="setSeason('S')" style="padding:3px 10px;border:1.5px solid var(--accent);border-radius:6px 0 0 6px;font-size:11px;background:var(--accent);color:#fff;cursor:pointer">春秋</button><button id="seasonBtnV" onclick="setSeason('V')" style="padding:3px 10px;border:1.5px solid var(--border);border-left:none;border-radius:0 6px 6px 0;font-size:11px;background:var(--surface);color:var(--tx2);cursor:pointer">寒暑</button></div></div></div><div style="display:flex;flex:1;overflow:hidden" id="mainRow"><div class="panel pl" style="display:none"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkXinxin" onchange="onUserChange()" style="width:auto;margin:0 2px">只看欣欣</label><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkBiscuit" onchange="onUserChange()" style="width:auto;margin:0 2px">只看饼干</label></div><h2>班级 <span style="font-size:10px;float:right"><a href="#" onclick="expandAll(event)" style="color:var(--sb)">展开</a> | <a href="#" onclick="collapseAll(event)" style="color:var(--sb)">折叠</a></span></h2><div id="classList"></div><button class="btn bo" style="margin-top:4px;width:100%" onclick="newUnitAll()">+ 新建单元</button><button class="btn bo" style="margin-top:4px;width:100%" onclick="newClass()">+ 新建班级</button><h3 style="margin-top:18px">本周课后素材</h3><div id="weeklyMaterial"><div style="font-size:11px;margin:4px 0"><b>启航段</b> <button class="btn bo" style="padding:0 6px;font-size:10px" onclick="uploadWeeklyMaterial(&#39;启航段&#39;)">上传</button> <a id="wmDLQH" href="#" style="font-size:10px;display:none" download>下载</a> <button class="btn bo" style="padding:0 6px;font-size:10px;display:none" id="wmDelQH" onclick="deleteWeeklyMaterial(&#39;启航段&#39;)">删</button></div><div style="font-size:11px;margin:4px 0"><b>探索段</b> <button class="btn bo" style="padding:0 6px;font-size:10px" onclick="uploadWeeklyMaterial(&#39;探索段&#39;)">上传</button> <a id="wmDLTS" href="#" style="font-size:10px;display:none" download>下载</a> <button class="btn bo" style="padding:0 6px;font-size:10px;display:none" id="wmDelTS" onclick="deleteWeeklyMaterial(&#39;探索段&#39;)">删</button></div></div><h3 style="margin-top:18px">输出文件</h3><div id="outputList"></div></div>
 <div class="panel pc"><div class="tabs" id="tabBar"></div><div class="ed-body" id="editorBody"><div style="color:var(--sb);text-align:center;padding:60px 0">加载中...</div></div></div>
 <div class="panel pr" id="previewPanel" style="display:none"><h2 style="cursor:pointer" onclick="togglePreview()"><span id="pvLabel">预览</span> <span id="pvHint" style="font-size:11px;color:var(--sb)">点击收起</span></h2><div id="previewContent" style="font-size:12px;color:var(--sb)">粘贴发言后在此预览</div></div>
 <script>
@@ -123,7 +123,8 @@ function switchMainTab(){
   else if(activeMainTab==='attendance')renderAttendanceTab();
   else if(activeMainTab==='students')renderStudentTab();
   else if(activeMainTab==='payments')renderPaymentTab();
-  else if(activeMainTab==='splits')renderRevenueSplitTab();
+  else if(activeMainTab==='costs')renderCostTab();
+	  else if(activeMainTab==='splits')renderRevenueSplitTab();
   else if(activeMainTab==='settle')renderSettleTab();
   else if(activeMainTab==='settle')renderSettleTab();
   else if(activeMainTab==='pricing')renderPricingTab();
@@ -132,7 +133,7 @@ function switchMainTab(){
 var _lastSaved='';
 function renderMainTabs(){
   var tb=document.getElementById('mainTabs');if(!tb)return;
-  var items=[{id:'overview',label:'总览'},{id:'edit',label:'编辑'},{id:'attendance',label:'消课'},{id:'students',label:'学生'},{id:'payments',label:'缴费'},{id:'splits',label:'分账'},{id:'settle',label:'结算'},{id:'pricing',label:'定价'}];
+  var items=[{id:'overview',label:'总览'},{id:'edit',label:'编辑'},{id:'attendance',label:'消课'},{id:'students',label:'学生'},{id:'payments',label:'缴费'},{id:'costs',label:'成本'},{id:'splits',label:'分账'},{id:'settle',label:'结算'},{id:'pricing',label:'定价'}];
   tb.innerHTML='';
   items.forEach(function(it){
     var t=document.createElement('button');t.textContent=it.label;
@@ -223,7 +224,7 @@ function renderClassList(){
   });
 }
 var cfgInfo={},allLessons={},zgUser='';
-function fetchConfig(retry){retry=retry||0;fetch(API+'/config').then(function(r){return r.json()}).then(function(d){cfgInfo=d.classes||d;allLessons=d.lessons||{};zgUser=d.zg_user||'';window._summary=d.summary||{};window._weekly=d.weekly||[];var clsKeys=Object.keys(cfgInfo);if(clsKeys.length){var ow=cfgInfo[clsKeys[0]];var uc=Object.keys(ow)[0];window._offWeeks=(ow[uc].off_weeks||'').split(',').filter(function(x){return x}).map(Number)}renderClassList();renderMainTabs();switchMainTab();refreshWeeklyMaterial()}).catch(function(e){if(retry<5)setTimeout(function(){fetchConfig(retry+1)},1000*retry)})}
+function fetchConfig(retry){retry=retry||0;fetch(API+'/config').then(function(r){return r.json()}).then(function(d){cfgInfo=d.classes||d;allLessons=d.lessons||{};zgUser=d.zg_user||'';window._summary=d.summary||{};window._weekly=d.weekly||[];var clsKeys=Object.keys(cfgInfo);if(clsKeys.length){var ow=cfgInfo[clsKeys[0]];var uc=Object.keys(ow)[0];window._offWeeks=(ow[uc].off_weeks||'').split(',').filter(function(x){return x}).map(Number)}renderClassList();renderMainTabs();switchMainTab();refreshWeeklyMaterial();fetch(API+'/students').then(function(r){return r.json()}).then(function(d){_cachedStudents=d;}).catch(function(){})}).catch(function(e){if(retry<5)setTimeout(function(){fetchConfig(retry+1)},1000*retry)})}
 fetchConfig();
 
 function newClass(){
@@ -487,7 +488,7 @@ function showAttendanceModal(genPromise,d,gs,gw){
     h+='<h3 style="margin:0 0 4px">考勤确认 — '+esc(cls)+'</h3><div style="font-size:11px;color:var(--sb);margin-bottom:12px">发言学生已自动勾选，请确认缺席/请假</div>';
     var roster=sug.roster||[];var speakers=sug.speakers||[];
     roster.forEach(function(r,i){
-      var bg=r.status==='出席'?'#e8f5e9':(r.isNew?'#e3f2fd':'#fff8e1');
+      var bg=r.status==='出席'?'var(--green-light)':(r.isNew?'var(--accent-light)':'var(--amber-light)');
       h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;margin:2px 0;border-radius:6px;background:'+bg+'">';
       h+='<input type="checkbox" id="attChk'+i+'" '+(r.status==='出席'?'checked':'')+' onchange="var s=document.getElementById(\'attSel'+i+'\');s.style.display=this.checked&&\''+esc(r.name)+'\'!==\'\'?\'none\':\'inline\';if(!this.checked)document.getElementById(\'attChk'+i+'\').checked=false" style="width:auto;margin:0">';
       h+='<span style="flex:1;font-size:13px">'+esc(r.name)+(r.isNew?' <span style="font-size:10px;color:var(--accent)">新</span>':'')+'</span>';
@@ -575,7 +576,7 @@ window.addEventListener('beforeunload',saveAll);
 function renderOverviewTab(){
   var el=document.getElementById('editorBody');if(!el)return;
   // Use preloaded data from config response
-  var s=window._summary||{};var week=window._weekly||[];
+  var s=window._summary||{};var week=_seasonFilter(window._weekly||[]);
   var h='<div style="padding:16px">';
   h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">';
   h+='<div class="kpi-card" style="border-top-color:var(--green)"><div class="kpi-label">在读学生</div><div class="kpi-val">'+(s.active_students||0)+'<span class="kpi-u">人</span></div></div>';
@@ -613,17 +614,20 @@ function renderOverviewTab(){
     }
     return dates.join('/');
   }
-  h+='<div style="display:flex;align-items:center;margin:12px 0 8px"><h3 style="margin:0;flex:1">周期课表</h3><button class="btn bo" style="padding:2px 10px;font-size:10px" onclick="showCalendarModal()">停课/周期</button><button class="btn bo" style="padding:2px 10px;font-size:10px;margin-left:6px" onclick="newClass()">+ 新增班级</button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border-radius:var(--radius);overflow:hidden">';
+  h+='<div style="display:flex;align-items:center;margin:12px 0 8px"><h3 style="margin:0;flex:1">周期课表</h3><span id="summerMonthToggle" style="display:none"><button id="smBtn7" class="btn bp" style="padding:2px 10px;font-size:10px" onclick="setSummerMonth(&apos;2607&apos;)">7月</button><button id="smBtn8" class="btn bo" style="padding:2px 10px;font-size:10px" onclick="setSummerMonth(&apos;2608&apos;)">8月</button></span><button class="btn bo" style="padding:2px 10px;font-size:10px" onclick="showCalendarModal()">停课/周期</button><button class="btn bo" style="padding:2px 10px;font-size:10px;margin-left:6px" onclick="newClass()">+ 新增班级</button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border-radius:var(--radius);overflow:hidden">';
   var days=['周一','周二','周三','周四','周五','周六','周日'];
   days.forEach(function(d){h+='<div style="background:var(--surface2);padding:8px;text-align:center;font-size:13px;font-weight:700;color:var(--tx2)">'+d+'</div>'});
   days.forEach(function(d){
     h+='<div style="background:var(--surface);padding:6px;min-height:60px;font-size:12px">';
-    week.forEach(function(w){if(w.weekday===d)h+='<div style="background:'+w.color+'20;border-left:3px solid '+w.color+';padding:5px 7px;margin:2px 0;border-radius:5px;font-size:12px"><b>'+esc(w.class_name)+'</b> <span style="color:var(--tx3)">'+esc(w.time)+'</span><br><span style="color:var(--tx3)">'+esc(w.teacher||'')+' · '+w.students.length+'人</span><br><span style="font-size:11px;color:var(--tx3)">'+w.students.join(', ')+'</span><br><span style="font-size:11px;color:var(--accent)">'+getDates(d)+'</span></div>'});
+    var dayEntries=week.filter(function(w){return w.weekday===d});
+	    dayEntries.sort(function(a,b){var ta=(a.time||'').replace(':',''),tb=(b.time||'').replace(':','');if(ta!==tb)return (parseInt(ta)||0)-(parseInt(tb)||0);var so={启航:1,探索:2,先锋:3};var sa=so[a.class_name.charAt(0)+a.class_name.charAt(1)]||0,sb=so[b.class_name.charAt(0)+b.class_name.charAt(1)]||0;return sa-sb;});
+	    dayEntries.forEach(function(w){h+='<div style="background:'+w.color+'20;border-left:3px solid '+w.color+';padding:5px 7px;margin:2px 0;border-radius:5px;font-size:12px"><b>'+esc(w.class_name)+'</b> <span style="color:var(--tx3)">'+esc(w.time)+'</span>'+(window._season==='V'?'<button class="btn bp" style="float:right;padding:1px 6px;font-size:9px" onclick="showPrefillModal(\''+esc(w.class_name)+'\')">预排</button>':'')+'<br><span style="color:var(--tx3)">'+esc(w.teacher||'')+' · '+w.students.length+'人</span><br><span style="font-size:11px;color:var(--tx3)">'+w.students.join(', ')+'</span><br><span style="font-size:11px;color:var(--accent)">'+getDates(d)+'</span>'+(window._season!=='V'?'<br><input class="pfNote" data-cls="'+esc(w.class_name)+'" placeholder="+备注" style="width:90%;padding:2px 4px;font-size:9px;border:1px dashed var(--border2);border-radius:3px;margin-top:2px;background:transparent" onchange="saveWeekNote(this)">':'')+'</div>'});
     h+='</div>';
   });
   h+='</div></div>';
   h+='<div style="margin-top:16px"><h3 style="margin:0 0 8px">课时不足提醒</h3><div id="lowLessonAlert" style="font-size:12px;color:var(--tx3)">加载中...</div></div>';
   h+='</div>';el.innerHTML=h;
+  var sm=document.getElementById('summerMonthToggle');if(sm)sm.style.display=window._season==='V'?'inline':'none';if(window._season==='V'){var b7=document.getElementById('smBtn7'),b8=document.getElementById('smBtn8');if(b7)b7.className=window._summerMonth==='2607'?'btn bp':'btn bo';if(b8)b8.className=window._summerMonth==='2608'?'btn bp':'btn bo';}
   Promise.all([fetch(API+'/students').then(function(r){return r.json()}),fetch(API+'/attendance/student-counts').then(function(r){return r.json()}).catch(function(){return{}})])
   .then(function(results){var students=results[0];var att=results[1];
     var byClass={};
@@ -698,7 +702,7 @@ function loadAttLessons(){
       // Row 2: title (L) | students (R)
       h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:4px">';
       h+='<div style="font-size:13px;color:var(--tx)"><b>'+esc(r.lesson_title)+'</b></div>';
-      h+='<div style="font-size:11px;color:var(--tx2);text-align:right;min-width:120px">'+r.students.join(', ')+'</div></div>';
+      h+='<div style="font-size:11px;color:var(--tx2);text-align:right;min-width:120px">'+(r.students.concat(r.trial_students||[])).join(', ')+'</div></div>';
       // Row 3: pricing (L) | notes (R)
       h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">';
       h+='<div style="font-size:10px;color:var(--tx3)">¥'+(r.price||0)+'/节 · 课销¥'+(r.lesson_revenue||0)+' · 人均¥'+(r.per_person||0)+(r.has_debt?' · <span style="color:var(--rd);font-weight:600">'+r.debt_count+'欠费-'+esc(r.debt_names)+'</span>':'')+'</div>';
@@ -747,6 +751,30 @@ function loadPayments(){
 function closeModal(btn){var el=btn||event.target;while(el&&el!==document.body){if(el.style&&(el.style.position==='fixed'||el.style.zIndex==='9999')){el.remove();break}el=el.parentElement}}
 function deletePay(id){if(!confirm('删除此缴费记录？'))return;fetch(API+'/finance/delete-purchase',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(function(r){return r.json()}).then(function(){loadPayments()})}
 // ====== Tab 7: 分账 =====
+function renderCostTab(){
+  var el=document.getElementById('editorBody');if(!el)return;
+  el.innerHTML='<div style="text-align:center;padding:60px 0;color:var(--tx3)">加载中...</div>';
+  fetch(API+'/finance/records?type=cost&limit=500').then(function(r){return r.json()}).then(function(rows){
+    var h='<div style="padding:16px"><div style="display:flex;align-items:center;margin-bottom:12px"><h3 style="margin:0;flex:1">成本记录</h3><button class="btn bg" style="padding:4px 12px;font-size:11px" onclick="showAddCostModal()">+ 新增成本</button></div>';
+    if(!rows||!rows.length){h+='<div class="section-card" style="text-align:center;padding:40px">暂无成本记录</div>';}
+    else{
+      h+='<div style="overflow-x:auto"><table class="datatable"><thead><tr><th>原因</th><th>类型</th><th>渠道</th><th>周期</th><th>金额</th><th>日期</th><th>备注</th><th></th></tr></thead><tbody>';
+      var total=0;
+      rows.forEach(function(r){
+        total+=parseFloat(r.amount)||0;
+        h+='<tr><td><b>'+esc(r.reason)+'</b></td><td>'+esc(r.cost_type||'')+'</td><td>'+esc(r.channel||'')+'</td><td>'+esc(r.cycle||'')+'</td><td style="color:var(--rd);font-weight:600">¥'+(parseFloat(r.amount)||0).toFixed(2)+'</td><td style="font-size:10px">'+(r.cost_date||'').slice(0,10)+'</td><td style="font-size:10px;color:var(--tx3)">'+esc(r.notes||'')+'</td><td><button onclick="deleteCost('+r.id+')" style="border:none;background:none;color:var(--rd);cursor:pointer;font-size:11px">删除</button></td></tr>';
+      });
+      h+='</tbody></table></div>';
+      h+='<div style="text-align:right;margin-top:8px;font-weight:700">合计：<span style="color:var(--rd)">¥'+total.toFixed(2)+'</span></div>';
+    }
+    h+='</div>';el.innerHTML=h;
+  }).catch(function(e){el.innerHTML='<div style="padding:16px;color:var(--rd)">加载失败: '+esc(e.message)+'</div>';});
+}
+function showAddCostModal(){
+  var ov=document.createElement('div');ov.className='zg-modal-overlay';ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML='<div style="background:var(--surface);border-radius:12px;padding:20px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)"><h3>新增成本</h3><input id="cfReason" placeholder="支出原因" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:6px"><input id="cfType" placeholder="类型(平台费/工资/其他)" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfChannel" placeholder="渠道(淘宝/微信/银行)" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"></div><input id="cfCycle" placeholder="周期(如2601第四周)" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfAmt" type="number" step="0.01" placeholder="金额" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfDate" type="date" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfNotes" placeholder="备注" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button onclick="closeModal(this)" class="btn bo" style="padding:6px 14px">取消</button><button onclick="saveCost()" class="btn bg" style="padding:6px 14px">保存</button></div></div>';
+  document.body.appendChild(ov);
+}
 function renderRevenueSplitTab(){
   var el=document.getElementById('editorBody');if(!el)return;
   Promise.all([
@@ -765,7 +793,7 @@ function renderRevenueSplitTab(){
       items.forEach(function(r){n+=fv(r.net_balance)});
       var cycCost=costByCycle[cyc]||0; cumNet+=n-cycCost; cycleNet[cyc]=cumNet;
     });
-    var h='<div style="padding:16px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><h3 style="margin:0">分账管理</h3><span style="flex:1"></span><button class="btn bo" style="padding:4px 10px;font-size:11px" onclick="generateSplits()">刷新数据</button><button class="btn bo" style="padding:4px 10px;font-size:11px" onclick="expandAllRows(this)">全部展开</button><button class="btn bo" style="padding:4px 10px;font-size:11px" onclick="importNeukolFees()">导入服务费</button></div>';
+    var h='<div style="padding:16px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><h3 style="margin:0">分账管理</h3><span style="flex:1"></span><button class="btn bo" style="padding:4px 10px;font-size:11px" onclick="generateSplits()">刷新数据</button><button class="btn bp" style="padding:4px 10px;font-size:11px;margin-left:4px" onclick="lockSplits()">锁定系数</button><button class="btn bo" style="padding:4px 10px;font-size:11px" onclick="expandAllRows(this)">全部展开</button><button class="btn bo" style="padding:4px 10px;font-size:11px" onclick="importNeukolFees()">导入服务费</button></div>';
     var TN='font-variant-numeric:tabular-nums;font-variant-alternates:normal';
     function th(){var s="";s+="<tr style=\"border-bottom:2px solid #e2e8f0;color:var(--sb)\">";
     s+="<th style=\"text-align:left;padding:4px 8px\">内容</th>";
@@ -926,9 +954,9 @@ function showAddCostModal(){
   document.body.appendChild(ov);
 }
 function saveCost(){
-  var d={reason:document.getElementById('cfReason').value,cost_type:document.getElementById('cfType').value,channel:document.getElementById('cfChannel').value,amount:parseFloat(document.getElementById('cfAmt').value)||0,cost_date:document.getElementById('cfDate').value};
+  var d={reason:document.getElementById('cfReason').value,cost_type:document.getElementById('cfType').value,channel:document.getElementById('cfChannel').value,amount:parseFloat(document.getElementById('cfAmt').value)||0,cost_date:document.getElementById('cfDate').value,cycle:document.getElementById('cfCycle').value,notes:document.getElementById('cfNotes').value};
   if(!d.reason)return alert('请输入支出原因');
-  fetch(API+'/finance/add-cost',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){document.querySelectorAll('#editorBody ~ div').forEach(function(x){if(x.style&&x.style.position==='fixed')x.remove()});renderFinanceTab()}else alert(rd.message)});
+  fetch(API+'/finance/add-cost',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){document.querySelectorAll('#editorBody ~ div').forEach(function(x){if(x.style&&x.style.position==='fixed')x.remove()});if(activeMainTab==='costs')renderCostTab();else renderFinanceTab()}else alert(rd.message)});
 }
 function deleteCost(id){if(!confirm('确定删除此成本记录？'))return;fetch(API+'/finance/delete-cost',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok')renderFinanceTab()})}
 var _cachedStudents=null;
@@ -943,7 +971,7 @@ function renderStudentTab(){
     sts.forEach(function(s){var active=studentFilter.status.indexOf(s)>=0;h+='<button class="filter-btn'+(active?' active':'')+'" onclick="studentFilter.status.indexOf(\''+s+'\')>=0?studentFilter.status=studentFilter.status.filter(function(x){return x!==\''+s+'\'}):studentFilter.status.push(\''+s+'\');renderStudentTab()">'+s+'</button>'});
     h+='<input id="studSearch" placeholder="搜索学生..." style="width:120px;padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;margin-left:4px" oninput="studentFilter.search=this.value;clearTimeout(window._studSearchTO);window._studSearchTO=setTimeout(function(){renderStudentTab()},300)"><span style="flex:1"></span><button class="btn bo" style="padding:3px 10px;font-size:10px" onclick="renderStudentTab()">刷新</button><button class="btn bg" style="padding:3px 10px;font-size:10px;margin-left:4px" onclick="showAddStudentModal()">+ 新增</button></div>';
     // Filter and group by class
-    var filtered=rows.filter(function(r){return studentFilter.status.indexOf(r.status||'在读中')>=0});if(studentFilter.search)filtered=filtered.filter(function(r){return r.student_name.indexOf(studentFilter.search)>=0});
+    var filtered=rows.filter(function(r){return studentFilter.status.indexOf(r.status||'在读中')>=0});if(studentFilter.search)filtered=filtered.filter(function(r){return r.student_name.indexOf(studentFilter.search)>=0});var _ss=_seasonSet();filtered=filtered.filter(function(r){return !r.enrolled_class||_ss[r.enrolled_class]===true||r.status==='暂时停课'});
     var byClass={};filtered.forEach(function(r){var c=r.enrolled_class;if(!c&&r.status==='暂时停课')c='暂时停课-待分班';else if(!c)c='未分班';if(!byClass[c])byClass[c]=[];byClass[c].push(r)});
     var sortedClasses=Object.keys(cfgInfo);var classOrder=[];sortedClasses.forEach(function(c){if(byClass[c])classOrder.push(c)});if(byClass['暂时停课-待分班']){classOrder.push('暂时停课-待分班')}Object.keys(byClass).sort().forEach(function(c){if(c!=='暂时停课-待分班'&&classOrder.indexOf(c)<0)classOrder.push(c)});
     classOrder.forEach(function(cls){
@@ -951,14 +979,13 @@ function renderStudentTab(){
       var clsLabel=cls==='暂时停课-待分班'?'暂时停课':cls;h+='<div class="section-card" id="classSection_'+esc(cls).replace(/\\s/g,'_')+'" style="padding:12px 16px;margin-bottom:12px"><div style="display:flex;align-items:center;margin-bottom:10px"><div style="font-size:13px;font-weight:700;color:var(--tx);flex:1">'+esc(clsLabel)+' <span style="font-weight:400;color:var(--tx3);font-size:11px">'+students.length+'人</span></div><button onclick="expandClassRecords(\''+esc(cls)+'\',\'att\')" style="padding:1px 6px;border-radius:3px;border:1px solid #dbeafe;background:var(--surface);color:#2563eb;font-size:9px;cursor:pointer;margin-left:4px">展开消课</button><button onclick="expandClassRecords(\''+esc(cls)+'\',\'pay\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:var(--surface);color:#16a34a;font-size:9px;cursor:pointer;margin-left:2px">展开缴费</button></div>';
       h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">';
       students.forEach(function(r){
-        var pct=parseInt(r.purchased_lessons)>0?Math.min(100,Math.round(parseInt(r.used_lessons)/parseInt(r.purchased_lessons)*100)):0;
-        var rem=(parseInt(r.purchased_lessons)||0)-(parseInt(r.used_lessons)||0);var barColor=rem>0?'#16a34a':(rem===0?'#d97706':'#dc2626');
+        var pur=parseInt(r.purchased_lessons)||0,used=parseInt(r.used_lessons)||0;var isGhost=pur===0;var pct=pur>0?Math.min(100,Math.round(used/pur*100)):0;
+        var rem=pur-used;var barColor=rem>0?'#16a34a':(rem===0?'#d97706':'#dc2626');
         var sid='studDetail_'+esc(r.student_name).replace(/\\s/g,'_');
-        h+='<div style="background:var(--surface2);border-radius:8px;padding:10px;border:1px solid var(--border)">';
-        h+='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px">'+esc(r.student_name)+'</b><span style="font-size:9px;padding:1px 6px;border-radius:999px;background:'+(r.status==='在读中'?'#dcfce7':(r.status==='暂时停课'?'#fef3c7':'#fee2e2'))+';color:'+(r.status==='在读中'?'#16a34a':(r.status==='暂时停课'?'#d97706':'#dc2626'))+'">'+esc(r.status||'?')+'</span></div>';
-        h+='<div style="height:4px;background:#e2e8f0;border-radius:2px;margin:6px 0"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:2px"></div></div>';
-        h+='<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--sb)"><span>已购'+r.purchased_lessons+'</span><span>已销'+r.used_lessons+'</span><span>余'+(parseInt(r.purchased_lessons)-parseInt(r.used_lessons))+'</span></div>';
-        h+='<div style="display:flex;gap:4px;margin-top:6px"><button onclick="showAddStudentModal(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bfdbfe;background:#eff6ff;color:#3b82f6;font-size:9px;cursor:pointer">编辑</button><button onclick="showAddPayForStudent(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:#f0fdf4;color:#16a34a;font-size:9px;cursor:pointer">+缴费</button><span style="flex:1"></span><button onclick="toggleStudAtt(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #dbeafe;background:var(--surface);color:#2563eb;font-size:9px;cursor:pointer">消课</button><button onclick="toggleStudPay(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:var(--surface);color:#16a34a;font-size:9px;cursor:pointer">缴费</button></div>';
+        h+='<div style="background:'+(isGhost?'var(--bg)':'var(--surface2)')+';border-radius:8px;padding:10px;border:1px '+(isGhost?'dashed':'solid')+' '+(isGhost?'var(--border2)':'var(--border)')+'">';
+        h+='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px;color:'+(isGhost?'var(--tx3)':'var(--tx)')+'">'+esc(r.student_name)+'</b>'+(r.gender?' <span style="font-size:9px;color:var(--tx3)">'+esc(r.gender)+'</span>':'')+'<span style="font-size:9px;padding:1px 6px;border-radius:999px;background:'+(isGhost?'#f0f0ff':'#fee2e2')+';color:'+(isGhost?'var(--accent)':'#dc2626')+'">'+(isGhost?'预排':esc(r.status||'?'))+'</span></div>';
+        if(!isGhost){h+='<div style="height:4px;background:#e2e8f0;border-radius:2px;margin:6px 0"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:2px"></div></div>';h+='<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--sb)"><span>已购'+pur+'</span><span>已销'+used+'</span><span>余'+rem+'</span></div>';}
+        h+='<div style="display:flex;gap:4px;margin-top:6px"><button onclick="showAddStudentModal(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bfdbfe;background:#eff6ff;color:#3b82f6;font-size:9px;cursor:pointer">编辑</button><button onclick="showAddPayForStudent(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:#f0fdf4;color:#16a34a;font-size:9px;cursor:pointer">+缴费</button>'+(isGhost?'':'<span style="flex:1"></span><button onclick="toggleStudAtt(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #dbeafe;background:var(--surface);color:#2563eb;font-size:9px;cursor:pointer">消课</button><button onclick="toggleStudPay(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:var(--surface);color:#16a34a;font-size:9px;cursor:pointer">缴费</button>')+'</div>';
         h+='<div id="studAtt_'+esc(r.student_name).replace(/\\s/g,'_')+'" style="display:none;margin-top:4px;padding:4px;background:var(--bg);border-radius:4px;font-size:9px"></div>';
         h+='<div id="studPay_'+esc(r.student_name).replace(/\\s/g,'_')+'" style="display:none;margin-top:4px;padding:4px;background:var(--bg);border-radius:4px;font-size:9px"></div>';
         h+='</div>';
@@ -1065,8 +1092,8 @@ function toggleStudAtt(name){
   if(!det)return;
   if(det.style.display==='block'){det.style.display='none';return}
   det.style.display='block';det.textContent='加载中...';
-  fetch(API+'/attendance/by-lesson?limit=100').then(function(r){return r.json()}).then(function(data){
-    var rows=data.rows||data;var found=rows.filter(function(r){return r.students&&r.students.indexOf(name)>=0});
+  fetch(API+'/attendance/by-lesson?limit=50&student='+encodeURIComponent(name)+'').then(function(r){return r.json()}).then(function(data){
+    var found=data.rows||data;
     if(!found.length){det.innerHTML='<span style=\"color:var(--tx3)\">暂无</span>';return}
     var h='<table style=\"width:100%;font-size:9px;border-collapse:collapse\"><tr style=\"color:var(--tx3)\"><th>日期</th><th>班级</th><th>课节</th></tr>';
     found.forEach(function(r){h+='<tr><td>'+((r.lesson_date||'').slice(0,10))+'</td><td>'+esc(r.class_name)+'</td><td>'+esc(r.lesson_title||'')+'</td></tr>'});
@@ -1303,5 +1330,111 @@ function uploadExcel(file){
     }else{st.textContent='导入失败: '+d.message;st.style.color='var(--rd)'}
     setTimeout(function(){st.remove()},4000);
   }).catch(function(e){st.textContent='导入失败: '+e.message;st.style.color='var(--rd)';setTimeout(function(){st.remove()},4000)});
+}
+
+
+// ── 春秋/寒暑切换 ──
+window._season='S';window._summerMonth='2607';
+var _vacationWords=['暑假','寒假','临时','先锋','混龄'];
+function _isVac(cn){for(var i=0;i<_vacationWords.length;i++){if(cn.indexOf(_vacationWords[i])>=0)return true;}var units=cfgInfo[cn];if(units){var ucs=Object.keys(units);for(var j=0;j<ucs.length;j++){if(ucs[j]==='2607'||ucs[j]==='2608')return true;}}return false;}
+function setSeason(s){
+  window._season=s;
+  var btS=document.getElementById('seasonBtnS'),btV=document.getElementById('seasonBtnV');
+  if(s==='S'){btS.style.background='var(--accent)';btS.style.color='#fff';btS.style.borderColor='var(--accent)';btV.style.background='var(--surface)';btV.style.color='var(--tx2)';btV.style.borderColor='var(--border)';}
+  else{btV.style.background='var(--accent)';btV.style.color='#fff';btV.style.borderColor='var(--accent)';btS.style.background='var(--surface)';btS.style.color='var(--tx2)';btS.style.borderColor='var(--border)';}
+  var sm=document.getElementById('summerMonthToggle');if(sm)sm.style.display=s==='V'?'inline':'none';
+  if(activeMainTab==='overview')renderOverviewTab();
+  if(activeMainTab==='edit'){renderClassList();if(activeTab)renderEditor();}
+  if(activeMainTab==='students')renderStudentTab();
+  renderMainTabs();switchMainTab();
+}
+function setSummerMonth(m){
+  window._summerMonth=m;
+  if(activeMainTab==='overview')renderOverviewTab();
+  if(activeMainTab==='edit'){renderClassList();if(activeTab)renderEditor();}
+  if(activeMainTab==='students')renderStudentTab();
+}
+function _seasonSet(){
+  var s={};Object.keys(cfgInfo).forEach(function(cn){
+    var v=_isVac(cn);
+    if(window._season==='V'){if(!v)return;var units=cfgInfo[cn];if(!units)return;if(window._summerMonth==='2607'&&!units['2607'])return;if(window._summerMonth==='2608'&&!units['2608'])return;s[cn]=true;}
+    else{if(!v)s[cn]=true;}
+  });return s;
+}
+function _seasonFilter(weekly){var ss=_seasonSet();return weekly.filter(function(w){return ss[w.class_name];});}
+
+// ── 预排弹窗 ──
+var _pfTopics=['高考作文','情感投射','城市规划','算法审美'];
+var _topicNums={高考作文:'一',情感投射:'二',城市规划:'三',算法审美:'四'};
+function _pfDisplay(s){
+  if(s.is_trial)return esc(s.student_name)+'(试)';
+  var ts=s.topics||[];
+  if(ts.length===4)return esc(s.student_name)+'(全)';
+  if(ts.length>0){var ns=ts.map(function(t){return _topicNums[t]||t});return esc(s.student_name)+'('+ns.join('')+')';}
+  return esc(s.student_name);
+}
+function showPrefillModal(cls){
+  var ov=document.createElement('div');ov.className='zg-modal-overlay';ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
+  var h='<div style="background:var(--surface);border-radius:12px;padding:20px;max-width:520px;width:90%;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)"><h3>预排 — '+esc(cls)+'</h3>'
+    +'<div id="pfCurrList" style="margin-bottom:12px;font-size:12px">加载中...</div>'
+    +'<div style="border-top:1px solid var(--border);padding-top:10px;margin-top:10px"><div style="font-size:11px;color:var(--tx3);margin-bottom:4px">添加学生</div>'
+    +'<div style="display:flex;gap:4px;margin:4px 0"><input id="pfName" placeholder="姓名" style="flex:1;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px"><input id="pfLessons" type="number" value="1" min="1" max="8" style="width:50px;padding:6px;border:1.5px solid var(--border);border-radius:6px;font-size:12px"><span style="font-size:11px;line-height:32px">节</span></div>'
+    +'<div style="margin:6px 0"><label style="font-size:12px;cursor:pointer"><input type="checkbox" id="pfTrial" style="width:auto" onchange="if(this.checked)document.getElementById(&apos;pfLessons&apos;).value=1"> 试听生（单节）</label></div>'
+    +'<div style="margin:6px 0"><div style="font-size:11px;color:var(--tx3);margin-bottom:2px">专题选择</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+  h+='<label style="font-size:11px;cursor:pointer"><input type="checkbox" id="pfAllTopics" onchange="var cbs=document.querySelectorAll(\'.pfTopicCb\');var checked=this.checked;cbs.forEach(function(cb){cb.checked=checked});var cnt=checked?4:0;if(cnt>0&&!document.getElementById(\'pfTrial\').checked)document.getElementById(\'pfLessons\').value=cnt*2;else if(cnt===0)document.getElementById(\'pfLessons\').value=1" style="width:auto"> 全选</label>';_pfTopics.forEach(function(t,i){h+='<label style="font-size:11px;cursor:pointer"><input type="checkbox" class="pfTopicCb" value="'+t+'" style="width:auto" onchange="var cnt=document.querySelectorAll(&apos;.pfTopicCb:checked&apos;).length;if(cnt>0&&!document.getElementById(&apos;pfTrial&apos;).checked)document.getElementById(&apos;pfLessons&apos;).value=cnt*2"> '+t+'</label>';});
+  h+='</div></div>'
+    +'<button class="btn bg" style="padding:4px 14px;font-size:11px;margin-top:6px" onclick="addPrefillStudent(\''+cls+'\')">添加</button></div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn bp" style="padding:6px 14px;font-size:12px;margin-right:auto" onclick="confirmPrefill(\''+cls+'\')">确认开班</button><button onclick="closeModal(this)" class="btn bo" style="padding:6px 14px">关闭</button></div></div>';
+  ov.innerHTML=h;document.body.appendChild(ov);loadPrefillList(cls);
+}
+function loadPrefillList(cls){
+  fetch(API+'/prefill/'+encodeURIComponent(cls)).then(function(r){return r.json()}).then(function(data){
+    var el=document.getElementById('pfCurrList');if(!el)return;
+    if(!data||!data.length){el.innerHTML='<div style="color:var(--tx3)">暂无预排学生</div>';return}
+    var h='<div style="font-size:11px;color:var(--tx3);margin-bottom:4px">当前预排 <b>'+data.length+'</b>人</div>';
+    data.forEach(function(s){
+      h+='<div style="display:flex;align-items:center;padding:5px 8px;margin:2px 0;background:var(--surface2);border-radius:4px;font-size:11px">'
+        +'<span style="flex:1"><b>'+_pfDisplay(s)+'</b> ×'+s.lesson_count+'节</span>'
+        +'<button data-pf-cls="'+esc(cls)+'" data-pf-name="'+esc(s.student_name)+'" onclick="var b=this;deletePrefill(b.getAttribute(\'data-pf-cls\'),b.getAttribute(\'data-pf-name\'))" style="border:none;background:none;color:var(--rd);cursor:pointer;font-size:14px;padding:0 4px">×</button></div>';
+    });el.innerHTML=h;
+  });
+}
+function addPrefillStudent(cls){
+  var nm=document.getElementById('pfName');if(!nm||!nm.value.trim())return;
+  var name=nm.value.trim(),lessons=parseInt(document.getElementById('pfLessons').value)||1;
+  var isTrial=document.getElementById('pfTrial').checked?1:0;if(isTrial)lessons=1;
+  var topics=[];document.querySelectorAll('.pfTopicCb:checked').forEach(function(cb){topics.push(cb.value)});
+  fetch(API+'/prefill/'+encodeURIComponent(cls)).then(function(r){return r.json()}).then(function(data){
+    var found=false;data.forEach(function(s){if(s.student_name===name){s.lesson_count=lessons;s.is_trial=isTrial;s.topics=topics;found=true;}});
+    if(!found)data.push({student_name:name,lesson_count:lessons,is_trial:isTrial,topics:topics});
+    return fetch(API+'/prefill/'+encodeURIComponent(cls),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  }).then(function(r){return r.json()}).then(function(){
+    nm.value='';document.getElementById('pfLessons').value='1';
+    document.getElementById('pfTrial').checked=false;
+    document.querySelectorAll('.pfTopicCb').forEach(function(cb){cb.checked=false});
+    loadPrefillList(cls);
+  });
+}
+function deletePrefill(cls,name){
+  fetch(API+'/prefill/'+encodeURIComponent(cls)).then(function(r){return r.json()}).then(function(data){
+    var filtered=data.filter(function(s){return s.student_name!==name});
+    return fetch(API+'/prefill/'+encodeURIComponent(cls),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(filtered)});
+  }).then(function(r){return r.json()}).then(function(){loadPrefillList(cls);});
+}
+function confirmPrefill(cls){
+  if(!confirm('确认开班后，预排学生将加入花名册。\\n\\n确定吗？'))return;
+  fetch(API+'/prefill/'+encodeURIComponent(cls)+'/confirm',{method:'POST'}).then(function(r){return r.json()}).then(function(d){
+    if(d.status==='ok'){alert('已确认开班！'+d.added+'名学生加入花名册');closeModal();if(activeMainTab==='overview')renderOverviewTab();}
+    else alert(d.message||'确认失败');
+  });
+}
+var _weekNotes={};
+function saveWeekNote(inp){var cls=inp.getAttribute('data-cls');if(cls)_weekNotes[cls]=inp.value;}
+
+function lockSplits(){
+  if(!confirm('锁定后，刷新数据不会重置已设定的教研系数。\n\n确定锁定当前所有系数吗？'))return;
+  fetch(API+'/revenue-splits/lock',{method:'POST'}).then(function(r){return r.json()}).then(function(d){
+    alert('已锁定 '+d.locked+' 条系数！刷新数据不会重置。');
+  });
 }
 </script></body></html>
