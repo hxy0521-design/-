@@ -682,9 +682,47 @@ def generate_all():
     elif "探索" in cls: seg = "探索段"
     else: seg = None
     if seg:
-        wm = os.path.join(BASE_DIR, "static", "class-material", f"本周课后素材-{seg}.png")
-        if os.path.exists(wm):
-            dest = os.path.join(folder_path, f"本周课后素材-{seg}.png")
+        # Derive cycle and week for weekly material filename
+        unit_code = unit_from_folder(folder) if folder else ""
+        # Compute cycle label from unit_code
+        cyc_label = ""
+        if unit_code:
+            uc_int = int(unit_code) if unit_code.isdigit() else 0
+            if uc_int >= 2603: cyc_label = unit_code + "春季班"
+            elif uc_int >= 2602: cyc_label = unit_code + "寒假班"
+            elif uc_int >= 2500: cyc_label = unit_code + "正式课"
+            else: cyc_label = unit_code + "试听期"
+        # Compute week from lesson date
+        wk_label = ""
+        if meta.get("date"):
+            try:
+                from datetime import date, timedelta
+                d = date.fromisoformat(meta["date"])
+                # Find first Tuesday touching the month
+                first = date(d.year, d.month, 1)
+                while first.weekday() != 1: first -= timedelta(days=1)
+                for w in range(7):
+                    ws = first + timedelta(days=w*7)
+                    we = ws + timedelta(days=6)
+                    if ws <= d <= we:
+                        wk_label = ["第一周","第二周","第三周","第四周","第五周","第六周"][w]
+                        break
+            except: pass
+        # Try new format first, fall back to old format
+        wm = None
+        for fmt in [
+            f"每周素材-{seg}-{cyc_label}-{wk_label}.png" if cyc_label and wk_label else "",
+            f"每周素材-{seg}-{cyc_label}-第一周.png" if cyc_label else "",
+            f"每周素材-{seg}-2606春季班-第一周.png",
+            f"本周课后素材-{seg}.png",
+        ]:
+            if fmt:
+                candidate = os.path.join(BASE_DIR, "static", "class-material", fmt)
+                if os.path.exists(candidate):
+                    wm = candidate
+                    break
+        if wm:
+            dest = os.path.join(folder_path, os.path.basename(wm))
             if not os.path.exists(dest): shutil.copy2(wm, dest)
     return jsonify({"status":"ok","outputs":outputs,"folder":folder,"font_warning":font_warning})
 
@@ -1704,13 +1742,15 @@ def class_material_upload():
     segment = request.form.get("segment", "")
     if segment not in ("探索段", "启航段"):
         return jsonify({"status": "error", "message": "无效分段"}), 400
+    cycle = request.form.get("cycle", "")
     # Store in static/class-material/
     import os as _os
     mat_dir = _os.path.join(BASE_DIR, "static", "class-material")
     _os.makedirs(mat_dir, exist_ok=True)
     # 探索段 from 周四探索, 启航段 from 周五启航
     weekly = request.form.get("weekly", "")
-    fname = f"本周课后素材-{segment}.png" if weekly else f"课后素材-{segment}.png"
+    cyc_suffix = f"-{cycle}" if cycle else ""
+    week = request.form.get("week", ""); wk_suffix = f"-{week}" if week else ""; fname = f"每周素材-{segment}{cyc_suffix}{wk_suffix}.png" if weekly else f"课后素材-{segment}{cyc_suffix}.png"
     fpath = _os.path.join(mat_dir, fname)
     file.save(fpath)
     # 同步到匹配分段的各单元文件夹
@@ -1727,9 +1767,11 @@ def class_material_upload():
 @app.route("/api/class-material/<name>", methods=["DELETE"])
 def class_material_delete(name):
     import os as _os
+    cycle = request.args.get("cycle", "")
     segment = name.replace("本周-", "")
     mat_dir = _os.path.join(BASE_DIR, "static", "class-material")
-    fname = f"本周课后素材-{segment}.png"
+    cyc_suffix = f"-{cycle}" if cycle else ""
+    week = request.args.get("week", ""); wk_suffix = f"-{week}" if week else ""; fname = f"每周素材-{segment}{cyc_suffix}{wk_suffix}.png"
     fpath = _os.path.join(mat_dir, fname)
     if _os.path.exists(fpath): _os.remove(fpath)
     # 同步删除匹配分段的各单元文件夹里的副本
