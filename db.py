@@ -188,7 +188,7 @@ def lesson_delete(cls_name, unit_code, lesson_num):
 # ------- Student Ext -------
 
 def attendance_student_counts():
-    """返回 {student_name: 实际出勤次数}（仅 status='出席'）"""
+    """返回 {student_name: 实际出勤次数}（出席且消费>0，排除转介绍）"""
     rows = _execute(get_db(), "SELECT student_name, COUNT(*) as cnt FROM attendance WHERE status='出席' GROUP BY student_name").fetchall()
     return {r["student_name"]: int(r["cnt"]) for r in rows}
 
@@ -247,8 +247,8 @@ def cycle_from_unit(unit_code):
     except: return unit_code
 
 def consume_lesson_for_student(student_name):
-    """消耗1课时，返回价格。用实际出勤 vs 已购判断欠费。
-    取该生最大金额的正式课购买作为单价（排除试听/转介绍）"""
+    """消耗1课时，返回价格。自动应用转介绍赠课（cp=0）。
+    用实际出勤 vs 已购判断欠费。"""
     db = get_db()
     se = _execute(db, "SELECT purchased_lessons FROM student_ext WHERE student_name=%s", [student_name]).fetchone()
     if not se: return -1
@@ -256,6 +256,11 @@ def consume_lesson_for_student(student_name):
     used = _execute(db, "SELECT COUNT(*) as cnt FROM attendance WHERE student_name=%s AND status='出席'", [student_name]).fetchone()
     used_cnt = int(used['cnt']) if used else 0
     if used_cnt > pur: return -1  # 欠费：已消超过已购
+    # 检查是否有未使用的转介绍赠课（无cp=0出席记录）
+    ref_pur = _execute(db, "SELECT COUNT(*) as cnt FROM purchases WHERE student_name=%s AND discount_type=%s", [student_name, "转介绍赠"]).fetchone()
+    ref_used = _execute(db, "SELECT COUNT(*) as cnt FROM attendance WHERE student_name=%s AND status='出席' AND consumed_price=0", [student_name]).fetchone()
+    if int(ref_pur["cnt"]) > 0 and int(ref_used["cnt"]) == 0:
+        return 0  # 使用转介绍赠课
     # 取正式课单价（排除试听折扣/转介绍赠）
     price_row = _execute(db, """
         SELECT amount, lesson_count FROM purchases
@@ -279,8 +284,9 @@ def attendance_batch(records):
         if r.get("status","出席") == "出席":
             consumed_price = consume_lesson_for_student(r["student_name"])
             if consumed_price < 0: consumed_price = -1  # 欠费标记
-        _execute(db, "DELETE FROM attendance WHERE class_name=%s AND unit_code=%s AND lesson_num=%s AND student_name=%s", [r["class_name"], r.get("unit_code",""), r["lesson_num"], r["student_name"]])
-        _execute(db, "INSERT INTO attendance (class_name,unit_code,lesson_num,lesson_title,lesson_date,student_name,status,note,recorded_at,cycle,content_label,consumed_price) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", [r["class_name"], r.get("unit_code",""), r["lesson_num"], r.get("lesson_title",""), r.get("lesson_date",""), r["student_name"], r.get("status","出席"), r.get("note",""), now, cycle, content_label, consumed_price])
+        is_makeup = int(r.get("is_makeup", 0) or 0)
+        _execute(db, "DELETE FROM attendance WHERE class_name=%s AND lesson_date=%s AND student_name=%s", [r["class_name"], r.get("lesson_date",""), r["student_name"]])
+        _execute(db, "INSERT INTO attendance (class_name,unit_code,lesson_num,lesson_title,lesson_date,student_name,status,note,recorded_at,cycle,content_label,consumed_price,is_makeup) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", [r["class_name"], r.get("unit_code",""), r["lesson_num"], r.get("lesson_title",""), r.get("lesson_date",""), r["student_name"], r.get("status","出席"), r.get("note",""), now, cycle, content_label, consumed_price, is_makeup])
 
 def attendance_get(class_name=None, date_from=None, date_to=None):
     db = get_db()
@@ -329,11 +335,11 @@ def attendance_by_lesson(class_name=None, cycle=None, student_name=None, limit=5
     # Paginated grouped query
     offset = (page - 1) * limit
     sql = f"SELECT class_name, lesson_title, lesson_date, ANY_VALUE(cycle) as cycle, ANY_VALUE(content_label) as content_label, COUNT(*) as total, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance {base_where}"
-    sql += " GROUP BY class_name, lesson_title, lesson_date ORDER BY lesson_date DESC, CASE class_name WHEN '周一探索' THEN 1 WHEN '周三启航' THEN 2 WHEN '周四探索' THEN 3 WHEN '周五启航' THEN 4 WHEN '周五领航' THEN 5 WHEN '周六启航' THEN 6 WHEN '周六探索' THEN 7 WHEN '周六先锋' THEN 8 WHEN '周日启航1' THEN 9 WHEN '周日启航2' THEN 10 WHEN '周日启航3' THEN 11 WHEN '周日探索' THEN 12 WHEN '寒假启航1' THEN 13 WHEN '寒假启航2' THEN 14 WHEN '寒假探索' THEN 15 WHEN '寒假先锋' THEN 16 WHEN '混龄特典' THEN 17 WHEN '纯试听' THEN 18 ELSE 0 END DESC, MAX(id) DESC LIMIT %s OFFSET %s"
+    sql += " GROUP BY class_name, lesson_title, lesson_date ORDER BY lesson_date DESC, MAX(id) DESC LIMIT %s OFFSET %s"
     rows = _execute(db, sql, w_params + [limit, offset]).fetchall()
     if not rows: return [], 0
     # One bulk query for all student details
-    detail_sql = "SELECT class_name, lesson_title, lesson_date, student_name, status, note, consumed_price FROM attendance WHERE (class_name, lesson_title, lesson_date) IN ("
+    detail_sql = "SELECT class_name, lesson_title, lesson_date, student_name, status, note, consumed_price, is_makeup FROM attendance WHERE (class_name, lesson_title, lesson_date) IN ("
     detail_params = []
     for r in rows:
         detail_sql += "(%s,%s,%s),"
@@ -375,7 +381,31 @@ def attendance_by_lesson(class_name=None, cycle=None, student_name=None, limit=5
         # Get students from the bulk-loaded map
         key = (cn, r["lesson_title"], r["lesson_date"])
         students = student_map.get(key, [])
-        student_names = [s["student_name"] for s in students if s["status"] == "出席"]
+        # Build makeup + new student info
+        all_attending = [s["student_name"] for s in students if s["status"] == "出席"]
+        makeup_info = []; new_info = []
+        for s in students:
+            if s["status"] != "出席": continue
+            if int(s["is_makeup"] or 0) == 1:
+                from_class = _execute(db, "SELECT enrolled_class FROM student_ext WHERE student_name=%s", [s["student_name"]]).fetchone()
+                fc = from_class["enrolled_class"] if from_class and from_class["enrolled_class"] else ""
+                if fc and fc != cn:
+                    makeup_info.append({"name": s["student_name"], "from_class": fc})
+                    continue
+            # New student: not in roster, no enrolled_class in another class
+            pur_cnt = _execute(db, "SELECT COUNT(*) as cnt FROM purchases WHERE student_name=%s", [s["student_name"]]).fetchone()
+            pur_69 = _execute(db, "SELECT COUNT(*) as cnt FROM purchases WHERE student_name=%s AND amount=%s", [s["student_name"], 69.9]).fetchone()
+            pc = int(pur_cnt["cnt"]) if pur_cnt else 0
+            p69 = int(pur_69["cnt"]) if pur_69 else 0
+            if pc <= 1 and p69 >= 1:
+                new_info.append({"name": s["student_name"]})
+            elif not pc:
+                new_info.append({"name": s["student_name"]})
+        # Remove makeup/new from regular student list
+        mk_names = set(m["name"] for m in makeup_info)
+        mk_names = set(m["name"] for m in makeup_info)
+        nw_names = set(n["name"] for n in new_info)
+        student_names = [n for n in all_attending if n not in mk_names and n not in nw_names]
         # Build notes: 分组显示 请假：xx xx | 缺席：xx
         qingjia = []; quexi = []
         for s in students:
@@ -416,8 +446,37 @@ def attendance_by_lesson(class_name=None, cycle=None, student_name=None, limit=5
             "price": nominal_price, "price_label": price_label, "has_debt": has_debt, "debt_count": debt_count, "debt_names": debt_names,
             "lesson_revenue": round(lesson_revenue, 1),
             "per_person": round(lesson_revenue / present, 1) if present > 0 else 0,
-            "students": formal, "trial_students": trial, "leave_notes": leave_notes,
+            "students": formal, "trial_students": trial, "leave_notes": leave_notes, "makeup_students": makeup_info, "new_students": new_info,
+            "debt_students": [], "referral_students": [],
         })
+    # 检测欠费和转介绍（精确到课节）
+    for r in result:
+        debt_list = []; ref_list = []
+        for sn in r["students"]:
+            # 转介绍：本课节 consumed_price=0 且学生有转介绍赠课购买记录
+            att_cp = _execute(db, "SELECT consumed_price FROM attendance WHERE class_name=%s AND lesson_title=%s AND lesson_date=%s AND student_name=%s AND status='出席'",
+                [r["class_name"], r["_raw_title"], r["lesson_date"], sn]).fetchone()
+            if att_cp and float(att_cp["consumed_price"] or 0) == 0:
+                ref_p = _execute(db, "SELECT COUNT(*) as cnt FROM purchases WHERE student_name=%s AND discount_type=%s", [sn, "转介绍赠"]).fetchone()
+                if int(ref_p["cnt"]) > 0:
+                    ref_list.append(sn)
+            # 欠费：学生已欠费(used>pur) AND 本课节是导致欠费的那一节（累计出席首次超过已购）
+            se = _execute(db, "SELECT purchased_lessons, used_lessons FROM student_ext WHERE student_name=%s", [sn]).fetchone()
+            if se and int(se["used_lessons"] or 0) > int(se["purchased_lessons"] or 0):
+                pur = int(se["purchased_lessons"]) if se else 0
+                # 找到该生所有出席记录，按日期排序，找到首次超出的那一节
+                all_att = _execute(db, "SELECT class_name, lesson_title, lesson_date FROM attendance WHERE student_name=%s AND status='出席' ORDER BY lesson_date, id", [sn]).fetchall()
+                running = 0; debt_lesson = None
+                for a in all_att:
+                    running += 1
+                    if running > pur:
+                        debt_lesson = (a["class_name"], a["lesson_title"], a["lesson_date"])
+                        break
+                if debt_lesson and debt_lesson[0] == r["class_name"] and debt_lesson[1] == r["_raw_title"] and debt_lesson[2] == r["lesson_date"]:
+                    debt_list.append(sn)
+        r["debt_students"] = debt_list
+        r["referral_students"] = ref_list
+
     # 批量计算价格标签和欠费：用原始 lesson_title（非 display_title）
     def _price_name(p, nominal):
         p = float(p or 0)
@@ -562,7 +621,7 @@ def purchase_add(data):
         clear_count = min(int(cnt), len(debt_rows))
         for dr in debt_rows[:clear_count]:
             # 取该班级的正价
-            pr = _execute(db, "SELECT consumed_price FROM attendance WHERE class_name=%s AND consumed_price>0 AND status='出席' ORDER BY id DESC LIMIT 1", [dr['class_name']]).fetchone()
+            pr = _execute(db, "SELECT consumed_price FROM attendance WHERE class_name=%s AND status='出席' ORDER BY id DESC LIMIT 1", [dr['class_name']]).fetchone()
             price = float(pr['consumed_price']) if pr else 160.0
             _execute(db, "UPDATE attendance SET consumed_price=%s, note='' WHERE id=%s", [price, dr['id']])
     return "new"
@@ -580,7 +639,7 @@ def purchase_list(student_name=None, date_from=None, date_to=None, limit=200):
     cols = ["id","student_name","student_code","charge_code","segment","course_type","method","discount_type","lesson_count","amount","refund_amount","actual_pay_date","order_id","xiaohongshu_received","notes"]
     return [dict(zip(cols, [r[c] for c in cols])) for r in rows]
 
-def purchases_paginated(page=1, limit=100, student_name=None, segment=None, class_name=None, search=None, discount_type=None):
+def purchases_paginated(page=1, limit=100, student_name=None, segment=None, class_name=None, search=None, discount_type=None, method=None):
     db = get_db()
     offset = (page - 1) * limit
     joins = ""; conditions = []; params = []
@@ -595,6 +654,8 @@ def purchases_paginated(page=1, limit=100, student_name=None, segment=None, clas
         conditions.append("e.enrolled_class=%s"); params.append(class_name)
     if discount_type:
         conditions.append("p.discount_type=%s"); params.append(discount_type)
+    if method:
+        conditions.append("p.method=%s"); params.append(method)
     where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
     total = _execute(db, f"SELECT COUNT(*) as cnt FROM purchases p{joins}{where}", params).fetchone()
     tc = int(total["cnt"]) if total else 0
@@ -703,9 +764,13 @@ def dashboard_weekly():
     weekly = []
     for cn, units in cfg.items():
         roster = roster_get(cn)
-        # 无花名册时，检查预填表（暑假班）
+        # 加载预填表数据（暑假班）
+        prefill_map = {}
+        prefill_rows = _execute(get_db(), "SELECT student_name, lesson_count FROM prefill WHERE class_name=%s", [cn]).fetchall()
+        for r in prefill_rows:
+            prefill_map[r["student_name"]] = int(r["lesson_count"] or 0)
+        # 无花名册时，用预填数据填充
         if not roster:
-            prefill_rows = _execute(get_db(), "SELECT student_name FROM prefill WHERE class_name=%s", [cn]).fetchall()
             roster = [r["student_name"] for r in prefill_rows]
         # 跳过无学生且非临时/非暑假的班级
         is_vacation = bool('临时' in cn or any(uc in units for uc in ['2607','2608']))
@@ -720,11 +785,11 @@ def dashboard_weekly():
                 if not slot: continue
                 weekday = slot[:2]  # e.g. "周一"
                 time = slot[2:] if len(slot) > 2 else ""
-                weekly.append({"class_name": cn, "time": time, "teacher": cb, "weekday": weekday, "students": roster, "color": color})
+                weekly.append({"class_name": cn, "time": time, "teacher": cb, "weekday": weekday, "students": roster, "color": color, "prefill_map": prefill_map})
         else:
             weekday_cn = cn[1] if len(cn) > 1 else ""
             weekday = _DAY_MAP.get(weekday_cn, "")
-            weekly.append({"class_name": cn, "time": ct, "teacher": cb, "weekday": weekday, "students": roster, "color": color})
+            weekly.append({"class_name": cn, "time": ct, "teacher": cb, "weekday": weekday, "students": roster, "color": color, "prefill_map": prefill_map})
     return weekly
 
 # ------- Teacher Coefficients -------

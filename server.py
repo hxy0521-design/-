@@ -873,9 +873,15 @@ def attendance_save():
         lesson_title = data.get("lesson_title", "")
         lesson_date = data.get("lesson_date", "")
         records = data.get("records", [])
-        # 如果有新生，也加入花名册
+        # 补课学生集合
+        makeup_names = set()
+        makeup_students = data.get("makeup_students", [])
+        for ms in makeup_students:
+            makeup_names.add(ms.get("name", ""))
+        # 如果有新生（非补课的），也加入花名册
         new_students = data.get("new_students", [])
         for ns in new_students:
+            if ns["name"] in makeup_names: continue  # 补课不算新生
             roster = db.roster_get(cls_name)
             if ns["name"] not in roster:
                 db.roster_set(cls_name, roster + [ns["name"]])
@@ -886,19 +892,27 @@ def attendance_save():
         batch = []
         cycle = data.get("cycle", "")
         content_label = data.get("content_label", "")
+        roster_names = set(db.roster_get(cls_name))
         for r in records:
+            is_mk = 1 if r["name"] in makeup_names else 0
+            # Auto-detect补课: not in roster, enrolled in another class
+            if not is_mk and r["name"] not in roster_names:
+                se = _execute(get_db(), "SELECT enrolled_class FROM student_ext WHERE student_name=%s", [r["name"]]).fetchone()
+                if se and se["enrolled_class"] and se["enrolled_class"] != cls_name:
+                    is_mk = 1
             batch.append({
                 "class_name": cls_name, "unit_code": unit_code,
                 "lesson_num": lesson_num, "lesson_title": lesson_title,
                 "lesson_date": lesson_date, "student_name": r["name"],
                 "status": r.get("status", "出席"), "note": r.get("note", ""),
-                "cycle": cycle, "content_label": content_label
+                "cycle": cycle, "content_label": content_label,
+                "is_makeup": is_mk
             })
         db.attendance_batch(batch)
         # 更新 student_ext 的消课计数
         names = list(set(r["name"] for r in records if r.get("status","出席") == "出席"))
         for name in names:
-            used = _execute(get_db(), "SELECT COUNT(*) as cnt FROM attendance WHERE student_name=%s AND status='出席'", [name]).fetchone()
+            used = _execute(get_db(), "SELECT COUNT(*) as cnt FROM attendance WHERE student_name=%s AND status='出席' AND consumed_price>0", [name]).fetchone()
             if used:
                 _execute(get_db(), "UPDATE student_ext SET used_lessons=%s, remaining_lessons=purchased_lessons-%s WHERE student_name=%s", [used["cnt"], used["cnt"], name])
         _clear_config_cache(); return jsonify({"status": "ok", "count": len(batch)})
@@ -1217,6 +1231,10 @@ def finance_delete_cost():
 @app.route("/api/students")
 def students_list():
     rows = db.student_ext_all()
+    from db import get_db, _execute
+    for r in rows:
+        ref = _execute(get_db(), "SELECT COALESCE(SUM(lesson_count),0) as t FROM purchases WHERE student_name=%s AND discount_type=%s", [r["student_name"], "转介绍赠"]).fetchone()
+        r["ref_lessons"] = int(ref["t"]) if ref else 0
     return jsonify(rows)
 
 @app.route("/api/students/next-code")
@@ -1308,7 +1326,8 @@ def purchases_paginated():
     class_name = request.args.get("class", "").strip() or None
     search = request.args.get("search", "").strip() or None
     discount = request.args.get("discount", "").strip() or None
-    return jsonify(db.purchases_paginated(page, limit, student_name=student, segment=segment, class_name=class_name, search=search, discount_type=discount))
+    method = request.args.get("method", "").strip() or None
+    return jsonify(db.purchases_paginated(page, limit, student_name=student, segment=segment, class_name=class_name, search=search, discount_type=discount, method=method))
 
 # ====== 分账 ======
 

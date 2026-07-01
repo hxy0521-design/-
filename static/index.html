@@ -86,7 +86,7 @@ hr{border:none;border-top:1.5px dashed var(--border);margin:18px 0;opacity:.6}
 ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}::-webkit-scrollbar-thumb:hover{background:var(--tx3)}
 </style></head><body>
 <button class="theme-toggle" onclick="toggleTheme()" title="切换深色模式">🌙</button>
-<div style="display:flex;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--surface)" id="topBar"><div id="mainTabs" style="display:flex;gap:4px;padding:4px 8px 0;overflow-x:auto;flex-shrink:0;"></div><div id="seasonDiv" style="display:flex;align-items:center;gap:0;padding:4px 12px 0;margin-left:auto"><button id="seasonBtnS" onclick="setSeason('S')" style="padding:3px 10px;border:1.5px solid var(--accent);border-radius:6px 0 0 6px;font-size:11px;background:var(--accent);color:#fff;cursor:pointer">春秋</button><button id="seasonBtnV" onclick="setSeason('V')" style="padding:3px 10px;border:1.5px solid var(--border);border-left:none;border-radius:0 6px 6px 0;font-size:11px;background:var(--surface);color:var(--tx2);cursor:pointer">寒暑</button></div></div></div><div style="display:flex;flex:1;overflow:hidden" id="mainRow"><div class="panel pl" style="display:none"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkXinxin" onchange="onUserChange()" style="width:auto;margin:0 2px">只看欣欣</label><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkBiscuit" onchange="onUserChange()" style="width:auto;margin:0 2px">只看饼干</label></div><h2>班级 <span style="font-size:10px;float:right"><a href="#" onclick="expandAll(event)" style="color:var(--sb)">展开</a> | <a href="#" onclick="collapseAll(event)" style="color:var(--sb)">折叠</a></span></h2><div id="classList"></div><button class="btn bo" style="margin-top:4px;width:100%" onclick="newUnitAll()">+ 新建单元</button><button class="btn bo" style="margin-top:4px;width:100%" onclick="newClass()">+ 新建班级</button><h3 style="margin-top:18px">课后素材 <select id="matWeek" onchange="refreshWeeklyMaterial()" style="width:auto;padding:1px 4px;font-size:10px;border:1px solid var(--border);border-radius:3px"><option>第一周</option><option>第二周</option><option>第三周</option><option>第四周</option></select></h3><div id="weeklyMaterial"><div style="font-size:11px;margin:4px 0"><b>启航段</b> <button class="btn bo" style="padding:0 6px;font-size:10px" onclick="uploadWeeklyMaterial(&#39;启航段&#39;)">上传</button> <a id="wmDLQH" href="#" style="font-size:10px;display:none" download>下载</a> <button class="btn bo" style="padding:0 6px;font-size:10px;display:none" id="wmDelQH" onclick="deleteWeeklyMaterial(&#39;启航段&#39;)">删</button></div><div style="font-size:11px;margin:4px 0"><b>探索段</b> <button class="btn bo" style="padding:0 6px;font-size:10px" onclick="uploadWeeklyMaterial(&#39;探索段&#39;)">上传</button> <a id="wmDLTS" href="#" style="font-size:10px;display:none" download>下载</a> <button class="btn bo" style="padding:0 6px;font-size:10px;display:none" id="wmDelTS" onclick="deleteWeeklyMaterial(&#39;探索段&#39;)">删</button></div></div><h3 style="margin-top:18px">输出文件</h3><div id="outputList"></div></div>
+<div style="display:flex;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--surface)" id="topBar"><div id="mainTabs" style="display:flex;gap:4px;padding:4px 8px 0;overflow-x:auto;flex-shrink:0;"></div><div id="seasonDiv" style="display:flex;align-items:center;gap:0;padding:4px 12px 0;margin-left:auto"><button id="seasonBtnS" onclick="setSeason('S')" style="padding:3px 10px;border:1.5px solid var(--accent);border-radius:6px 0 0 6px;font-size:11px;background:var(--accent);color:#fff;cursor:pointer">春秋</button><button id="seasonBtnV" onclick="setSeason('V')" style="padding:3px 10px;border:1.5px solid var(--border);border-left:none;border-radius:0 6px 6px 0;font-size:11px;background:var(--surface);color:var(--tx2);cursor:pointer">寒暑</button></div></div></div><div style="display:flex;flex:1;overflow:hidden" id="mainRow"><div class="panel pl" style="display:none"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkXinxin" onchange="onUserChange()" style="width:auto;margin:0 2px">只看欣欣</label><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkBiscuit" onchange="onUserChange()" style="width:auto;margin:0 2px">只看饼干</label></div><h2>班级 <span style="font-size:10px;float:right"><a href="#" onclick="expandAll(event)" style="color:var(--sb)">展开</a> | <a href="#" onclick="collapseAll(event)" style="color:var(--sb)">折叠</a></span></h2><div id="classList"></div><button class="btn bo" style="margin-top:4px;width:100%" onclick="newUnitAll()">+ 新建单元</button><button class="btn bo" style="margin-top:4px;width:100%" onclick="newClass()">+ 新建班级</button><h3 style="margin-top:18px">课后素材 <select id="matWeek" onchange="refreshWeeklyMaterial()" style="width:auto;padding:1px 4px;font-size:10px;border:1px solid var(--border);border-radius:3px"><option value="" disabled>选周</option><option>第一周</option><option>第二周</option><option>第三周</option><option>第四周</option></select></h3><div id="weeklyMaterial"><div style="font-size:11px;margin:4px 0"><b>启航段</b> <button class="btn bo" style="padding:0 6px;font-size:10px" onclick="uploadWeeklyMaterial(&#39;启航段&#39;)">上传</button> <a id="wmDLQH" href="#" style="font-size:10px;display:none" download>下载</a> <button class="btn bo" style="padding:0 6px;font-size:10px;display:none" id="wmDelQH" onclick="deleteWeeklyMaterial(&#39;启航段&#39;)">删</button></div><div style="font-size:11px;margin:4px 0"><b>探索段</b> <button class="btn bo" style="padding:0 6px;font-size:10px" onclick="uploadWeeklyMaterial(&#39;探索段&#39;)">上传</button> <a id="wmDLTS" href="#" style="font-size:10px;display:none" download>下载</a> <button class="btn bo" style="padding:0 6px;font-size:10px;display:none" id="wmDelTS" onclick="deleteWeeklyMaterial(&#39;探索段&#39;)">删</button></div></div><h3 style="margin-top:18px">输出文件</h3><div id="outputList"></div></div>
 <div class="panel pc"><div class="tabs" id="tabBar"></div><div class="ed-body" id="editorBody"><div style="color:var(--sb);text-align:center;padding:60px 0">加载中...</div></div></div>
 <div class="panel pr" id="previewPanel" style="display:none"><h2 style="cursor:pointer" onclick="togglePreview()"><span id="pvLabel">预览</span> <span id="pvHint" style="font-size:11px;color:var(--sb)">点击收起</span></h2><div id="previewContent" style="font-size:12px;color:var(--sb)">粘贴发言后在此预览</div></div>
 <script>
@@ -111,6 +111,7 @@ var cache={};
 function cachedFetch(url,force){return new Promise(function(resolve){if(!force&&cache[url])return resolve({json:function(){return Promise.resolve(cache[url])}});fetch(url).then(function(r){return r.json()}).then(function(d){cache[url]=d;resolve({json:function(){return Promise.resolve(d)}})})})}
 function switchMainTab(){
   var el=document.getElementById('editorBody');if(!el)return;
+  var sd=document.getElementById('seasonDiv');if(sd)sd.style.display=({overview:1,edit:1,students:1}[activeMainTab])?'flex':'none';
   var pl=document.querySelector('.pl');var pr=document.getElementById('previewPanel');var tb=document.getElementById('tabBar');
   var isEdit=activeMainTab==='edit';
   if(pl)pl.style.display=isEdit?'block':'none';
@@ -225,17 +226,7 @@ function renderClassList(){
 }
 var cfgInfo={},allLessons={},zgUser='';
 function fetchConfig(retry){retry=retry||0;fetch(API+'/config').then(function(r){return r.json()}).then(function(d){cfgInfo=d.classes||d;allLessons=d.lessons||{};zgUser=d.zg_user||'';window._summary=d.summary||{};window._weekly=d.weekly||[];var clsKeys=Object.keys(cfgInfo);if(clsKeys.length){var ow=cfgInfo[clsKeys[0]];var uc=Object.keys(ow)[0];window._offWeeks=(ow[uc].off_weeks||'').split(',').filter(function(x){return x}).map(Number)}renderClassList();renderMainTabs();switchMainTab();refreshWeeklyMaterial();
-  // Auto-detect current week for material selector
-  var _detCyc=(window._summary&&window._summary.cycle)||'';
-  if(_detCyc){
-    fetch(API+'/attendance/by-lesson?cycle='+encodeURIComponent(_detCyc)+'&limit=1').then(function(r){return r.json()}).then(function(d){
-      var rows=d.rows||[];
-      if(rows.length>0&&rows[0].content_label){
-        var mw=document.getElementById('matWeek');
-        if(mw){mw.value=rows[0].content_label;refreshWeeklyMaterial();}
-      }
-    }).catch(function(){});
-  }
+  
   fetch(API+'/students').then(function(r){return r.json()}).then(function(d){_cachedStudents=d;}).catch(function(){})}).catch(function(e){if(retry<5)setTimeout(function(){fetchConfig(retry+1)},1000*retry)})}
 fetchConfig();
 
@@ -369,6 +360,12 @@ function removeTopicImage(topicIdx,imgIdx){
 }
 
 function renderEditor(){if(!activeTab)return;var d=tabs[activeTab],el=document.getElementById('editorBody');
+  // Auto-set material week from lesson date
+  if(d.meta.date){
+    var dt=new Date(d.meta.date+'T00:00:00');var y=dt.getFullYear();var mo=dt.getMonth();
+    var wkStart=new Date(y,mo,1);while(wkStart.getDay()!==2)wkStart.setDate(wkStart.getDate()-1);
+    for(var w=0;w<7;w++){var ws=new Date(wkStart);ws.setDate(ws.getDate()+w*7);var we=new Date(ws);we.setDate(we.getDate()+6);if(dt>=ws&&dt<=we){var labels={1:'第一周',2:'第二周',3:'第三周',4:'第四周',5:'第五周',6:'第六周'};var wkLabel=labels[w+1]||'';if(wkLabel){var mw=document.getElementById('matWeek');if(mw){mw.value=wkLabel;refreshWeeklyMaterial();}}break;}}
+  }
 var h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:12px;color:var(--sb);white-space:nowrap">继承自</span><select id="inheritCls" onchange="onInheritClass(this.value)" style="width:auto;padding:4px 8px;font-size:12px"><option value="">无</option></select><select id="inheritLesson" onchange="loadInheritTopics(this.value)" style="width:auto;padding:4px 8px;font-size:12px;display:none"><option value="">选择课节</option></select><span id="inheritLabel" style="font-size:11px;color:var(--go);display:none"></span><span style="flex:1"></span><span id="saveStatus" style="font-size:11px;color:var(--go);display:none"></span><a href="#" onclick="saveToServer();return false" style="font-size:11px;color:var(--go);white-space:nowrap">保存</a></div><div id="inheritTopics" style="margin-bottom:10px;padding:6px 10px;background:#faf8f4;border:1px solid var(--bd);border-radius:6px;display:none"></div>';
 h+='<div class="mr"><input id="etTitle" placeholder="课节标题" value="'+esc(d.meta.title||'')+'" onchange="saveMeta()" /><input id="etDate" type="date" value="'+esc(d.meta.date||'')+'" onchange="saveMeta()" style="width:130px" /></div>';
 h+='<div class="mr" style="margin-bottom:10px"><input id="etClass" placeholder="班级" value="'+esc(d.meta.class||activeTab)+'" onchange="saveMeta()" style="width:180px" /><input id="etUnit" placeholder="单元" value="'+esc(d.meta.unit||'')+'" onchange="saveMeta()" style="flex:1" /></div>';
@@ -430,24 +427,43 @@ function applyInherit(){
   renderEditor();renderPreview();
 }
 
-function updateGenderPicker(){var el=document.getElementById('genderPicker');if(!el)return;var d=tabs[activeTab];if(!d)return;var names=[];d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s,j){if(names.indexOf(s.name)<0)names.push(s.name)})});if(!names.length){el.innerHTML='<span style="color:var(--sb)">请先粘贴发言</span>';return}
-// Auto-load genders from student tab if not set
-var existingBoys=[];var gstr=d.meta.gender||'';if(gstr.indexOf('Male')===0)existingBoys=gstr.replace('Male','').trim().split(/\s+/).filter(Boolean);
-if(!existingBoys.length&&!_cachedStudents){}
-if(!existingBoys.length&&_cachedStudents&&_cachedStudents.length){
-  var autoBoys=[];names.forEach(function(n){
-    var se=_cachedStudents.find(function(s){return s.student_name===n});
-    if(se&&se.gender==='男')autoBoys.push(n);
+function updateGenderPicker(){
+var el=document.getElementById('genderPicker');if(!el)return;
+var d=tabs[activeTab];if(!d)return;
+var names=[];d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s,j){if(names.indexOf(s.name)<0)names.push(s.name)})});
+if(!names.length){el.innerHTML='';return}
+var boys=[];var gstr=d.meta.gender||'';
+if(gstr.indexOf('Male')===0)boys=gstr.replace('Male','').trim().split(/\\s+/).filter(Boolean);
+if(!boys.length){
+  var students=_cachedStudents;
+  if(!students||!students.length){
+    fetch(API+'/students').then(function(r){return r.json()}).then(function(rows){_cachedStudents=rows;updateGenderPicker();}).catch(function(){});
+    return;
+  }
+  names.forEach(function(n){
+    var se=students.find(function(s){
+      if(s.student_name===n)return true;
+      if(s.student_name.indexOf(n)===0)return true;
+      if(n.indexOf(s.student_name)===0)return true;
+      if(s.student_name.replace(/-\\d+$/,'')===n)return true;
+      return false;
+    });
+    if(se&&se.gender==='男')boys.push(n);
   });
-  if(autoBoys.length){d.meta.gender='Male '+autoBoys.join(' ');}
+  if(boys.length)d.meta.gender='Male '+boys.join(' ');
 }
-// parse current selection
-var boys=[];var gstr=d.meta.gender||'';if(gstr.indexOf('Male')===0)boys=gstr.replace('Male','').trim().split(/\s+/).filter(Boolean);var bc=boys.length;var mode=d._genderMode||(bc===names.length?'allBoy':bc===0?'allGirl':bc>0&&bc<names.length?(bc*2<names.length?'girlMore':'boyMore'):'girlMore');if(!d._genderMode){if(bc===names.length)mode='allBoy';else if(bc===0)mode='allGirl';else if(bc*2<names.length)mode='girlMore';else mode='boyMore';}var minority=mode==='boyMore'?names.filter(function(n){return boys.indexOf(n)<0}):mode==='girlMore'?names.filter(function(n){return boys.indexOf(n)>=0}):[];// build UI
-var h='<div style="display:flex;align-items:center;gap:14px"><span style="font-size:12px;color:var(--sb)">性别:</span>';h+='<label style="cursor:pointer"><input type="radio" name="gm" '+(mode=='allGirl'?'checked':'')+' onchange="setGenderMode(\'allGirl\')">全女</label>';h+='<label style="cursor:pointer"><input type="radio" name="gm" '+(mode=='allBoy'?'checked':'')+' onchange="setGenderMode(\'allBoy\')">全男</label>';h+='<label style="cursor:pointer"><input type="radio" name="gm" '+(mode=='boyMore'?'checked':'')+' onchange="setGenderMode(\'boyMore\')">女生少</label>';h+='<label style="cursor:pointer"><input type="radio" name="gm" '+(mode=='girlMore'?'checked':'')+' onchange="setGenderMode(\'girlMore\')">男生少</label></div>';if(mode!=='allBoy'&&mode!=='allGirl'){var label=mode==='boyMore'?'勾选女生:':'勾选男生:';h+='<div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap"><span style="font-size:11px;color:var(--sb)">'+label+'</span>';names.forEach(function(n){var isBoy=boys.indexOf(n)>=0;var checked=false;h+='<label style="cursor:pointer;padding:2px 6px;border-radius:4px;border:1px solid var(--bd);font-size:12px;display:inline-flex;align-items:center;gap:2px"><input type="checkbox" onchange="saveGender()" value="'+n+'" '+(checked?'checked':'')+' style="width:auto;margin:0">'+n+'</label>'});h+='</div>'}el.innerHTML=h}
-function setGenderMode(mode){var d=tabs[activeTab];if(!d)return;var names=[];d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s,j){if(names.indexOf(s.name)<0)names.push(s.name)})});var oldBoys=[];var gstr=d.meta.gender||'';if(gstr.indexOf('Male')===0)oldBoys=gstr.replace('Male','').trim().split(/\s+/).filter(Boolean);if(mode==='allBoy')d.meta.gender='Male '+names.join(' ');else if(mode==='allGirl')d.meta.gender='';else if(oldBoys.length)d.meta.gender='Male '+oldBoys.join(' ');else d.meta.gender='Male';d._genderMode=mode;renderEditor()}
-function saveGender(){var d=tabs[activeTab];if(!d)return;var mode=d._genderMode;var names=[];d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s,j){if(names.indexOf(s.name)<0)names.push(s.name)})});var checked=[];document.querySelectorAll('#genderPicker input[type=checkbox]:checked').forEach(function(c){checked.push(c.value)});if(mode==='girlMore'){d.meta.gender=checked.length?'Male '+checked.join(' '):''}else if(mode==='boyMore'){var boys=names.filter(function(n){return checked.indexOf(n)<0});d.meta.gender='Male '+boys.join(' ')}else{d.meta.gender=checked.length?'Male '+checked.join(' '):''}}
-
-window._gk={};
+// Deduplicate
+var uniqBoys=[];boys.forEach(function(b){if(uniqBoys.indexOf(b)<0)uniqBoys.push(b);});
+var uniqGirls=[];names.forEach(function(n){if(uniqBoys.indexOf(n)<0&&uniqGirls.indexOf(n)<0)uniqGirls.push(n);});
+var h='<span style=\"font-size:11px;color:var(--sb)\">';
+if(uniqBoys.length)h+='男：'+uniqBoys.join('、')+' ';
+if(uniqGirls.length)h+='女：'+uniqGirls.join('、');
+h+='</span>';
+el.innerHTML=h;
+}
+// Keep setGenderMode stub for backward compat
+function setGenderMode(mode){}
+function saveGender(){}
 function renderPreview(){var el=document.getElementById('previewContent'),d=tabs[activeTab];if(!d||!d.topics.length){el.innerHTML='<span class="st">粘贴发言后在此预览</span>';return}if(!d._golden)d._golden={};window._gk={};var h='<div style="font-size:11px;color:var(--sb);margin-bottom:8px">点击切换金句 | <button class="btn bo" style="padding:2px 8px;font-size:11px;margin:0 4px" onclick="detectGoldenAsync();return false">自动标记</button> | <a href="#" onclick="clearGolden();return false">清除</a></div>';h+='<div class="pt">';d.topics.forEach(function(t,i){h+='<div style="font-weight:700;color:var(--accent);font-size:14px;margin:12px 0 4px">'+esc(t.title)+'</div><div style="color:var(--bd);margin-bottom:8px">'+Array(30).join('-')+'</div>';(t.speeches||[]).forEach(function(s,j){var key=s.name+':'+s.content;var isGold=d._golden[key];var bg=isGold?'background:#fff3cd;':'',gid='g_'+i+'_'+j;window._gk[gid]=key;h+='<div id="'+gid+'" style="margin:2px 0;padding:2px 4px;border-radius:3px;cursor:pointer;'+bg+'" onclick="toggleGolden(\''+gid+'\')"><b style="color:var(--rd)">'+esc(s.name)+'</b>: '+esc(s.content).replace(/\[img:\d+\]/g,'[图]')+'</div>'});var timgs=t._images||[];if(timgs.length){h+='<div style="display:flex;gap:4px;flex-wrap:wrap;padding:4px 0">';timgs.forEach(function(img,idx){h+='<img src=\"'+img+'\" style=\"max-height:60px;border-radius:4px;border:1px solid var(--bd)\">'});h+='</div>'}if(i<d.topics.length-1)h+='<div style="margin:16px 0 4px;color:var(--bd)">'+Array(30).join('=')+'</div>'});h+='</div>';el.innerHTML=h}
 function toggleGolden(gid){var el=document.getElementById(gid);if(!el)return;var d=tabs[activeTab];if(!d._golden)d._golden={};var key=window._gk[gid];if(!key)return;if(d._golden[key]){delete d._golden[key];el.style.background='transparent'}else{d._golden[key]=true;el.style.background='#fff3cd'}}
 function clearGolden(){if(tabs[activeTab])tabs[activeTab]._golden={};renderPreview();renderPosterSectionUI()}
@@ -514,8 +530,8 @@ function showAttendanceModal(genPromise,d,gs,gw){
       var bg=r.status==='出席'?'var(--green-light)':(r.isNew?'var(--accent-light)':'var(--amber-light)');
       h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;margin:2px 0;border-radius:6px;background:'+bg+'">';
       h+='<input type="checkbox" id="attChk'+i+'" '+(r.status==='出席'?'checked':'')+' onchange="var s=document.getElementById(\'attSel'+i+'\');s.style.display=this.checked&&\''+esc(r.name)+'\'!==\'\'?\'none\':\'inline\';if(!this.checked)document.getElementById(\'attChk'+i+'\').checked=false" style="width:auto;margin:0">';
-      h+='<span style="flex:1;font-size:13px">'+esc(r.name)+(r.isNew?' <span style="font-size:10px;color:var(--accent)">新</span>':'')+'</span>';
-      h+='<select id="attSel'+i+'" style="display:'+(r.status==='出席'?'none':'inline')+';width:auto;padding:2px 4px;font-size:11px"><option value="">缺席</option><option value="请假">请假</option></select>';
+      h+='<span style="flex:1;font-size:13px">'+esc(r.name)+(r.isNew?' <span style="font-size:10px;color:var(--sky)" class="mkBadge">新</span>':'')+'</span>';
+      h+='<select id="attSel'+i+'" style="display:'+(r.status==='出席'?'none':'inline')+';width:auto;padding:2px 4px;font-size:11px"><option value="缺席">缺席</option><option value="请假">请假</option></select>';
       h+='<input id="attNote'+i+'" placeholder="备注" style="width:80px;padding:2px 4px;font-size:11px;display:'+(r.status==='出席'?'none':'inline')+'">';
       h+='</div>';
     });
@@ -563,11 +579,19 @@ function submitAttendance(cls,unitCode,lessonNum,title,date){
     var n=note?note.value:'';
     records.push({name:roster[i].name,status:status,note:n||(sel&&sel.value?sel.value:'')});
   }
-  att.newStudents.forEach(function(s){records.push({name:s.name,status:'出席',note:s.note||'新生'})});
+  var makeupStudents=[];
+  att.newStudents.forEach(function(s){
+    // Check if this student exists in student_ext (补课 vs 新生)
+    var se=_cachedStudents?_cachedStudents.find(function(x){return x.student_name===s.name}):null;
+    if(se&&se.enrolled_class&&se.enrolled_class!==cls){
+      makeupStudents.push({name:s.name,from_class:se.enrolled_class});
+    }
+    records.push({name:s.name,status:'出席',note:s.note||'新生'});
+  });
   // 根据 unit_code 推算周期标签，如 2606 → 2606春季班
   var cycLabel='';var ucInt=parseInt(unitCode);if(ucInt>=2603)cycLabel=unitCode+'春季班';else if(ucInt>=2602)cycLabel=unitCode+'寒假班';else if(ucInt>=2500)cycLabel=unitCode+'正式课';else cycLabel=unitCode+'试听期';
   var saveBtn=document.querySelector('#attOverlay .bg');if(saveBtn){saveBtn.textContent='保存中...';saveBtn.disabled=true}
-  fetch(API+'/attendance/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({class_name:cls,unit_code:unitCode,lesson_num:parseInt(lessonNum),lesson_title:title,lesson_date:date,records:records,new_students:att.newStudents,cycle:cycLabel})}).then(function(r){if(!r.ok)throw new Error('服务器错误 '+r.status);return r.json()}).then(function(rd){
+  fetch(API+'/attendance/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({class_name:cls,unit_code:unitCode,lesson_num:parseInt(lessonNum),lesson_title:title,lesson_date:date,records:records,new_students:att.newStudents,makeup_students:makeupStudents,cycle:cycLabel})}).then(function(r){if(!r.ok)throw new Error('服务器错误 '+r.status);return r.json()}).then(function(rd){
     console.log('考勤已保存:',rd.count||0,'条');
     var o=document.getElementById('attOverlay');if(o)o.remove();
   }).catch(function(e){
@@ -607,13 +631,17 @@ function renderOverviewTab(){
   h+='<div class="kpi-card" style="border-top-color:var(--sky)"><div class="kpi-label">本月待消课</div><div class="kpi-val">'+(s.pending_paid||0)+'<span class="kpi-u">课时待销</span> <span style="font-size:14px;color:var(--tx3)">'+(s.schedule_remaining||0)+'节排课</span></div></div>';
   h+='<div class="kpi-card" style="border-top-color:var(--orange)"><div class="kpi-label">本月收入</div><div class="kpi-val">¥'+(s.month_revenue||0).toFixed(0)+'</div></div>';
   h+='</div>';
-  // Build weeks (Tue-Mon) — 与 showCalendarModal 同逻辑、同周次编号
-  var nowD=new Date();var y=nowD.getFullYear();var mo=nowD.getMonth();
+  // Build weeks — 寒暑用7/8月，春秋用当月
+  var y=2026,mo;
+  if(window._season==='V'){mo=window._summerMonth==='2608'?7:6;}
+  else{var nowD=new Date();y=nowD.getFullYear();mo=Math.min(nowD.getMonth(),5);} // 春秋最晚6月
   var firstDay=new Date(y,mo,1);var lastDay=new Date(y,mo+1,0);
-  // 找到触及本月的第一个周二（可能在上月）
-  var wkStart=new Date(y,mo,1);while(wkStart.getDay()!==2)wkStart.setDate(wkStart.getDate()-1);
+  var wkStart=new Date(y,mo,1);
+  var targetDay=window._season==='V'?1:2;
+  while(wkStart.getDay()!==targetDay)wkStart.setDate(wkStart.getDate()-1);
   var weeks=[];var offSet=window._offWeeks||[];
-  for(var w=0;w<7;w++){
+  var maxWeeks=window._season==='V'?6:7;
+  for(var w=0;w<maxWeeks;w++){
     var ws=new Date(wkStart);ws.setDate(ws.getDate()+w*7);
     if(ws>lastDay)break;
     var we=new Date(ws);we.setDate(we.getDate()+6);
@@ -644,7 +672,7 @@ function renderOverviewTab(){
     h+='<div style="background:var(--surface);padding:6px;min-height:60px;font-size:12px">';
     var dayEntries=week.filter(function(w){return w.weekday===d});
 	    dayEntries.sort(function(a,b){var ta=(a.time||'').replace(':',''),tb=(b.time||'').replace(':','');if(ta!==tb)return (parseInt(ta)||0)-(parseInt(tb)||0);var so={启航:1,探索:2,先锋:3};var sa=so[a.class_name.charAt(0)+a.class_name.charAt(1)]||0,sb=so[b.class_name.charAt(0)+b.class_name.charAt(1)]||0;return sa-sb;});
-	    dayEntries.forEach(function(w){h+='<div style="background:'+w.color+'20;border-left:3px solid '+w.color+';padding:5px 7px;margin:2px 0;border-radius:5px;font-size:12px"><b>'+esc(w.class_name)+'</b> <span style="color:var(--tx3)">'+esc(w.time)+'</span>'+(window._season==='V'?'<button class="btn bp" style="float:right;padding:1px 6px;font-size:9px" onclick="showPrefillModal(\''+esc(w.class_name)+'\')">预排</button>':'')+'<br><span style="color:var(--tx3)">'+esc(w.teacher||'')+' · '+w.students.length+'人</span><br><span style="font-size:11px;color:var(--tx3)">'+w.students.join(', ')+'</span><br><span style="font-size:11px;color:var(--accent)">'+getDates(d)+'</span>'+(window._season!=='V'?'<br><input class="pfNote" data-cls="'+esc(w.class_name)+'" placeholder="+备注" style="width:90%;padding:2px 4px;font-size:9px;border:1px dashed var(--border2);border-radius:3px;margin-top:2px;background:transparent" onchange="saveWeekNote(this)">':'')+'</div>'});
+	    dayEntries.forEach(function(w){h+='<div style="background:'+w.color+'20;border-left:3px solid '+w.color+';padding:5px 7px;margin:2px 0;border-radius:5px;font-size:12px"><b>'+esc(w.class_name)+'</b> <span style="color:var(--tx3)">'+esc(w.time)+'</span>'+(window._season==='V'?'<button class="btn bp" style="float:right;padding:1px 6px;font-size:9px" onclick="showPrefillModal(\''+esc(w.class_name)+'\')">预排</button>':'')+'<br><span style="color:var(--tx3)">'+esc(w.teacher||'')+' · '+w.students.length+'人</span><br><span style="font-size:11px;color:var(--tx3)">'+(w.prefill_map?w.students.map(function(n){var c=w.prefill_map[n];return c?n+'-'+c:n;}).join(', '):w.students.join(', '))+'</span><br><span style="font-size:11px;color:var(--accent)">'+getDates(d)+'</span>'+(window._season!=='V'?'<br><input class="pfNote" data-cls="'+esc(w.class_name)+'" placeholder="+备注" style="width:90%;padding:2px 4px;font-size:9px;border:1px dashed var(--border2);border-radius:3px;margin-top:2px;background:transparent" onchange="saveWeekNote(this)">':'')+'</div>'});
     h+='</div>';
   });
   h+='</div></div>';
@@ -655,9 +683,10 @@ function renderOverviewTab(){
   .then(function(results){var students=results[0];var att=results[1];
     var byClass={};
     students.forEach(function(s){
-      var pur=parseInt(s.purchased_lessons)||0; var used=att[s.student_name]||0; var rem=pur-used;
-      if(rem<=0&&(s.status==='在读中'||s.status==='一课一消')){
-        var c=s.enrolled_class||'未分班'; if(!byClass[c])byClass[c]=[]; byClass[c].push({name:s.student_name,rem:rem,pur:pur,used:used});
+      var pur=parseInt(s.purchased_lessons)||0; var used=parseInt(s.used_lessons)||0; var rem=pur-used;
+      if(rem<0&&(s.status==='在读中'||s.status==='一课一消')){
+        var c=s.enrolled_class||'未分班';
+        if(!byClass[c])byClass[c]=[]; byClass[c].push({name:s.student_name,rem:rem,pur:pur,used:used});
       }
     });
     var alertEl=document.getElementById('lowLessonAlert');if(!alertEl)return;
@@ -725,10 +754,29 @@ function loadAttLessons(){
       // Row 2: title (L) | students (R)
       h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:4px">';
       h+='<div style="font-size:13px;color:var(--tx)"><b>'+esc(r.lesson_title)+'</b></div>';
-      h+='<div style="font-size:11px;color:var(--tx2);text-align:right;min-width:120px">'+(r.students.concat(r.trial_students||[])).join(', ')+'</div></div>';
+      h+='<div style="font-size:11px;color:var(--tx2);text-align:right;min-width:120px">'+(function(){
+    var regular=(r.students||[]).concat(r.trial_students||[]);
+    var mk=r.makeup_students||[];
+    var nw=r.new_students||[];
+    // Remove duplicates: makeup/new names from regular
+    var mkNames=mk.map(function(m){return m.name});
+    var nwNames=nw.map(function(m){return m.name});
+    regular=regular.filter(function(n){return mkNames.indexOf(n)<0&&nwNames.indexOf(n)<0});
+    var parts=[];
+    if(regular.length)parts.push(regular.join(', '));
+    // Group makeup by from_class
+    var mkByClass={};mk.forEach(function(m){var fc=m.from_class||'?';if(!mkByClass[fc])mkByClass[fc]=[];mkByClass[fc].push(m.name);});
+    Object.keys(mkByClass).forEach(function(fc){parts.push(mkByClass[fc].join(',')+'(补-'+fc+')');});
+    if(nw.length){var nwParts=nw.map(function(m){return m.name});parts.push(nwParts.join(',')+'(新)');}
+    return parts.join(' | ');
+  })()+'</div></div>';
       // Row 3: pricing (L) | notes (R)
       h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">';
-      h+='<div style="font-size:10px;color:var(--tx3)">¥'+(r.price||0)+'/节 · 课销¥'+(r.lesson_revenue||0)+' · 人均¥'+(r.per_person||0)+(r.has_debt?' · <span style="color:var(--rd);font-weight:600">'+r.debt_count+'欠费-'+esc(r.debt_names)+'</span>':'')+'</div>';
+      h+='<div style="font-size:10px;color:var(--tx3)">¥'+(r.price||0)+'/节 · 课销¥'+(r.lesson_revenue||0)+' · 人均¥'+(r.per_person||0);
+      var extras=[];
+      if(r.referral_students&&r.referral_students.length)extras.push('<span style=\"color:var(--amber);font-weight:600\">消转介绍 '+r.referral_students.join('、')+'</span>');
+      if(r.debt_students&&r.debt_students.length)extras.push('<span style=\"color:var(--rd);font-weight:600\">欠费 '+r.debt_students.join('、')+'</span>');
+      h+=(extras.length?' · '+extras.join(' · '):'')+'</div>';
       if(r.leave_notes){var n=r.leave_notes;if(Array.isArray(n))n=n.join('; ');h+='<div style="font-size:10px;color:var(--sky);text-align:right">'+esc(n)+'</div>';}
       h+='</div>';
       h+='</div>';
@@ -757,19 +805,25 @@ function loadAttLessons(){
 var payPage=1;
 function renderPaymentTab(){
   var el=document.getElementById('editorBody');if(!el)return;payPage=1;
-  el.innerHTML='<div style="padding:16px"><h3>缴费记录</h3><div id="payTable" style="font-size:12px">加载中...</div><div id="payPager" style="text-align:center;margin-top:12px"></div></div>';
+  el.innerHTML='<div style="padding:16px"><h3>缴费记录</h3><div style="display:flex;gap:6px;margin-bottom:8px;align-items:center"><input id="paySearch" placeholder="搜学生" style="width:80px;padding:6px;border:1.5px solid var(--border);border-radius:6px;font-size:12px"><select id="payMethod" onchange="payPage=1;loadPayments()" style="width:110px;padding:6px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg);color:var(--tx)"><option value="">全部方式</option><option>小红书订单</option><option>微信转账</option><option>支付宝转账</option><option>转介绍赠课</option><option>其他</option></select><button class="btn bp" style="padding:4px 10px;font-size:11px" onclick="payPage=1;loadPayments()">搜索</button><button class="btn bo" style="padding:4px 8px;font-size:10px" onclick="document.getElementById(\'paySearch\').value=\'\';document.getElementById(\'payMethod\').value=\'\';payPage=1;loadPayments()">清除</button><span id="payLoading" style="font-size:10px;color:var(--tx3);display:none">加载中...</span></div><div id="payTable" style="font-size:12px">加载中...</div><div id="payPager" style="text-align:center;margin-top:12px"></div></div>';
   loadPayments();
 }
 function loadPayments(){
-  fetch(API+'/purchases?page='+payPage+'&limit=100').then(function(r){return r.json()}).then(function(d){
+  var search=document.getElementById('paySearch');var method=document.getElementById('payMethod');
+  var ld=document.getElementById('payLoading');if(ld)ld.style.display='inline';
+  var url=API+'/purchases?page='+payPage+'&limit=100';
+  if(search&&search.value.trim())url+='&search='+encodeURIComponent(search.value.trim());
+  if(method&&method.value)url+='&method='+encodeURIComponent(method.value);
+  fetch(url).then(function(r){return r.json()}).then(function(d){
+  if(ld)ld.style.display='none';
     var el=document.getElementById('payTable');var pg=document.getElementById('payPager');if(!el)return;
-    var h='<div style="overflow-x:auto;border-radius:8px;border:1px solid #f1f5f9"><table class="datatable"><thead><tr><th>学生</th><th>分段</th><th>课型</th><th>方式</th><th>优惠</th><th>课次</th><th>金额</th><th>日期</th><th></th></tr></thead><tbody>';
+    var h='<div style="overflow-x:auto;border-radius:8px;border:1px solid #f1f5f9"><table class="datatable"><thead><tr><th>学生</th><th>分段</th><th>课型</th><th>方式</th><th>优惠</th><th>课次</th><th>金额</th><th>日期</th><th>订单号</th><th>备注</th><th></th></tr></thead><tbody>';
     d.rows.forEach(function(r){
-    h+='<tr><td><b>'+esc(r.student_name)+'</b></td><td>'+esc(r.segment||'')+'</td><td>'+esc(r.course_type||'')+'</td><td>'+esc(r.method||'')+'</td><td>'+esc(r.discount_type||'')+'</td><td>'+r.lesson_count+'</td><td>¥'+(r.amount||0)+'</td><td style="font-size:11px">'+((r.actual_pay_date||'')?((r.actual_pay_date||'').slice(0,10)):'-')+'</td><td><button onclick="deletePay(\''+r.id+'\')" style="border:none;background:none;color:var(--rd);cursor:pointer;font-size:11px">删</button></td></tr>'});
+    h+='<tr><td><b>'+esc(r.student_name)+'</b></td><td>'+esc(r.segment||'')+'</td><td>'+esc(r.course_type||'')+'</td><td>'+esc(r.method||'')+'</td><td>'+esc(r.discount_type||'')+'</td><td>'+r.lesson_count+'</td><td>¥'+(r.amount||0)+'</td><td style="font-size:11px">'+((r.actual_pay_date||'')?((r.actual_pay_date||'').slice(0,10)):'-')+'</td><td style="font-size:10px;color:var(--tx3)">'+esc(r.order_id||'')+'</td><td style="font-size:10px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(r.notes||'')+'">'+esc(r.notes||'')+'</td><td><button onclick="deletePay(\''+r.id+'\')" style="border:none;background:none;color:var(--rd);cursor:pointer;font-size:11px">删</button></td></tr>'});
     h+='</tbody></table></div>';el.innerHTML=h;
     var totalPages=Math.ceil(d.total/100);
     pg.innerHTML='<button onclick="payPage=Math.max(1,payPage-1);loadPayments()" style="padding:4px 10px;margin:0 2px">←</button><span style="font-size:12px;margin:0 8px">'+payPage+'/'+totalPages+' (共'+d.total+'条)</span><button onclick="payPage=Math.min('+totalPages+',payPage+1);loadPayments()" style="padding:4px 10px;margin:0 2px">→</button>';
-  });
+  }).catch(function(){var ld=document.getElementById('payLoading');if(ld)ld.style.display='none';});
 }
 function closeModal(btn){var el=btn||event.target;while(el&&el!==document.body){if(el.style&&(el.style.position==='fixed'||el.style.zIndex==='9999')){el.remove();break}el=el.parentElement}}
 function deletePay(id){if(!confirm('删除此缴费记录？'))return;fetch(API+'/finance/delete-purchase',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(function(r){return r.json()}).then(function(){loadPayments()})}
@@ -911,7 +965,7 @@ function toggleRowDetail(rowId,cyc,cl){var row=document.getElementById(rowId);if
 function expandAllRows(btn){loadClassBreakdown(function(bd){var rows=document.querySelectorAll('[id^=row_]');var anyClosed=false;rows.forEach(function(r){if(r.style.display==='none'){anyClosed=true}});rows.forEach(function(r){if(anyClosed){r.style.display='';var cyc=r.getAttribute('data-cyc'),cl=r.getAttribute('data-cl');var key=cyc+'|'+cl;var classes=bd[key]||[];var h='';classes.forEach(function(c){var names=c.trial_names?' ('+esc(c.trial_names)+')':'';h+='<span style="display:inline-block;margin:2px 8px 2px 0;padding:2px 8px;border-radius:4px;border:1px solid var(--border)">'+esc(c.class)+' <b style="color:var(--coral)">试听'+c.trial+'</b>'+names+' <b style="color:var(--accent)">正式'+c.formal+'</b></span>'});if(!h)h='<span style="color:var(--tx3)">无数据</span>';r.cells[0].innerHTML=h}else{r.style.display='none'}});if(btn)btn.textContent=anyClosed?'全部收起':'全部展开'})}
 function updateSplitCoef(id,teacher,val){var v=(parseFloat(val)||0)/100;var el=event.target;fetch(API+'/revenue-splits',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,coef_update:true,teacher:teacher,value:v})}).then(function(r){return r.json()}).then(function(d){if(d.status==='ok'){var row=el.closest('tr');if(!row)return;var cells=row.querySelectorAll('td');var t20Cell=8,shareCell,netCell=22;if(teacher==='xinxin')shareCell=10;else if(teacher==='sitong')shareCell=12;else if(teacher==='biscuit')shareCell=14;var t20=parseFloat(cells[t20Cell].textContent.replace('¥',''))||0;var newShare=Math.round(t20*v);if(cells[shareCell])cells[shareCell].textContent='¥'+newShare;var rev=parseFloat(cells[1].textContent.replace('¥',''))||0;var l50=parseFloat(cells[5].textContent.replace('¥',''))||0;var xs=teacher==='xinxin'?newShare:parseFloat(cells[10].textContent.replace('¥',''))||0;var ss=teacher==='sitong'?newShare:parseFloat(cells[12].textContent.replace('¥',''))||0;var bs=teacher==='biscuit'?newShare:parseFloat(cells[14].textContent.replace('¥',''))||0;var pf=parseFloat(cells[19].textContent.replace('¥',''))||0;var other=parseFloat((cells[20].querySelector('input')||{}).value)||0;var nb=Math.round(rev-l50-xs-ss-bs-pf-other);cells[netCell].textContent='¥'+nb;var c9=parseFloat((cells[9].querySelector('input')||{}).value)||0;var c11=parseFloat((cells[11].querySelector('input')||{}).value)||0;var c13=parseFloat((cells[13].querySelector('input')||{}).value)||0;var sum=c9+c11+c13,ok=sum===100;[9,11,13].forEach(function(i){var inp=cells[i].querySelector('input');if(inp){inp.style.border=(ok?'1px solid #dde1ed':'2px solid #f47289')}})}}).catch(function(){alert('保存失败')})}
 function updateSplitNum(id,field,val){var v=field==='notes'?val:(parseFloat(val)||0);fetch(API+'/revenue-splits',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,num_update:true,field:field,value:v})}).then(function(r){return r.json()}).then(function(d){if(d.status==='ok')renderRevenueSplitTab()})}
-function generateSplits(){if(!confirm('⚠️ 将重新生成所有分账数据\\n已填写的教研系数、备注、其他收入都会丢失\\n确定刷新？'))return;fetch(API+'/revenue-splits/generate',{method:'POST'}).then(function(r){return r.json()}).then(function(d){if(d.status==='ok')renderRevenueSplitTab()})}
+function generateSplits(){if(!confirm('⚠️ 将重新生成所有分账数据\\n已填写的教研系数、备注、其他收入都会丢失\\n确定刷新？'))return;var btn=event.target;btn.textContent='刷新中...';btn.disabled=true;fetch(API+'/revenue-splits/generate',{method:'POST'}).then(function(r){return r.json()}).then(function(d){if(d.status==='ok'){renderRevenueSplitTab()}else{alert('刷新失败: '+d.message)}btn.textContent='刷新数据';btn.disabled=false})}
 function importNeukolFees(){var inp=document.createElement('input');inp.type='file';inp.accept='.xlsx';inp.onchange=function(){var fd=new FormData();fd.append('file',inp.files[0]);fetch(API+'/revenue-splits/import-neukol',{method:'POST',body:fd}).then(function(r){return r.json()}).then(function(d){if(d.status==='ok'){alert('已更新 '+d.updated+' 条');renderRevenueSplitTab()}else alert('导入失败: '+d.message)})};inp.click()}
 function updateRecruitCoef(id,val){var v=(parseFloat(val)||0)/100;fetch(API+'/revenue-splits',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,coef_update:true,teacher:'recruit_xin',value:v})}).then(function(r){return r.json()}).then(function(d){if(d.status==='ok'){renderRevenueSplitTab()}else{alert('保存失败')}})}
 
@@ -1007,7 +1061,7 @@ function renderStudentTab(){
         var sid='studDetail_'+esc(r.student_name).replace(/\\s/g,'_');
         h+='<div style="background:'+(isGhost?'var(--bg)':'var(--surface2)')+';border-radius:8px;padding:10px;border:1px '+(isGhost?'dashed':'solid')+' '+(isGhost?'var(--border2)':'var(--border)')+'">';
         h+='<div style="display:flex;justify-content:space-between;align-items:center"><div><b style="font-size:13px;color:'+(isGhost?'var(--tx3)':'var(--tx)')+'">'+esc(r.student_name)+'</b>'+(r.gender?' <span style="font-size:9px;color:var(--tx3)">'+esc(r.gender)+'</span>':'')+'</div><span style="font-size:9px;padding:1px 6px;border-radius:999px;background:'+(isGhost?'#f0f0ff':'#fee2e2')+';color:'+(isGhost?'var(--accent)':'#dc2626')+'">'+(isGhost?'预排':esc(r.status||'?'))+'</span></div>';
-        if(!isGhost){h+='<div style="height:4px;background:#e2e8f0;border-radius:2px;margin:6px 0"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:2px"></div></div>';h+='<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--sb)"><span>已购'+pur+'</span><span>已销'+used+'</span><span>余'+rem+'</span></div>';}
+        if(!isGhost){h+='<div style="height:4px;background:#e2e8f0;border-radius:2px;margin:6px 0"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:2px"></div></div>';var purText='已购'+pur;var ref=parseInt(r.ref_lessons)||0;if(ref>0)purText='已购'+(pur-ref)+'+转介绍赠'+ref;h+='<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--sb)"><span>'+purText+'</span><span>已消'+used+'</span><span>余'+rem+'</span></div>';}
         h+='<div style="display:flex;gap:4px;margin-top:6px"><button onclick="showAddStudentModal(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bfdbfe;background:#eff6ff;color:#3b82f6;font-size:9px;cursor:pointer">编辑</button><button onclick="showAddPayForStudent(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:#f0fdf4;color:#16a34a;font-size:9px;cursor:pointer">+缴费</button>'+(isGhost?'':'<span style="flex:1"></span><button onclick="toggleStudAtt(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #dbeafe;background:var(--surface);color:#2563eb;font-size:9px;cursor:pointer">消课</button><button onclick="toggleStudPay(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:var(--surface);color:#16a34a;font-size:9px;cursor:pointer">缴费</button>')+'</div>';
         h+='<div id="studAtt_'+esc(r.student_name).replace(/\\s/g,'_')+'" style="display:none;margin-top:4px;padding:4px;background:var(--bg);border-radius:4px;font-size:9px"></div>';
         h+='<div id="studPay_'+esc(r.student_name).replace(/\\s/g,'_')+'" style="display:none;margin-top:4px;padding:4px;background:var(--bg);border-radius:4px;font-size:9px"></div>';
@@ -1026,15 +1080,16 @@ function expandClassRecords(cls,type){
   buttons.forEach(function(btn){btn.click()});
 }
 function showCalendarModal(){
-  var nowD=new Date();var y=nowD.getFullYear();var mo=nowD.getMonth();
-  // Build all teaching weeks (Tue-Mon) that touch this month
+  var y=2026,mo;
+  if(window._season==='V'){mo=window._summerMonth==='2608'?7:6;}
+  else{var nowD=new Date();y=nowD.getFullYear();mo=Math.min(nowD.getMonth(),5);} // 春秋最晚6月
   var firstDay=new Date(y,mo,1);var lastDay=new Date(y,mo+1,0);
-  // Go back to find the first Tue that could touch this month
   var wkStart=new Date(y,mo,1);
-  while(wkStart.getDay()!==2) wkStart.setDate(wkStart.getDate()-1);
-  // Collect all weeks that overlap with this month
+  var targetDay=window._season==='V'?1:2;
+  while(wkStart.getDay()!==targetDay) wkStart.setDate(wkStart.getDate()-1);
   var weeks=[];
-  for(var w=0;w<7;w++){
+  var maxWeeks=window._season==='V'?6:7;
+  for(var w=0;w<maxWeeks;w++){
     var ws=new Date(wkStart);ws.setDate(ws.getDate()+w*7);
     var we=new Date(ws);we.setDate(we.getDate()+6);
     if(ws>lastDay)break;
@@ -1116,10 +1171,14 @@ function toggleStudAtt(name){
   if(det.style.display==='block'){det.style.display='none';return}
   det.style.display='block';det.textContent='加载中...';
   fetch(API+'/attendance/by-lesson?limit=50&student='+encodeURIComponent(name)+'').then(function(r){return r.json()}).then(function(data){
-    var found=data.rows||data;
+    var found=(data.rows||data).filter(function(r){return (r.students&&r.students.indexOf(name)>=0)||(r.trial_students&&r.trial_students.indexOf(name)>=0);});
     if(!found.length){det.innerHTML='<span style=\"color:var(--tx3)\">暂无</span>';return}
     var h='<table style=\"width:100%;font-size:9px;border-collapse:collapse\"><tr style=\"color:var(--tx3)\"><th>日期</th><th>班级</th><th>课节</th></tr>';
-    found.forEach(function(r){h+='<tr><td>'+((r.lesson_date||'').slice(0,10))+'</td><td>'+esc(r.class_name)+'</td><td>'+esc(r.lesson_title||'')+'</td></tr>'});
+    found.forEach(function(r){
+    var isMK=r.makeup_students&&r.makeup_students.some(function(m){return m.name===name});
+    var isNW=r.new_students&&r.new_students.some(function(m){return m.name===name});
+    h+='<tr><td>'+((r.lesson_date||'').slice(0,10))+'</td><td>'+esc(r.class_name)+'</td><td>'+esc(r.lesson_title||'')+(isMK?' <span style="color:var(--sky);font-size:8px">补课</span>':isNW?' <span style="color:var(--accent);font-size:8px">新生</span>':'')+'</td></tr>';
+  });
     h+='</table>';det.innerHTML=h;
   }).catch(function(){det.innerHTML='加载失败'});
 }
@@ -1140,40 +1199,67 @@ function showAddStudentModal(nameHint){
   // Build class dropdown options
   var activeClasses={};if(_cachedStudents){_cachedStudents.forEach(function(s){var c=s.enrolled_class;if(c)activeClasses[c]=true})}else{Object.keys(cfgInfo).forEach(function(c){activeClasses[c]=true})}
   var clsOpts='<option value=\"\">选择班级</option>';Object.keys(cfgInfo).forEach(function(c){if(activeClasses[c])clsOpts+='<option value=\"'+c+'\">'+c+'</option>'});
-  var h='<div style="background:var(--surface);border-radius:14px;padding:24px;max-width:420px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,.2)"><h3 style="margin:0 0 16px">新增学生</h3>';
+  // Check if editing existing student
+  var existing=nameHint&&_cachedStudents?_cachedStudents.find(function(s){return s.student_name===nameHint}):null;
+  var isEdit=!!existing;
+  var h='<div style="background:var(--surface);border-radius:14px;padding:24px;max-width:420px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,.2)"><h3 style="margin:0 0 16px">'+(isEdit?'编辑学生':'新增学生')+'</h3>';
   h+='<input id="sfName" placeholder="学生姓名" value="'+(nameHint||'')+'" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px">';
-  h+='<input id="sfCode" placeholder="编号（自动生成）" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px;color:var(--tx3)">';
+  h+='<input id="sfCode" placeholder="编号（自动生成）" value="'+(existing&&existing.student_code?existing.student_code:'')+'" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px;color:var(--tx3)">';
   h+='<div style="display:flex;gap:6px"><select id="sfSeg" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px;background:var(--bg);color:var(--tx)"><option value="">分段</option><option>探索段</option><option>启航段</option><option>先锋段</option><option>领航1V1</option><option>领航1V2</option><option>成人班</option></select>';
-  h+='<select id="sfStatus" onchange="onSFStatusChange()" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px;background:var(--bg);color:var(--tx)"><option value="在读中">在读中</option><option value="仅试听">仅试听</option><option value="暂时停课">暂时停课</option><option value="终止课程">终止课程</option></select></div>';
+  h+='<select id="sfStatus" onchange="onSFStatusChange()" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px;background:var(--bg);color:var(--tx)"><option value="仅试听">仅试听</option><option value="在读中">在读中</option><option value="暂时停课">暂时停课</option><option value="终止课程">终止课程</option></select></div>';
   h+='<select id="sfClass" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px;background:var(--bg);color:var(--tx)">'+clsOpts+'</select>';
-  h+='<div style="display:flex;gap:6px"><select id="sfGender" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px;background:var(--bg);color:var(--tx)"><option value="">性别</option><option>男</option><option>女</option></select><input id="sfOrderId" placeholder="小红书订单号" style="flex:2;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px"></div>';
-  h+='<div style="font-size:12px;color:var(--tx2);margin:4px 0;padding:8px;background:var(--bg);border-radius:6px">已购课时：<b>1</b><span style="margin-left:12px;color:var(--tx3)">已消课时：0（新生默认）</span></div>';
-  h+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button onclick="closeModal(this)" class="btn bo">取消</button><button onclick="saveStudent()" class="btn bp">保存</button></div></div>';
+  h+='<select id="sfGender" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px;background:var(--bg);color:var(--tx)"><option value="">性别</option><option>男</option><option>女</option></select>';
+  if(isEdit){
+    var pur=parseInt(existing.purchased_lessons)||0, used=parseInt(existing.used_lessons)||0;
+    h+='<div style="font-size:12px;color:var(--tx2);margin:4px 0;padding:8px;background:var(--bg);border-radius:6px">已购课时：<b>'+pur+'</b> <span style="margin-left:12px">已消课时：<b>'+used+'</b></span><span style="margin-left:12px;color:var(--tx3)">余：<b>'+(pur-used)+'</b></span></div>';
+  } else {
+    h+='<input id="sfOrderId" placeholder="小红书订单号" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin:4px 0;font-size:14px">';
+    h+='<div style="font-size:12px;color:var(--tx2);margin:4px 0;padding:8px;background:var(--bg);border-radius:6px">已购课时：<input id="sfPur" type="number" value="1" min="0" style="width:60px;padding:4px;border:1.5px solid var(--border);border-radius:4px;font-size:13px"> <span id="sfUsedLabel" style="margin-left:12px;color:var(--tx3)"></span></div>';
+  }
+  h+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button onclick="closeModal(this)" class="btn bo">取消</button><button onclick="saveStudent('+(isEdit?'true':'false')+')" class="btn bp">保存</button></div></div>';
   ov.innerHTML=h;document.body.appendChild(ov);
-  // Auto-generate code
-  fetch(API+'/students/next-code').then(function(r){return r.json()}).then(function(d){document.getElementById('sfCode').value=d.code||''});
-  onSFStatusChange();
+  // Pre-fill existing data
+  if(existing){
+    var segEl=document.getElementById('sfSeg');if(segEl&&existing.segment)segEl.value=existing.segment;
+    var stEl=document.getElementById('sfStatus');if(stEl&&existing.status)stEl.value=existing.status;
+    var clEl=document.getElementById('sfClass');if(clEl&&existing.enrolled_class)clEl.value=existing.enrolled_class;
+    var gEl=document.getElementById('sfGender');if(gEl&&existing.gender)gEl.value=existing.gender;
+  }
+  // Auto-generate code if empty
+  if(!document.getElementById('sfCode').value){
+    fetch(API+'/students/next-code').then(function(r){return r.json()}).then(function(d){document.getElementById('sfCode').value=d.code||''});
+  }
+  if(!isEdit) onSFStatusChange();
 }
 function onSFStatusChange(){
-  var pu=document.getElementById('sfPur');var ue=document.getElementById('sfUsed');
-  if(!pu||!ue)return;
+  var pu=document.getElementById('sfPur');var ul=document.getElementById('sfUsedLabel');
+  if(!pu)return;
   var s=document.getElementById('sfStatus').value;
-  if(s==='仅试听'){pu.value='1';ue.value='0';pu.disabled=true;ue.disabled=true}
-  else{pu.disabled=false;ue.disabled=false}
+  if(s==='仅试听'){pu.value='1';pu.disabled=true;if(ul)ul.textContent='';}
+  else{pu.disabled=false;if(ul)ul.textContent='已消课时：0';}
 }
-function saveStudent(){
+function saveStudent(isEdit){
   var btn=event.target; btn.textContent='保存中...'; btn.disabled=true;
   var name=document.getElementById('sfName').value;
   if(!name){btn.textContent='保存';btn.disabled=false;return alert('请输入学生姓名')}
-  // Check if existing student - preserve lesson counts
-  var existing=_cachedStudents?_cachedStudents.filter(function(s){return s.student_name===name})[0]:null;
-  var pur=existing?parseInt(existing.purchased_lessons)||1:1;
-  var used=existing?parseInt(existing.used_lessons)||0:0;
-  var d={student_name:name,student_code:document.getElementById('sfCode').value,segment:document.getElementById('sfSeg').value,status:document.getElementById('sfStatus').value,enrolled_class:document.getElementById('sfClass').value,gender:document.getElementById('sfGender').value,purchased_lessons:pur,used_lessons:used,remaining_lessons:pur-used,source:'',notes:''};
+  var existing=_cachedStudents?_cachedStudents.find(function(s){return s.student_name===name}):null;
+  var pur,used;
+  if(isEdit){
+    // Editing: preserve existing counts
+    pur=existing?parseInt(existing.purchased_lessons)||0:0;
+    used=existing?parseInt(existing.used_lessons)||0:0;
+  }else{
+    // New student
+    var purEl=document.getElementById('sfPur');pur=parseInt(purEl?purEl.value:1)||0;
+    used=0;
+    var oid=document.getElementById('sfOrderId')?document.getElementById('sfOrderId').value.trim():'';
+    if(oid&&pur>0)pur=0; // purchase will +1
+  }
+  var d={student_name:name,student_code:document.getElementById('sfCode').value,segment:document.getElementById('sfSeg').value,status:document.getElementById('sfStatus').value,enrolled_class:document.getElementById('sfClass').value,gender:document.getElementById('sfGender').value,purchased_lessons:pur,used_lessons:used,remaining_lessons:pur-used,source:existing?existing.source||'':'',notes:existing?existing.notes||'':''};
   d.remaining_lessons=d.purchased_lessons-d.used_lessons;
   fetch(API+'/students',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(r){return r.json()}).then(function(rd){
     if(rd.status==='ok'){
-    var oid=document.getElementById('sfOrderId').value.trim();
+    var oidEl=document.getElementById('sfOrderId');var oid=oidEl?oidEl.value.trim():'';
     if(oid){
       var payData={student_name:name,segment:document.getElementById('sfSeg').value,course_type:'正式课',method:'小红书订单',discount_type:'试听折扣',lesson_count:1,amount:69.9,actual_pay_date:new Date().toISOString().slice(0,10),order_id:oid};
       fetch(API+'/finance/add-revenue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payData)}).catch(function(){});
@@ -1472,11 +1558,11 @@ function checkTopicQMarks(){
   var hasQM=false,names=[];
   document.querySelectorAll("#topicList .tb input").forEach(function(inp){
     var v=inp.value||"";
-    if(v.indexOf("?")>=0||v.indexOf("？")>=0){hasQM=true;names.push(v);inp.style.borderColor="var(--rd)";inp.style.background="#fff5f5";}
+    if(v.indexOf(":")>=0||v.indexOf("：")>=0){hasQM=true;names.push(v);inp.style.borderColor="var(--rd)";inp.style.background="#fff5f5";}
     else{inp.style.borderColor="";inp.style.background="";}
   });
   var gw=document.getElementById("genWarn");
-  if(gw){gw.innerHTML=hasQM?"<span style=\"color:var(--rd)\">⚠ 标题含问号："+names.join("、")+"（影响素材生成，请修改）</span>":"";}
+  if(gw){gw.innerHTML=hasQM?"<span style=\"color:var(--rd)\">⚠ 标题含冒号："+names.join("、")+"（影响素材生成，请修改）</span>":"";}
 }
 
 </script></body></html>
