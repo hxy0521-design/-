@@ -339,7 +339,23 @@ def generate_feedback(meta, topics, output_path, input_path=""):
     default_gender, genders = parse_gender(input_path, profiles, cls) if input_path else ("女", {})
     save_gender_to_profiles(profiles, cls, genders, default_gender, all_names)
     import random as _rnd2
-    greets = ["妈妈好呀~", "妈妈好，分享一下" + title + "这节课孩子的表现~"]
+    # 新开场白：xx妈妈好～本周我们讨论的是{title}，我们一起探讨{theme}。
+    # 从话题提取主题词（全班统一）
+    import re as _re2
+    from collections import Counter as _Counter
+    all_topic_text = ' '.join(t for t,_ in topics)
+    # 简单主题抽取：去掉常见虚词，取高频2-3字词
+    stop_words = set('的了是我们在这一起讨论关于话题你怎么为会要怎么什么哪不是就行')
+    words = []
+    for wl in [2, 3]:
+        for i in range(len(all_topic_text) - wl + 1):
+            w = all_topic_text[i:i+wl]
+            if _re2.match(r'^[一-鿿]+$', w) and not any(c in stop_words for c in w):
+                words.append(w)
+    wc = _Counter(words)
+    top = [w for w, _ in wc.most_common(3) if len(w) >= 2][:2]
+    theme = '、'.join(top) if top else title[:12]
+    greets = ["妈妈好～本周我们讨论的是" + title + "，我们一起探讨" + theme + "。"]
     _gr = _rnd2.Random(hash(title))
 
     student_data = defaultdict(list)
@@ -377,8 +393,7 @@ def generate_feedback(meta, topics, output_path, input_path=""):
         hist_context = pick_history_context(profiles, cls, name, ta, trait_records)
 
         greet = _gr.choice(greets)
-        opener = make_opener(title, topics)
-        lines.append(name + greet + " " + opener)
+        lines.append(name + greet)
 
         used_in_traits = set()
         for t in traits:

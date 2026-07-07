@@ -66,6 +66,37 @@ def generate_all(input_path, feedback_styles=None, golden_quotes=None, images_di
     print(f"Class: {cls}")
     print()
 
+    # 保存课节记录到 TiDB（确保 CLI 生成也不会漏）
+    try:
+        from db import lesson_save, lesson_get, config_all
+        with open(input_path, 'r', encoding='utf-8') as _f:
+            _raw = _f.read()
+        unit_code = "2605"
+        unit_name = meta.get("unit","")
+        _cfg = config_all()
+        for _code, _info in _cfg.get(cls, {}).items():
+            if _info.get("name","") == unit_name or _code in unit_name:
+                unit_code = _code; break
+        # 兜底：从路径中提取 unit_code（如 2606）
+        if unit_code == "2605":
+            _um = re.search(rf'{cls}-(\d{{4}})', input_path)
+            if _um: unit_code = _um.group(1)
+        lesson_num = 1
+        # 从路径提取课节号: .../周日启航3-2606-3/xxx.txt → lesson_num=3
+        _m = re.search(rf'{cls}-{unit_code}-(\d+)', input_path) or \
+             re.search(rf'{cls}-{unit_code}-(\d+)', os.path.basename(os.path.dirname(input_path)))
+        if not _m:
+            _m = re.search(rf'/{cls}.*?-(\d+)\.txt$', input_path) or \
+                 re.search(rf'{cls}-\d{{4}}-(\d+)', input_path)
+        if _m:
+            lesson_num = int(_m.group(1))
+        _existing, _ = lesson_get(cls, unit_code, lesson_num)
+        if not _existing:
+            lesson_save(cls, unit_code, lesson_num, meta.get("title",""), _raw)
+            print(f"  [DB] 课节记录已写入: {cls} {unit_code} #{lesson_num}")
+    except Exception as _e:
+        print(f"  [DB] 保存课节记录失败（不影响生成）: {_e}")
+
     # ====== 话题与发言对照 ======
     total_speeches = sum(len(s) for _, s in topics)
     print(f"本节课共 {len(topics)} 个小话题，{total_speeches} 次发言")

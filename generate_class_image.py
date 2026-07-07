@@ -1178,7 +1178,11 @@ def generate_student_cards(meta, topics, output_dir, highlights=None):
             max_w = card_w - 100
             lines = wrap_lines(_dummy, content, text_font, max_w)
             y += len(lines) * 28 + 16
-        y += 10 + 1 + 20 + 10 + 48 + 26 + 22  # separator + score + stats + note
+        # 预计算评价行高
+        comment_max_w = card_w - 180
+        c_lines = wrap_lines(_dummy, comment, comment_font, comment_max_w)
+        comment_h = max(26, len(c_lines) * 26)
+        y += 10 + 1 + 20 + comment_h + 26 + 22  # separator + score + comment + stats + note
         card_h = y + 40
 
         img = Image.new("RGB", (card_w, card_h), (253, 251, 247))
@@ -1203,15 +1207,24 @@ def generate_student_cards(meta, topics, output_dir, highlights=None):
         draw.line([(40, y), (card_w - 40, y)], fill=(210, 205, 200), width=1)
         y += 20
 
-        # 分数
+        # 分数 + 星星（右对齐）
         score_text = f"{score:.1f}" if score != int(score) else f"{int(score)}"
         draw.text((card_w - 120, y - 10), score_text, fill=(200, 80, 30), font=score_font)
         stars = "★" * int(score) + ("☆" if score != int(score) else "")
         draw.text((card_w - 120, y + 55), stars, fill=(240, 165, 40), font=comment_font)
 
-        draw.text((40, y + 10), comment, fill=(80, 80, 85), font=comment_font)
+        # 简评（左侧，限制宽度避免和分数重叠，预计算已留空间）
+        comment_max_w = card_w - 180
+        comment_lines = wrap_lines(_dummy, comment, comment_font, comment_max_w)
+        comment_f = comment_font if len(comment_lines) <= 1 else ImageFont.truetype(font_path, 20)
+        if len(comment_lines) > 1:
+            comment_lines = wrap_lines(_dummy, comment, comment_f, comment_max_w)
+        ch = 0
+        for cl in comment_lines:
+            draw.text((40, y + 10 + ch), cl, fill=(80, 80, 85), font=comment_f)
+            ch += 24
         stats = f"本节课共 {len(topics)} 个话题 · 参与 {total_speeches} 次发言"
-        note = "部分导入/追问话题未单独计入"
+        note = "部分导入/追问话题未单独填入"
         draw.text((40, y + 48), stats, fill=(160, 160, 165), font=topic_font)
         note_font = ImageFont.truetype(font_path, 16)
         draw.text((40, y + 74), note, fill=(180, 180, 185), font=note_font)

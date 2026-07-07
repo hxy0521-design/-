@@ -288,14 +288,16 @@ def attendance_batch(records):
         _execute(db, "DELETE FROM attendance WHERE class_name=%s AND lesson_date=%s AND student_name=%s", [r["class_name"], r.get("lesson_date",""), r["student_name"]])
         _execute(db, "INSERT INTO attendance (class_name,unit_code,lesson_num,lesson_title,lesson_date,student_name,status,note,recorded_at,cycle,content_label,consumed_price,is_makeup) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", [r["class_name"], r.get("unit_code",""), r["lesson_num"], r.get("lesson_title",""), r.get("lesson_date",""), r["student_name"], r.get("status","出席"), r.get("note",""), now, cycle, content_label, consumed_price, is_makeup])
 
-def attendance_get(class_name=None, date_from=None, date_to=None):
+def attendance_get(class_name=None, date_from=None, date_to=None, student_name=None, limit=None):
     db = get_db()
     sql = "SELECT * FROM attendance WHERE 1=1"
     params = []
     if class_name: sql += " AND class_name=%s"; params.append(class_name)
     if date_from: sql += " AND lesson_date >= %s"; params.append(date_from)
     if date_to: sql += " AND lesson_date <= %s"; params.append(date_to)
+    if student_name: sql += " AND student_name=%s"; params.append(student_name)
     sql += " ORDER BY lesson_date DESC, class_name, student_name"
+    if limit: sql += " LIMIT %s"; params.append(int(limit))
     rows = _execute(db, sql, params).fetchall()
     cols = ["id","class_name","unit_code","lesson_num","lesson_title","lesson_date","student_name","status","note","recorded_at"]
     return [dict(zip(cols, [r[c] for c in cols])) for r in rows]
@@ -387,19 +389,34 @@ def attendance_by_lesson(class_name=None, cycle=None, student_name=None, limit=5
         for s in students:
             if s["status"] != "出席": continue
             if int(s["is_makeup"] or 0) == 1:
-                from_class = _execute(db, "SELECT enrolled_class FROM student_ext WHERE student_name=%s", [s["student_name"]]).fetchone()
-                fc = from_class["enrolled_class"] if from_class and from_class["enrolled_class"] else ""
+                fc = ""
+                # Use stored note (补自XXX) if available, otherwise fall back to current enrolled_class
+                note_val = s["note"] or ""
+                if note_val.startswith("补自"):
+                    fc = note_val[2:]
+                else:
+                    from_class = _execute(db, "SELECT enrolled_class FROM student_ext WHERE student_name=%s", [s["student_name"]]).fetchone()
+                    fc = from_class["enrolled_class"] if from_class and from_class["enrolled_class"] else ""
                 if fc and fc != cn:
                     makeup_info.append({"name": s["student_name"], "from_class": fc})
                     continue
-            # New student: not in roster, no enrolled_class in another class
+            # New student: not in roster, no enrolled_class set, 0-1 purchases
+            enrolled = _execute(db, "SELECT enrolled_class FROM student_ext WHERE student_name=%s", [s["student_name"]]).fetchone()
+            if enrolled and enrolled["enrolled_class"] and enrolled["enrolled_class"] != cn:
+                # Has enrolled_class elsewhere → should be补课, fix is_makeup
+                _execute(db, "UPDATE attendance SET is_makeup=1 WHERE class_name=%s AND lesson_title=%s AND lesson_date=%s AND student_name=%s",
+                    [r["class_name"], r["lesson_title"], r["lesson_date"], s["student_name"]])
+                continue
+            # New student: has ≤1 purchase AND fewer than 2 prior attendances (not 试听 repeats)
+            prior_att = _execute(db, "SELECT COUNT(*) as cnt FROM attendance WHERE student_name=%s AND status='出席'", [s["student_name"]]).fetchone()
+            prior_cnt = int(prior_att["cnt"]) if prior_att else 0
             pur_cnt = _execute(db, "SELECT COUNT(*) as cnt FROM purchases WHERE student_name=%s", [s["student_name"]]).fetchone()
             pur_69 = _execute(db, "SELECT COUNT(*) as cnt FROM purchases WHERE student_name=%s AND amount=%s", [s["student_name"], 69.9]).fetchone()
             pc = int(pur_cnt["cnt"]) if pur_cnt else 0
             p69 = int(pur_69["cnt"]) if pur_69 else 0
-            if pc <= 1 and p69 >= 1:
+            if prior_cnt < 2 and (pc <= 1 and p69 >= 1):
                 new_info.append({"name": s["student_name"]})
-            elif not pc:
+            elif prior_cnt < 2 and not pc:
                 new_info.append({"name": s["student_name"]})
         # Remove makeup/new from regular student list
         mk_names = set(m["name"] for m in makeup_info)
@@ -962,10 +979,63 @@ def config_and_lessons():
 
     return cfg, lessons, summary, weekly
 
+# ------- 素材库 -------
+def material_items_table():
+    _execute(get_db(), """CREATE TABLE IF NOT EXISTS material_items (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        cycle VARCHAR(20) NOT NULL,
+        title VARCHAR(200) NOT NULL,
+        segment VARCHAR(50) DEFAULT '',
+        class_name VARCHAR(100) DEFAULT '',
+        file_path VARCHAR(500) NOT NULL,
+        student_name VARCHAR(100) DEFAULT '',
+        material_type VARCHAR(20) DEFAULT '长图',
+        score VARCHAR(10) DEFAULT '',
+        recommendation VARCHAR(500) DEFAULT '',
+        poster_path VARCHAR(500) DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )""")
+
+def material_add(cycle, title, file_path, segment="", class_name="", student_name="", material_type="长图", score="", recommendation="", poster_path=""):
+    _execute(get_db(), """INSERT INTO material_items (cycle,title,file_path,segment,class_name,student_name,material_type,score,recommendation,poster_path)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+        [cycle, title, file_path, segment, class_name, student_name, material_type, score, recommendation, poster_path])
+
+def material_delete(mid):
+    _execute(get_db(), "DELETE FROM material_items WHERE id=%s", [int(mid)])
+
+def material_list(cycle=None, title=None, material_type=None):
+    sql = "SELECT * FROM material_items WHERE 1=1"
+    params = []
+    if cycle: sql += " AND cycle=%s"; params.append(cycle)
+    if title: sql += " AND title=%s"; params.append(title)
+    if material_type: sql += " AND material_type=%s"; params.append(material_type)
+    sql += " ORDER BY created_at DESC"
+    rows = _execute(get_db(), sql, params).fetchall()
+    cols = ["id","cycle","title","segment","class_name","file_path","student_name","material_type","score","recommendation","poster_path","created_at"]
+    return [dict(zip(cols, [r[c] for c in cols])) for r in rows]
+
+# ------- 豆瓣评分缓存 -------
+def douban_cache_table():
+    _execute(get_db(), """CREATE TABLE IF NOT EXISTS douban_cache (
+        title VARCHAR(200) PRIMARY KEY,
+        rating VARCHAR(10) DEFAULT '',
+        kind VARCHAR(10) DEFAULT '',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )""")
+
+def douban_cache_get(title):
+    r = _execute(get_db(), "SELECT rating, kind FROM douban_cache WHERE title=%s", [title]).fetchone()
+    return (r["rating"], r["kind"]) if r else (None, None)
+
+def douban_cache_set(title, rating, kind):
+    _execute(get_db(), "REPLACE INTO douban_cache (title, rating, kind) VALUES (%s,%s,%s)", [title, rating, kind])
+
 # ------- Init -------
 if __name__ == "__main__":
     print("TiDB connected OK")
     init_pricing()
+    material_items_table()
     for n, c, r in [("欣欣", 0.9, 0), ("思童", 0.1, 0), ("饼干", 0, 0)]:
         try: teacher_coefficient_set(n, c, r)
         except: pass

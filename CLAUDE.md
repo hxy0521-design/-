@@ -7,7 +7,7 @@
 - `python3` 命令：直接执行
 - `pip3 install`：直接执行
 - 文件读写：以下路径直接操作
-  - `/Users/meowmeow/Claude code test/`
+  - `/Users/meowmeow/Claude code-课后素材/`
   - `/Users/meowmeow/追光π/`
   - `/Users/meowmeow/Desktop/`
   - `/tmp/`
@@ -26,3 +26,14 @@
 - 图表：`logo.png`、`slogan.png`、`slogan单人.png` 同目录
 - 模板：`input_template.txt`
 - 生成文件跳过：含 `template`、`golden`、`test` 的文件名
+
+## 飞书回复规范
+- 通过飞书 bridge 回复消息时，代码块控制在 15 行以内，超过的用文字概述代替
+- 文件和路径引用用 `file.ts:42` 格式的链接，不要贴代码
+- 回复优先用中文自然语言描述方案，避免大段代码
+
+## 飞书消息路由
+- 本窗口对应飞书机器人「欣欣的课后素材Claude」，**只回复 @本机器人 的消息**
+- 未 @你 的消息一律不回复，包括其他 bot 的发言、群友之间的对话等
+- 另一个机器人「欣欣的课程评估Claude」由课程评估窗口处理，本窗口不干涉
+- 另一个机器人「饼干的小仆人」的发言与本窗口无关，不回复

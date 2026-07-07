@@ -33,13 +33,20 @@ def sort_class_names(names):
     cfg = db.config_all()
     def _key(x):
         day = _DAY_ORDER.get(x[1] if len(x)>1 else '', 99)
-        # 取该班级第一个单元的 class_time
         tm = 99999
         if x in cfg:
             for u in cfg[x].values():
                 t = u.get('class_time', '')
                 if t:
-                    tm = _time_minutes(t)
+                    # 寒暑双日课表取第一天的星期和时间
+                    if '/' in t:
+                        first = t.split('/')[0].strip()
+                        day_ch = first[:2]  # e.g. "周一"
+                        time_str = first[2:]  # e.g. "10:30"
+                        day = _DAY_ORDER.get(day_ch[1] if len(day_ch)>1 else '', 99)
+                        tm = _time_minutes(time_str)
+                    else:
+                        tm = _time_minutes(t)
                     break
         return (day, tm, x)
     return sorted(names, key=_key)
@@ -227,6 +234,7 @@ def update_unit_path(cls_name, unit_code):
     path = data.get("path", "").strip()
     if not path or not os.path.isdir(path): return jsonify({"status": "error", "message": "路径不存在"}), 400
     db.config_update_unit_path(cls_name, unit_code, path)
+    _clear_config_cache()
     return jsonify({"status": "ok"})
 
 @app.route("/api/classes/<cls_name>/roster", methods=["POST"])
@@ -539,7 +547,7 @@ def generate_all():
 
     base = unit_path(cls, unit_code)
     if not base:
-        return jsonify({"status": "error", "message": f"未找到班级「{cls}」单元「{unit_code}」的路径，请先在左侧新建单元"}), 400
+        return jsonify({"status": "need_path", "cls": cls, "unit_code": unit_code, "message": f"请为「{cls}」的单元「{unit_code}」绑定存放路径"})
 
     folder_base = data.get("tab_name", cls)
     is_new_lesson = folder_base.endswith("-new")
@@ -677,53 +685,46 @@ def generate_all():
             fb2 = os.path.join(base, f"{label}_{cn}.txt")
             if os.path.exists(fb2):
                 outputs.append({"name": os.path.basename(fb2), "path":f"/api/file/{folder}/{os.path.basename(fb2)}"}); break
-    # 同步本周课后素材到课节文件夹
+    # 同步素材库中的长图到课节文件夹
+    unit_code = unit_from_folder(folder) if folder else ""
     if "启航" in cls: seg = "启航段"
     elif "探索" in cls: seg = "探索段"
+    elif "先锋" in cls: seg = "先锋段"
     else: seg = None
-    if seg:
-        # Derive cycle and week for weekly material filename
-        unit_code = unit_from_folder(folder) if folder else ""
-        # Compute cycle label from unit_code
-        cyc_label = ""
-        if unit_code:
-            uc_int = int(unit_code) if unit_code.isdigit() else 0
-            if uc_int >= 2603: cyc_label = unit_code + "春季班"
-            elif uc_int >= 2602: cyc_label = unit_code + "寒假班"
-            elif uc_int >= 2500: cyc_label = unit_code + "正式课"
-            else: cyc_label = unit_code + "试听期"
-        # Compute week from lesson date
-        wk_label = ""
-        if meta.get("date"):
-            try:
-                from datetime import date, timedelta
-                d = date.fromisoformat(meta["date"])
-                # Find first Tuesday touching the month
-                first = date(d.year, d.month, 1)
-                while first.weekday() != 1: first -= timedelta(days=1)
-                for w in range(7):
-                    ws = first + timedelta(days=w*7)
-                    we = ws + timedelta(days=6)
-                    if ws <= d <= we:
-                        wk_label = ["第一周","第二周","第三周","第四周","第五周","第六周"][w]
+    if seg and unit_code:
+        try:
+            for m in db.material_list(cycle=unit_code, material_type="长图"):
+                m_segs = (m.get("segment") or "").split(",")
+                if seg in m_segs:
+                    fp = m["file_path"]
+                    src = None
+                    if fp.startswith("素材库/"):
+                        src = os.path.join(MATERIAL_DIR, fp.replace("素材库/", ""))
+                    elif os.path.isfile(fp):
+                        src = fp
+                    if src and os.path.isfile(src):
+                        dest = os.path.join(folder_path, f"本周课后素材-{seg}.png")
+                        shutil.copy2(src, dest)
                         break
+        except: pass
+        # Also check combined cycle
+        if unit_code and "&" not in unit_code:
+            try:
+                for combined_cycle in ["2607&08", "2608&07"]:
+                    for m in db.material_list(cycle=combined_cycle, material_type="长图"):
+                        m_segs = (m.get("segment") or "").split(",")
+                        if seg in m_segs:
+                            fp = m["file_path"]
+                            src = None
+                            if fp.startswith("素材库/"):
+                                src = os.path.join(MATERIAL_DIR, fp.replace("素材库/", ""))
+                            elif os.path.isfile(fp):
+                                src = fp
+                            if src and os.path.isfile(src):
+                                dest = os.path.join(folder_path, f"本周课后素材-{seg}.png")
+                                shutil.copy2(src, dest)
+                                break
             except: pass
-        # Try new format first, fall back to old format
-        wm = None
-        for fmt in [
-            f"每周素材-{seg}-{cyc_label}-{wk_label}.png" if cyc_label and wk_label else "",
-            f"每周素材-{seg}-{cyc_label}-第一周.png" if cyc_label else "",
-            f"每周素材-{seg}-2606春季班-第一周.png",
-            f"本周课后素材-{seg}.png",
-        ]:
-            if fmt:
-                candidate = os.path.join(BASE_DIR, "static", "class-material", fmt)
-                if os.path.exists(candidate):
-                    wm = candidate
-                    break
-        if wm:
-            dest = os.path.join(folder_path, os.path.basename(wm))
-            if not os.path.exists(dest): shutil.copy2(wm, dest)
     return jsonify({"status":"ok","outputs":outputs,"folder":folder,"font_warning":font_warning})
 
 @app.route("/api/file/<folder>/images/<filename>")
@@ -737,7 +738,7 @@ def serve_image(folder, filename):
             return send_from_directory(fp, filename)
     return jsonify({"error":"not found"}), 404
 
-@app.route("/api/file/<folder>/<filename>")
+@app.route("/api/file/<folder>/<path:filename>")
 def serve_file(folder, filename):
     cls_name = cls_from_folder(folder)
     unit_code = unit_from_folder(folder)
@@ -777,7 +778,13 @@ def tmdb_search():
     api_key = os.environ.get("TMDB_API_KEY", "97f5317f472b218e43f77db067ca7784")
     url = f"https://api.themoviedb.org/3/search/movie?api_key={api_key}&query={urllib.parse.quote(q)}&language=zh-CN"
     try:
-        r = urllib.request.urlopen(url, timeout=10)
+        proxy_url = os.environ.get("TMDB_PROXY") or os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
+        if proxy_url:
+            proxy_handler = urllib.request.ProxyHandler({"https": proxy_url})
+            opener = urllib.request.build_opener(proxy_handler)
+            r = opener.open(url, timeout=10)
+        else:
+            r = urllib.request.urlopen(url, timeout=10)
         data = json.loads(r.read())
         results = []
         for m in data.get("results", [])[:5]:
@@ -787,12 +794,107 @@ def tmdb_search():
                 "year": m.get("release_date", "")[:4],
                 "overview": m.get("overview", ""),
                 "rating": str(m.get("vote_average", "")),
-                "poster": f"https://image.tmdb.org/t/p/w500{m['poster_path']}" if m.get("poster_path") else "",
+                "poster": f"/api/tmdb/image/w500{m['poster_path']}" if m.get("poster_path") else "",
                 "id": m.get("id"),
             })
         return jsonify(results)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/api/douban/search")
+def douban_search():
+    import subprocess, re, urllib.request, urllib.parse
+    q = request.args.get("q", "").strip()
+    if not q: return jsonify([])
+    headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://movie.douban.com"}
+    # Step 1: get posters from Douban suggest API
+    import requests as _req
+    sess = _req.Session()
+    sess.get("https://movie.douban.com", headers={"User-Agent": "Mozilla/5.0"}, timeout=5)
+    posters = {}  # title → poster_url
+    def _fetch_posters(url):
+        try:
+            for m in (sess.get(url, headers=headers, timeout=10).json() or [])[:8]:
+                t = m.get("title","")
+                p = m.get("img", m.get("pic","")) or ""
+                if t and p: posters[t] = p
+        except: pass
+    _fetch_posters(f"https://movie.douban.com/j/subject_suggest?q={urllib.parse.quote(q)}")
+    _fetch_posters(f"https://book.douban.com/j/subject_suggest?q={urllib.parse.quote(q)}")
+    # Step 2: get ratings from douban-mcp-cli
+    results = []
+    def _parse(output, kind):
+        for line in output.strip().split("\n"):
+            line = line.strip()
+            if not line: continue
+            m = re.match(r'\d+\.\s+\*\*(.+?)\*\*\s*(⭐([\d.]+))?', line)
+            if m:
+                raw = m.group(1).strip()
+                title = re.sub(r'\s+[A-Za-z].*', '', raw).strip()
+                rating = m.group(3) or ""
+                if rating: db.douban_cache_set(title, rating, kind)
+                poster = posters.get(title, "")
+                if not poster:
+                    for k, v in posters.items():
+                        if title in k or k in title: poster = v; break
+                results.append({"title": title, "year": "", "rating": rating, "poster": poster, "id": "", "kind": kind})
+    try:
+        r = subprocess.run(["npx", "-y", "douban-mcp-cli", "search-movie", "--q", q, "--count", "5"], capture_output=True, text=True, timeout=20)
+        _parse(r.stdout, "影")
+    except Exception as e: print(f"Douban movie failed: {e}")
+    # Book search: try CLI for ratings, fall back to suggest API for titles+posters
+    try:
+        r = subprocess.run(["npx", "-y", "douban-mcp-cli", "search-book", "--q", q, "--count", "5"], capture_output=True, text=True, timeout=20)
+        _parse(r.stdout, "书")
+    except Exception as e: print(f"Douban book CLI failed: {e}")
+    # Fill any missing books from suggest API (for titles not found by CLI)
+    try:
+        for m in (sess.get(f"https://book.douban.com/j/subject_suggest?q={urllib.parse.quote(q)}", headers=headers, timeout=10).json() or [])[:5]:
+            title = m.get("title","")
+            if not any(r["title"] == title for r in results):
+                poster = m.get("pic","") or ""
+                cached_rating, cached_kind = db.douban_cache_get(title)
+                rating = cached_rating or ""
+                results.append({"title": title, "year": m.get("year",""), "rating": rating, "poster": poster, "id": m.get("id",""), "kind": "书"})
+    except Exception as e: print(f"Douban book suggest failed: {e}")
+    return jsonify(results)
+
+@app.route("/api/douban/recommendation", methods=["POST"])
+def douban_recommendation():
+    """DeepSeek 生成图书推荐语"""
+    data = request.json
+    title = data.get("title","")
+    kind = data.get("kind","书")
+    if not title: return jsonify({"recommendation": ""})
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=os.environ.get("DEEPSEEK_API_KEY",""), base_url="https://api.deepseek.com")
+        resp = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[{"role":"user","content":f"请为{kind}《{title}》写一段推荐语，50字以内，适合推荐给中小学生。只输出推荐语，不要其他内容。"}],
+            max_tokens=100, temperature=0.7)
+        rec = resp.choices[0].message.content.strip()
+        return jsonify({"recommendation": rec})
+    except Exception as e:
+        return jsonify({"recommendation": "", "error": str(e)})
+
+@app.route("/api/tmdb/image/<path:img_path>")
+def tmdb_image(img_path):
+    """代理 TMDB 图片，解决部分网络无法直连 image.tmdb.org 的问题"""
+    import urllib.request
+    try:
+        url = f"https://image.tmdb.org/t/p/{img_path}"
+        proxy_url = os.environ.get("TMDB_PROXY") or os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
+        if proxy_url:
+            proxy_handler = urllib.request.ProxyHandler({"https": proxy_url})
+            opener = urllib.request.build_opener(proxy_handler)
+            r = opener.open(url, timeout=15)
+        else:
+            r = urllib.request.urlopen(url, timeout=15)
+        return r.read(), 200, {"Content-Type": r.headers.get("Content-Type", "image/jpeg"),
+                                "Cache-Control": "public, max-age=86400"}
+    except Exception:
+        return "", 404
 
 # ====== 考勤 ======
 
@@ -841,11 +943,11 @@ def attendance_suggest():
         # 构建建议
         result = []
         seen = set()
-        # Build fuzzy match map: short name → roster names
+        # Build fuzzy match map: map speaker derivative names → roster names
         fuzzy = {}
         for rn in roster:
             for sn in speakers:
-                if sn != rn and (sn in rn or rn.startswith(sn)):
+                if sn != rn and (rn in sn or sn.startswith(rn)):
                     fuzzy[sn] = rn
         # 花名册中的学生
         for name in roster:
@@ -892,8 +994,17 @@ def attendance_save():
         batch = []
         cycle = data.get("cycle", "")
         content_label = data.get("content_label", "")
-        roster_names = set(db.roster_get(cls_name))
+        roster_names_list = db.roster_get(cls_name)
+        roster_names = set(roster_names_list)
+        # Fuzzy map: normalize derivative names (县令小米 → 小米)
+        def _resolve_name(name, roster):
+            if name in roster: return name
+            for rn in roster:
+                if rn and rn != name and (rn in name or name.startswith(rn)):
+                    return rn
+            return name
         for r in records:
+            r["name"] = _resolve_name(r["name"], roster_names_list)
             is_mk = 1 if r["name"] in makeup_names else 0
             # Auto-detect补课: not in roster, enrolled in another class
             if not is_mk and r["name"] not in roster_names:
@@ -943,7 +1054,7 @@ def finance_records():
     if rtype == "cost":
         records = db.cost_list(limit)
     elif rtype == "attendance":
-        records = db.attendance_get(class_name=cls or None)
+        records = db.attendance_get(class_name=cls or None, student_name=student or None, limit=limit)
     else:
         records = db.purchase_list(student_name=student or None, limit=limit)
     return jsonify(records)
@@ -1232,9 +1343,11 @@ def finance_delete_cost():
 def students_list():
     rows = db.student_ext_all()
     from db import get_db, _execute
+    # Batch fetch all ref_lessons in one query (fix N+1)
+    refs = _execute(get_db(), "SELECT student_name, COALESCE(SUM(lesson_count),0) as t FROM purchases WHERE discount_type=%s GROUP BY student_name", ["转介绍赠"]).fetchall()
+    ref_map = {r["student_name"]: int(r["t"]) for r in refs}
     for r in rows:
-        ref = _execute(get_db(), "SELECT COALESCE(SUM(lesson_count),0) as t FROM purchases WHERE student_name=%s AND discount_type=%s", [r["student_name"], "转介绍赠"]).fetchone()
-        r["ref_lessons"] = int(ref["t"]) if ref else 0
+        r["ref_lessons"] = ref_map.get(r["student_name"], 0)
     return jsonify(rows)
 
 @app.route("/api/students/next-code")
@@ -1305,7 +1418,7 @@ def attendance_by_lesson():
         now = __import__('time').time()
         if cache_key in _ATT_CACHE:
             cached = _ATT_CACHE[cache_key]
-            if now - cached["ts"] < 30:  # 30秒缓存
+            if now - cached["ts"] < 300:  # 5分钟缓存
                 return jsonify(cached["data"])
         result, total = db.attendance_by_lesson(class_name=cls or None, cycle=cycle or None, student_name=student or None, limit=limit, page=page)
         data = {"rows": result, "total": total, "page": page, "limit": limit}
@@ -1725,6 +1838,165 @@ def class_breakdown():
         result[key].append({'class': r['class_name'], 'trial': int(r['trial'] or 0), 'formal': int(r['formal'] or 0), 'trial_names': r['trial_names'] or ''})
     return jsonify(result)
 
+@app.route("/api/img-proxy")
+def img_proxy():
+    import subprocess
+    url = request.args.get("url","")
+    if not url: return "", 404
+    try:
+        r = subprocess.run(["curl", "-s", "-L", url, "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36", "-H", "Referer: https://movie.douban.com", "-H", "Accept: image/*"], capture_output=True, timeout=10)
+        ct = "image/jpeg"
+        if r.stdout[:4] == b'\x89PNG': ct = "image/png"
+        elif r.stdout[:4] == b'GIF8': ct = "image/gif"
+        elif r.stdout[:4] == b'<scr': return "", 404
+        return r.stdout, 200, {"Content-Type": ct, "Cache-Control": "max-age=86400"}
+    except: return "", 404
+
+MATERIAL_DIR = os.path.join(_SHARED, "素材库")
+os.makedirs(MATERIAL_DIR, exist_ok=True)
+
+@app.route("/api/material", methods=["POST"])
+def material_save():
+    data = request.json
+    if not data.get("title") or not data.get("file_path"):
+        return jsonify({"status": "error", "message": "标题和长图必填"}), 400
+    cycle = data.get("cycle","")
+    title = data.get("title","")
+    # Delete existing materials for this title+cycle before re-saving
+    try:
+        for old in db.material_list(cycle=cycle, title=title):
+            db.material_delete(old["id"])
+    except: pass
+    # Helper: copy file to 素材库 and return relative path
+    def _copy_to_lib(src):
+        if not src or not os.path.isfile(src): return src
+        fname = os.path.basename(src)
+        # avoid overwrite: prefix with timestamp if needed
+        dest = os.path.join(MATERIAL_DIR, fname)
+        if os.path.exists(dest):
+            import time
+            name, ext = os.path.splitext(fname)
+            dest = os.path.join(MATERIAL_DIR, f"{name}_{int(time.time())}{ext}")
+        shutil.copy2(src, dest)
+        return f"素材库/{os.path.basename(dest)}"
+    # Save long image
+    img_segs = ",".join(data.get("img_segs", []))
+    db.material_add(cycle=cycle, title=title, file_path=_copy_to_lib(data["file_path"]), material_type="长图", segment=img_segs)
+    # Save recommendation materials
+    for rec in data.get("recs", []):
+        if rec.get("file_path"):
+            rec_segs = ",".join(rec.get("segs", []))
+            db.material_add(cycle=cycle, title=title, file_path=_copy_to_lib(rec["file_path"]),
+                student_name=rec.get("name",""), material_type="推荐素材",
+                score=rec.get("score",""), recommendation=rec.get("line",""),
+                segment=rec_segs)
+    return jsonify({"status": "ok"})
+
+@app.route("/api/material-file/<path:filename>")
+def material_file(filename):
+    return send_from_directory(MATERIAL_DIR, filename)
+
+@app.route("/api/pick-file")
+def pick_file():
+    import subprocess
+    try:
+        r = subprocess.run(["osascript", "-e",
+            'set f to (choose file with prompt "选择素材图片")\n'
+            'return POSIX path of f'],
+            capture_output=True, text=True, timeout=120)
+        path = r.stdout.strip()
+        if path and os.path.exists(path):
+            return jsonify({"path": path})
+    except: pass
+    return jsonify({"path": ""})
+
+# ====== 周期素材列表 ======
+@app.route("/api/cycle-materials")
+def cycle_materials():
+    cycle = request.args.get("cycle", "")
+    if not cycle: return jsonify([])
+    cfg = get_config()
+    materials = []
+    for cls_name, units in cfg.items():
+        for unit_code, info in units.items():
+            if unit_code != cycle: continue
+            if not isinstance(info, dict): continue
+            base = info.get("path", "")
+            if not base or not os.path.isdir(base): continue
+            # Scan lesson folders matching {cls}-{unit_code}-*
+            prefix = f"{cls_name}-{unit_code}-"
+            for fname in sorted(os.listdir(base)):
+                if not fname.startswith(prefix): continue
+                fp = os.path.join(base, fname)
+                if not os.path.isdir(fp): continue
+                # Extract title from long image or txt
+                title = ""
+                class_image = ""
+                for f in sorted(os.listdir(fp)):
+                    if f.endswith(".png") and "金句" not in f and "单人" not in f and "素材" not in f:
+                        title = f.rsplit(".", 1)[0].replace(f"_{cls_name}", "").strip()
+                        class_image = f"/api/file/{fname}/{f}"
+                        break
+                if not title:
+                    # Try extracting from txt
+                    for f in os.listdir(fp):
+                        if f.endswith(".txt") and cls_name in f:
+                            try:
+                                with open(os.path.join(fp, f), encoding='utf-8') as tf:
+                                    for line in tf:
+                                        if line.startswith("@title "):
+                                            title = line[7:].strip(); break
+                            except: pass
+                            if title: break
+                if not title: continue
+                cards = find_cards(fname, base)
+                golden = find_golden(fname, cls_name, base)
+                has_fb = any(f.startswith("课后反馈") for f in os.listdir(fp))
+                has_tr = any(f.startswith("课堂实录") for f in os.listdir(fp))
+                materials.append({
+                    "title": title, "folder": fname, "class_name": cls_name,
+                    "class_image": class_image, "cards": cards, "golden_quotes": golden,
+                    "has_feedback": has_fb, "has_transcript": has_tr
+                })
+    # Merge manually uploaded materials from DB (skip if table not yet created)
+    def _mat_url(p):
+        import urllib.parse
+        if p.startswith("素材库/"): return f"/api/material-file/{urllib.parse.quote(p.replace('素材库/',''))}"
+        if p.startswith("/api/"): return p
+        if p.startswith("http"): return f"/api/img-proxy?url={urllib.parse.quote(p, safe='')}"
+        return f"/api/material-file/{urllib.parse.quote(os.path.basename(p))}"
+    try:
+        db_mats = db.material_list(cycle=cycle)
+        # Also include combined-cycle records (e.g. 2607&08)
+        if "&" not in cycle:
+            combined = db.material_list(cycle=None)
+            for cm in combined:
+                c = cm.get("cycle","")
+                if "&" in c and cycle in c.split("&"):
+                    db_mats.append(cm)
+    except:
+        db_mats = []
+    for m in db_mats:
+        existing = next((x for x in materials if x["title"] == m["title"]), None)
+        if existing:
+            if m["material_type"] == "推荐素材":
+                existing["golden_quotes"].append({"name": m.get("student_name", m["file_path"].rsplit("/",1)[-1]), "path": _mat_url(m["file_path"]), "score": m.get("score",""), "line": m.get("recommendation",""), "segment": m.get("segment","")})
+            elif m["material_type"] == "长图":
+                if isinstance(existing["class_image"], str):
+                    existing["class_image"] = {}
+                for s in (m.get("segment","") or "").split(","):
+                    if s.strip(): existing["class_image"][s.strip()] = _mat_url(m["file_path"])
+        else:
+            entry = {"title": m["title"], "folder": "", "class_name": m.get("class_name",""), "class_image": {}, "cards": [], "golden_quotes": [], "has_feedback": False, "has_transcript": False, "segment": m.get("segment","")}
+            if m["material_type"] == "长图":
+                segs = m.get("segment","").split(",")
+                for s in segs:
+                    if s.strip(): entry["class_image"][s.strip()] = _mat_url(m["file_path"])
+            elif m["material_type"] == "推荐素材":
+                entry["golden_quotes"].append({"name": m.get("student_name", m["file_path"].rsplit("/",1)[-1]), "path": _mat_url(m["file_path"]), "score": m.get("score",""), "line": m.get("recommendation",""), "segment": m.get("segment","")})
+            materials.append(entry)
+    return jsonify(materials)
+
 # ====== 课后素材图片 ======
 
 def _segment_units(segment):
@@ -1849,6 +2121,8 @@ if __name__ == "__main__":
         import time
         _CONFIG_CACHE["data"] = {"classes": out, "lessons": all_lessons, "zg_user": zg_user, "summary": summary, "weekly": weekly}
         _CONFIG_CACHE["ts"] = time.time()
+        db.material_items_table()
+        db.douban_cache_table()
         print("  数据库就绪 ✓")
     except Exception as e:
         print(f"  预热跳过: {e}")

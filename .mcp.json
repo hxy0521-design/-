@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "feishu": {
+      "command": "/Users/meowmeow/.npm-global/bin/lark-mcp",
+      "args": ["mcp", "-a", "cli_aab8f2ae953c5bfb", "-s", "mZFQy9RFI5TEyTaOqwt9KejDp2bRUQBs"]
+    }
+  }
+}

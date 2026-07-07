@@ -86,7 +86,7 @@ hr{border:none;border-top:1.5px dashed var(--border);margin:18px 0;opacity:.6}
 ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}::-webkit-scrollbar-thumb:hover{background:var(--tx3)}
 </style></head><body>
 <button class="theme-toggle" onclick="toggleTheme()" title="切换深色模式">🌙</button>
-<div style="display:flex;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--surface)" id="topBar"><div id="mainTabs" style="display:flex;gap:4px;padding:4px 8px 0;overflow-x:auto;flex-shrink:0;"></div><div id="seasonDiv" style="display:flex;align-items:center;gap:0;padding:4px 12px 0;margin-left:auto"><button id="seasonBtnS" onclick="setSeason('S')" style="padding:3px 10px;border:1.5px solid var(--accent);border-radius:6px 0 0 6px;font-size:11px;background:var(--accent);color:#fff;cursor:pointer">春秋</button><button id="seasonBtnV" onclick="setSeason('V')" style="padding:3px 10px;border:1.5px solid var(--border);border-left:none;border-radius:0 6px 6px 0;font-size:11px;background:var(--surface);color:var(--tx2);cursor:pointer">寒暑</button></div></div></div><div style="display:flex;flex:1;overflow:hidden" id="mainRow"><div class="panel pl" style="display:none"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkXinxin" onchange="onUserChange()" style="width:auto;margin:0 2px">只看欣欣</label><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkBiscuit" onchange="onUserChange()" style="width:auto;margin:0 2px">只看饼干</label></div><h2>班级 <span style="font-size:10px;float:right"><a href="#" onclick="expandAll(event)" style="color:var(--sb)">展开</a> | <a href="#" onclick="collapseAll(event)" style="color:var(--sb)">折叠</a></span></h2><div id="classList"></div><button class="btn bo" style="margin-top:4px;width:100%" onclick="newUnitAll()">+ 新建单元</button><button class="btn bo" style="margin-top:4px;width:100%" onclick="newClass()">+ 新建班级</button><h3 style="margin-top:18px">课后素材 <select id="matWeek" onchange="refreshWeeklyMaterial()" style="width:auto;padding:1px 4px;font-size:10px;border:1px solid var(--border);border-radius:3px"><option value="" disabled>选周</option><option>第一周</option><option>第二周</option><option>第三周</option><option>第四周</option></select></h3><div id="weeklyMaterial"><div style="font-size:11px;margin:4px 0"><b>启航段</b> <button class="btn bo" style="padding:0 6px;font-size:10px" onclick="uploadWeeklyMaterial(&#39;启航段&#39;)">上传</button> <a id="wmDLQH" href="#" style="font-size:10px;display:none" download>下载</a> <button class="btn bo" style="padding:0 6px;font-size:10px;display:none" id="wmDelQH" onclick="deleteWeeklyMaterial(&#39;启航段&#39;)">删</button></div><div style="font-size:11px;margin:4px 0"><b>探索段</b> <button class="btn bo" style="padding:0 6px;font-size:10px" onclick="uploadWeeklyMaterial(&#39;探索段&#39;)">上传</button> <a id="wmDLTS" href="#" style="font-size:10px;display:none" download>下载</a> <button class="btn bo" style="padding:0 6px;font-size:10px;display:none" id="wmDelTS" onclick="deleteWeeklyMaterial(&#39;探索段&#39;)">删</button></div></div><h3 style="margin-top:18px">输出文件</h3><div id="outputList"></div></div>
+<div style="display:flex;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--surface)" id="topBar"><div id="mainTabs" style="display:flex;gap:4px;padding:4px 8px 0;overflow-x:auto;flex-shrink:0;"></div><div id="seasonDiv" style="display:flex;align-items:center;gap:0;padding:4px 12px 0;margin-left:auto"><button id="seasonBtnS" onclick="setSeason('S')" style="padding:3px 10px;border:1.5px solid var(--border);border-radius:6px 0 0 6px;font-size:11px;background:var(--surface);color:var(--tx2);cursor:pointer">春秋</button><button id="seasonBtnV" onclick="setSeason('V')" style="padding:3px 10px;border:1.5px solid var(--accent);border-left:none;border-radius:0 6px 6px 0;font-size:11px;background:var(--accent);color:#fff;cursor:pointer">寒暑</button></div></div></div><div style="display:flex;flex:1;overflow:hidden" id="mainRow"><div class="panel pl" style="display:none"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkXinxin" onchange="onUserChange()" style="width:auto;margin:0 2px">只看欣欣</label><label style="font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="chkBiscuit" onchange="onUserChange()" style="width:auto;margin:0 2px">只看饼干</label></div><h2>班级 <span style="font-size:10px;float:right"><a href="#" onclick="expandAll(event)" style="color:var(--sb)">展开</a> | <a href="#" onclick="collapseAll(event)" style="color:var(--sb)">折叠</a></span></h2><div id="classList"></div><button class="btn bo" style="margin-top:4px;width:100%" onclick="newUnitAll()">+ 新建单元</button><button class="btn bo" style="margin-top:4px;width:100%" onclick="newClass()">+ 新建班级</button><h3 style="margin-top:18px">输出文件</h3><div id="outputList"></div></div>
 <div class="panel pc"><div class="tabs" id="tabBar"></div><div class="ed-body" id="editorBody"><div style="color:var(--sb);text-align:center;padding:60px 0">加载中...</div></div></div>
 <div class="panel pr" id="previewPanel" style="display:none"><h2 style="cursor:pointer" onclick="togglePreview()"><span id="pvLabel">预览</span> <span id="pvHint" style="font-size:11px;color:var(--sb)">点击收起</span></h2><div id="previewContent" style="font-size:12px;color:var(--sb)">粘贴发言后在此预览</div></div>
 <script>
@@ -111,7 +111,7 @@ var cache={};
 function cachedFetch(url,force){return new Promise(function(resolve){if(!force&&cache[url])return resolve({json:function(){return Promise.resolve(cache[url])}});fetch(url).then(function(r){return r.json()}).then(function(d){cache[url]=d;resolve({json:function(){return Promise.resolve(d)}})})})}
 function switchMainTab(){
   var el=document.getElementById('editorBody');if(!el)return;
-  var sd=document.getElementById('seasonDiv');if(sd)sd.style.display=({overview:1,edit:1,students:1}[activeMainTab])?'flex':'none';
+  var sd=document.getElementById('seasonDiv');if(sd)sd.style.display=({overview:1,materials:1,edit:1,students:1}[activeMainTab])?'flex':'none';
   var pl=document.querySelector('.pl');var pr=document.getElementById('previewPanel');var tb=document.getElementById('tabBar');
   var isEdit=activeMainTab==='edit';
   if(pl)pl.style.display=isEdit?'block':'none';
@@ -120,6 +120,7 @@ function switchMainTab(){
   if(!isEdit)document.querySelector('.pc').style.width='100%';
   el.innerHTML='<div style="text-align:center;padding:60px 0;color:var(--sb)"><div style="display:inline-block;width:24px;height:24px;border:3px solid #e2e8f0;border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite"></div></div>';
   if(activeMainTab==='overview')renderOverviewTab();
+  else if(activeMainTab==='materials')renderMaterialTab();
   else if(activeMainTab==='edit'){if(activeTab)renderEditor();else el.innerHTML='<div style=\"color:var(--sb);text-align:center;padding:60px 0\">请从左侧选择班级</div>'}
   else if(activeMainTab==='attendance')renderAttendanceTab();
   else if(activeMainTab==='students')renderStudentTab();
@@ -134,7 +135,7 @@ function switchMainTab(){
 var _lastSaved='';
 function renderMainTabs(){
   var tb=document.getElementById('mainTabs');if(!tb)return;
-  var items=[{id:'overview',label:'总览'},{id:'edit',label:'编辑'},{id:'attendance',label:'消课'},{id:'students',label:'学生'},{id:'payments',label:'缴费'},{id:'costs',label:'成本'},{id:'splits',label:'分账'},{id:'settle',label:'结算'},{id:'pricing',label:'定价'}];
+  var items=[{id:'overview',label:'总览'},{id:'materials',label:'素材'},{id:'edit',label:'编辑'},{id:'attendance',label:'消课'},{id:'students',label:'学生'},{id:'payments',label:'缴费'},{id:'costs',label:'成本'},{id:'splits',label:'分账'},{id:'settle',label:'结算'},{id:'pricing',label:'定价'}];
   tb.innerHTML='';
   items.forEach(function(it){
     var t=document.createElement('button');t.textContent=it.label;
@@ -170,19 +171,44 @@ fetch(API+'/config').then(function(r){return r.json()}).then(function(d){
 function expandAll(e){e.preventDefault();document.querySelectorAll('#classList .ci').forEach(function(d){var u=d.nextElementSibling;if(u){u.style.display='block';u.querySelectorAll('div>div').forEach(function(l){l.style.display='block'})}})}
 function collapseAll(e){e.preventDefault();document.querySelectorAll('#classList .ci').forEach(function(d){var u=d.nextElementSibling;if(u){u.style.display='none'}})}
 
+function _classSortOrder(){
+  // 排序：周一~周日 → 早~晚 → 启航<探索<先锋
+  var dayOrder={'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'日':7};
+  var segOrder={'启航':1,'探索':2,'先锋':3};
+  var clsSort={};
+  (window._weekly||[]).forEach(function(w){
+    var d=dayOrder[(w.weekday||'').slice(1)]||99;
+    var t=parseInt((w.time||'0').replace(':',''))||0;
+    var key=d*10000+t;
+    if(!clsSort[w.class_name]||key<clsSort[w.class_name])clsSort[w.class_name]=key;
+  });
+  // Fallback: derive from class_time in config
+  Object.keys(cfgInfo).forEach(function(cn){
+    if(clsSort[cn])return;var units=cfgInfo[cn];if(!units)return;
+    Object.values(units).forEach(function(u){var ct=u.class_time||'';if(ct){var parts=ct.split('/');var first=parts[0];var day=first.slice(0,2);var d=dayOrder[day.slice(1)]||99;var tm=first.slice(2);var t=parseInt((tm||'0').replace(':',''))||0;if(d<99)clsSort[cn]=d*10000+t}});
+  });
+  return Object.keys(cfgInfo).sort(function(a,b){
+    var sa=clsSort[a]||999999,sb=clsSort[b]||999999;
+    if(sa!==sb)return sa-sb;
+    var sga=segOrder[a.slice(0,2)]||9,sgb=segOrder[b.slice(0,2)]||9;
+    return sga-sgb;
+  });
+}
 function renderClassList(){
   var el=document.getElementById('classList');el.innerHTML='';
   var filter=getCheckedUsers().length>0;
   // Build class list — 只展示有课节的班级，无内容的班级自动隐藏
-  Object.keys(cfgInfo).forEach(function(cls){
+  _classSortOrder().forEach(function(cls){
     var units=cfgInfo[cls];if(!Object.keys(units).length)return;
     if(filter){var hasMine=Object.values(units).some(function(u){return getCheckedUsers().indexOf(u.created_by)>=0});if(!hasMine)return}
-    // 至少有一个单元有课节才展示
+    // 至少有一个单元有课节才展示（寒暑预排班级除外，允许空班展示）
     var hasLessons=Object.keys(units).some(function(uc){
       var ls=allLessons[cls]&&allLessons[cls][uc]?allLessons[cls][uc]:[];
       return ls.length>0;
     });
-    if(!hasLessons)return;
+    if(!hasLessons&&!_isVac(cls))return;
+    // Season filter — 春秋/寒暑班级隔离
+    var ss=_seasonSet();if(!ss[cls])return;
     var d=document.createElement('div');d.className='ci';d.style.cssText='display:flex;align-items:center;cursor:pointer';
     d.onclick=function(e){if(e.target.tagName==='BUTTON')return;var ul=this.nextElementSibling;if(ul)ul.style.display=ul.style.display==='none'?'block':'none'};
     var cnSpan=document.createElement('span');cnSpan.textContent=cls;cnSpan.style.flex='1';
@@ -225,7 +251,7 @@ function renderClassList(){
   });
 }
 var cfgInfo={},allLessons={},zgUser='';
-function fetchConfig(retry){retry=retry||0;fetch(API+'/config').then(function(r){return r.json()}).then(function(d){cfgInfo=d.classes||d;allLessons=d.lessons||{};zgUser=d.zg_user||'';window._summary=d.summary||{};window._weekly=d.weekly||[];var clsKeys=Object.keys(cfgInfo);if(clsKeys.length){var ow=cfgInfo[clsKeys[0]];var uc=Object.keys(ow)[0];window._offWeeks=(ow[uc].off_weeks||'').split(',').filter(function(x){return x}).map(Number)}renderClassList();renderMainTabs();switchMainTab();refreshWeeklyMaterial();
+function fetchConfig(retry){retry=retry||0;fetch(API+'/config').then(function(r){return r.json()}).then(function(d){cfgInfo=d.classes||d;allLessons=d.lessons||{};zgUser=d.zg_user||'';window._summary=d.summary||{};window._weekly=d.weekly||[];var clsKeys=Object.keys(cfgInfo);if(clsKeys.length){var ow=cfgInfo[clsKeys[0]];var uc=Object.keys(ow)[0];window._offWeeks=(ow[uc].off_weeks||'').split(',').filter(function(x){return x}).map(Number)}renderClassList();renderMainTabs();switchMainTab();
   
   fetch(API+'/students').then(function(r){return r.json()}).then(function(d){_cachedStudents=d;}).catch(function(){})}).catch(function(e){if(retry<5)setTimeout(function(){fetchConfig(retry+1)},1000*retry)})}
 fetchConfig();
@@ -290,19 +316,19 @@ function newUnit(cls, unitCode, unitFull){
 }
 function newLesson(cls,unit,unitFull){
   var uname=unitFull||unit;var tabName=cls+'-'+unit+'-new';
-  // Determine unit code from the clicked unit
   var unitCode=unit;var m2=uname.match(/(\d{4})/);if(m2)unitCode=m2[1];
-  // Always create fresh blank tab with correct unit code
   tabs[tabName]={meta:{title:'',unit:uname,date:new Date().toISOString().slice(0,10),class:cls,gender:''},topics:[],_golden:{},folder:cls+'-'+unitCode+'-new'};
   var d=tabs[tabName];
   var el=document.getElementById('editorBody');if(el)el.innerHTML='<div style="text-align:center;padding:60px 0;color:var(--tx3)"><div style="display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite"></div><div style="margin-top:10px;font-size:13px">准备新课节...</div></div>';
   fetch(API+'/config').then(function(r){return r.json()}).then(function(cfg){
-    var u=cfg[cls]&&cfg[cls][unit];if(u&&u.path)d.basePath=u.path;
+    var u=cfg[cls]&&cfg[cls][unit];
+    if(u){d.basePath=u.path||'';d.meta.unit=uname}
+    if(!u||!u.path){if(confirm('班级「'+cls+'」单元「'+uname+'」尚未绑定存放路径，是否现在选择？')){fetch(API+'/pick-folder').then(function(r){return r.json()}).then(function(pd){if(pd.path){d.basePath=pd.path;var url=u?API+'/classes/'+encodeURIComponent(cls)+'/units/'+unitCode:API+'/classes/'+encodeURIComponent(cls)+'/units';var method=u?'PUT':'POST';var body=u?JSON.stringify({path:pd.path}):JSON.stringify({code:unitCode,name:uname,path:pd.path});fetch(url,{method:method,headers:{'Content-Type':'application/json'},body:body}).then(function(r){return r.json()}).then(function(){fetchConfig()})}})}};
     activeTab=tabName;renderTabs();switchMainTab();renderPreview();
   });
 }
 
-function openTab(cls){if(!tabs[cls])tabs[cls]={meta:{title:'',unit:'',date:'',class:cls,gender:''},topics:[],_golden:{}};activeTab=cls;renderTabs();renderEditor();renderPreview()}
+function openTab(cls){var units=cfgInfo[cls];var unitName='';var needPath=false;if(units){var ukeys=Object.keys(units);if(ukeys.length){var uc=ukeys[ukeys.length-1];unitName=units[uc].name||uc;if(!units[uc].path){needPath=true}}}if(needPath){var m2=unitName.match(/(\d{4})/);var uc2=m2?m2[1]:'';if(confirm('班级「'+cls+'」单元「'+unitName+'」尚未绑定存放路径，是否现在选择？')){fetch(API+'/pick-folder').then(function(r){return r.json()}).then(function(pd){if(pd.path){fetch(API+'/classes/'+encodeURIComponent(cls)+'/units/'+uc2,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:pd.path})}).then(function(r){return r.json()}).then(function(){fetchConfig()})}})}}if(!tabs[cls])tabs[cls]={meta:{title:'',unit:unitName,date:'',class:cls,gender:''},topics:[],_golden:{}};activeTab=cls;renderTabs();renderEditor();renderPreview()}
 function closeTab(cls,e){e.stopPropagation();delete tabs[cls];if(activeTab===cls)activeTab=Object.keys(tabs)[0]||null;renderTabs();renderMainTabs();if(activeTab){switchMainTab();renderPreview()}else{document.getElementById('editorBody').innerHTML='<div style="color:var(--sb);text-align:center;padding:60px 0">请从左侧选择班级</div>';document.getElementById('previewContent').innerHTML='<span class="st">粘贴发言后在此预览</span>';document.getElementById('outputList').innerHTML=''}}
 function renderOutputs(outputs){var ol=document.getElementById('outputList');ol.innerHTML='';(outputs||[]).forEach(function(o){var op=document.createElement('div');op.className='op';if(o.path){var isPng=o.name&&o.name.toLowerCase().endsWith('.png');if(isPng){op.innerHTML='<a href="#" onclick="showPreviewImage(\''+o.path+'\',\''+esc(o.name)+'\');return false">'+o.name+'</a>'}else{op.innerHTML='<a href="'+o.path+'" target="_blank">'+o.name+'</a>'}}else{op.textContent=o.name}ol.appendChild(op)})}
 function loadAndOpen(folder,cls){var el=document.getElementById('editorBody');if(el)el.innerHTML='<div style="text-align:center;padding:60px 0;color:var(--tx3)"><div style="display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite"></div><div style="margin-top:10px;font-size:13px">加载课节中...</div></div>';fetch(API+'/load/'+folder).then(function(r){return r.json()}).then(function(d){
@@ -311,12 +337,14 @@ function renderTabs(){var tb=document.getElementById('tabBar');tb.innerHTML='';O
 
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function ge(id){var e=document.getElementById(id);return e?e.value:''}
-function saveMeta(){if(!activeTab)return;var d=tabs[activeTab];d.meta.title=ge('etTitle');d.meta.unit=ge('etUnit');d.meta.date=ge('etDate');d.meta.class=ge('etClass')||activeTab}
+function saveMeta(){if(!activeTab)return;var d=tabs[activeTab];d.meta.title=ge('etTitleManual');d.meta.unit=ge('etUnit');d.meta.date=ge('etDate');d.meta.class=ge('etClass')||activeTab}
 
 function parseSpeechRaw(raw,topicTitle){var ss=[],allTitles=[];document.querySelectorAll('#topicList .tb').forEach(function(b){var t=b.querySelector('input');if(t&&t.value)allTitles.push(t.value)});var nlSep=(zgUser==='饼干')?'':'\n';raw.split('\n').forEach(function(line){// 先把所有 [img:N] 提到行首
 var imgTags='';line=line.replace(/\[img:\d+\]/g,function(m){imgTags+=m+' ';return''}).trim();line=imgTags+line;
-var m=line.match(/^(\[img:\d+\]\s*)*\s*([^:：]+)[：:](.*)$/);if(m){var nm=m[2].trim();nm=nm.replace(/\[img[^\]]*\]?/g,'').trim();if(!nm||nm.length>8)return;if(nm===topicTitle)return;if(allTitles.some(function(t){return t.indexOf(nm+':')===0}))return;var cont=(imgTags+m[3].trim()).trim();ss.push({name:nm,content:cont})}else if(imgTags.trim()&&!line.replace(/^(\[img:\d+\]\s*)+$/,'').trim()){if(ss.length)ss[ss.length-1].content+=' '+imgTags.trim();else ss.push({name:'',content:imgTags.trim()})}else if(line.trim()&&ss.length)ss[ss.length-1].content+=nlSep+line.trim()});return ss}
-function saveTopics(){if(!activeTab)return;var old=tabs[activeTab].topics||[];var ts=[];document.querySelectorAll('#topicList .tb').forEach(function(b,bi){var t=b.querySelector('input'),ta=b.querySelector('textarea');var title=t?t.value:'',raw=ta?ta.value:'';ts.push({title:title,speeches:parseSpeechRaw(raw,title),_raw:raw,_images:(old[bi]&&old[bi]._images)||[]})});tabs[activeTab].topics=ts}
+var m=line.match(/^(\[img:\d+\]\s*)*\s*([^:：]+)[：:](.*)$/);if(m){var nm=m[2].trim();nm=nm.replace(/\[img[^\]]*\]?/g,'').trim();// 衍生名映射：县令小米→小米（最长后缀匹配学生名册）
+if(_cachedStudents&&_cachedStudents.length){var best='',bestLen=0;_cachedStudents.forEach(function(s){var sn=s.student_name;if(sn.length>bestLen&&nm!==sn&&nm.endsWith(sn)){best=sn;bestLen=sn.length}});if(best)nm=best}
+if(!nm||nm.length>8)return;if(nm===topicTitle)return;if(allTitles.some(function(t){return t.indexOf(nm+':')===0}))return;var cont=(imgTags+m[3].trim()).trim();ss.push({name:nm,content:cont})}else if(imgTags.trim()&&!line.replace(/^(\[img:\d+\]\s*)+$/,'').trim()){if(ss.length)ss[ss.length-1].content+=' '+imgTags.trim();else ss.push({name:'',content:imgTags.trim()})}else if(line.trim()&&ss.length)ss[ss.length-1].content+=nlSep+line.trim()});return ss}
+function saveTopics(){if(!activeTab)return;var old=tabs[activeTab].topics||[];var ts=[];document.querySelectorAll('#topicList .tb').forEach(function(b,bi){var t=b.querySelector('input'),ta=b.querySelector('textarea');var title=t?t.value:'',raw=ta?ta.value:'';ts.push({title:title,speeches:parseSpeechRaw(raw,title),_raw:raw,_images:(old[bi]&&old[bi]._images)||[]})});tabs[activeTab].topics=ts;clearTimeout(window._autoSaveTO);window._autoSaveTO=setTimeout(function(){saveMeta();_autoSave()},10000)}
 window.formatTopic=function(idx){var ta=document.querySelectorAll('#topicList .tb textarea')[idx];if(!ta)return;var lines=ta.value.split('\n');var out=[];for(var i=0;i<lines.length;i++){var ln=lines[i];if(/^[^\s：:]{1,6}[：:]/.test(ln)){out.push(ln.trim())}else if(ln.trim()&&out.length){out[out.length-1]+=ln.trim()}}ta.value=out.join('\n');saveTopics();renderPreview()};
 window.addBullets=function(idx){var ta=document.querySelectorAll('#topicList .tb textarea')[idx];if(!ta)return;var lines=ta.value.split('\n');for(var i=0;i<lines.length;i++){var ln=lines[i];var m=ln.match(/^([^：:]+[：:])\s*(.*)/);if(m){if(m[2]&&!m[2].startsWith('- '))lines[i]=m[1]+'- '+m[2]}else if(ln.trim()&&!ln.trim().startsWith('- '))lines[i]='- '+ln.trim()}ta.value=lines.join('\n');saveTopics();renderPreview()}
 window.removeBullets=function(idx){var ta=document.querySelectorAll('#topicList .tb textarea')[idx];if(!ta)return;var lines=ta.value.split('\n');for(var i=0;i<lines.length;i++){var ln=lines[i];var m=ln.match(/^([^：:]+[：:])\s*- (.*)/);if(m){lines[i]=m[1]+m[2]}else if(ln.trim().startsWith('- '))lines[i]=ln.trim().substring(2)}ta.value=lines.join('\n');saveTopics();renderPreview()}
@@ -360,27 +388,61 @@ function removeTopicImage(topicIdx,imgIdx){
 }
 
 function renderEditor(){if(!activeTab)return;var d=tabs[activeTab],el=document.getElementById('editorBody');
-  // Auto-set material week from lesson date
-  if(d.meta.date){
-    var dt=new Date(d.meta.date+'T00:00:00');var y=dt.getFullYear();var mo=dt.getMonth();
-    var wkStart=new Date(y,mo,1);while(wkStart.getDay()!==2)wkStart.setDate(wkStart.getDate()-1);
-    for(var w=0;w<7;w++){var ws=new Date(wkStart);ws.setDate(ws.getDate()+w*7);var we=new Date(ws);we.setDate(we.getDate()+6);if(dt>=ws&&dt<=we){var labels={1:'第一周',2:'第二周',3:'第三周',4:'第四周',5:'第五周',6:'第六周'};var wkLabel=labels[w+1]||'';if(wkLabel){var mw=document.getElementById('matWeek');if(mw){mw.value=wkLabel;refreshWeeklyMaterial();}}break;}}
-  }
 var h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:12px;color:var(--sb);white-space:nowrap">继承自</span><select id="inheritCls" onchange="onInheritClass(this.value)" style="width:auto;padding:4px 8px;font-size:12px"><option value="">无</option></select><select id="inheritLesson" onchange="loadInheritTopics(this.value)" style="width:auto;padding:4px 8px;font-size:12px;display:none"><option value="">选择课节</option></select><span id="inheritLabel" style="font-size:11px;color:var(--go);display:none"></span><span style="flex:1"></span><span id="saveStatus" style="font-size:11px;color:var(--go);display:none"></span><a href="#" onclick="saveToServer();return false" style="font-size:11px;color:var(--go);white-space:nowrap">保存</a></div><div id="inheritTopics" style="margin-bottom:10px;padding:6px 10px;background:#faf8f4;border:1px solid var(--bd);border-radius:6px;display:none"></div>';
-h+='<div class="mr"><input id="etTitle" placeholder="课节标题" value="'+esc(d.meta.title||'')+'" onchange="saveMeta()" /><input id="etDate" type="date" value="'+esc(d.meta.date||'')+'" onchange="saveMeta()" style="width:130px" /></div>';
+h+='<div class="mr"><select id="etTitle" onchange="onTitleSelect(this.value)" style="flex:1;padding:7px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--tx)"><option value="">课节标题（选素材）</option></select><input id="etTitleManual" placeholder="或手动输入" value="'+esc(d.meta.title||'')+'" onchange="saveMeta()" style="width:150px;padding:7px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px" /><input id="etDate" type="date" value="'+esc(d.meta.date||'')+'" onchange="saveMeta()" style="width:130px" /></div>';
 h+='<div class="mr" style="margin-bottom:10px"><input id="etClass" placeholder="班级" value="'+esc(d.meta.class||activeTab)+'" onchange="saveMeta()" style="width:180px" /><input id="etUnit" placeholder="单元" value="'+esc(d.meta.unit||'')+'" onchange="saveMeta()" style="flex:1" /></div>';
-h+='<h3>话题</h3><div id="topicList">'+renderTopics()+'</div>';setTimeout(function(){checkTopicQMarks();},100);
-h+='<hr style="border:none;border-top:2px dashed var(--bd);margin:20px 0 14px">';
-h+='<div id="posterSection">'+renderPosterSection()+'</div>';
-h+='<hr style="border:none;border-top:2px dashed var(--bd);margin:14px 0">';
-h+='<div style="text-align:center;margin:6px 0"><button class="btn bo" style="padding:3px 12px;font-size:11px" data-act="formatAllBtn">全部排版</button><button class="btn bo" style="padding:3px 12px;font-size:11px" data-act="addBulletAllBtn">全部加"—"</button><button class="btn bo" style="padding:3px 12px;font-size:11px" data-act="removeBulletAllBtn">全部减"—"</button></div>';
-h+='<hr style="border:none;border-top:2px dashed var(--bd);margin:14px 0">';
-h+='<div id="genderPicker" style="font-size:12px;margin-bottom:12px"></div>';
+	h+='<h3>话题</h3><div id="topicList">'+renderTopics()+'</div>';setTimeout(function(){checkTopicQMarks();},100);
+	h+='<div style="text-align:center;margin:6px 0"><button class="btn bo" style="padding:3px 12px;font-size:11px" data-act="formatAllBtn">全部排版</button><button class="btn bo" style="padding:3px 12px;font-size:11px" data-act="addBulletAllBtn">全部加"—"</button><button class="btn bo" style="padding:3px 12px;font-size:11px" data-act="removeBulletAllBtn">全部减"—"</button></div>';
+	h+='<hr style="border:none;border-top:2px dashed var(--bd);margin:14px 0">';
+	h+='<div id="matPreview" style="display:none;margin-bottom:10px;padding:8px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)"></div>';
+	h+='<hr style="border:none;border-top:2px dashed var(--bd);margin:14px 0">';
+	h+='<div id="posterSection">'+renderPosterSection()+'</div>';
+	h+='<hr style="border:none;border-top:2px dashed var(--bd);margin:14px 0">';h+='<div id="genderPicker" style="font-size:12px;margin-bottom:12px"></div>';
 h+='<hr style="border:none;border-top:2px dashed var(--bd);margin:14px 0">';
 h+='<div style="display:flex;align-items:center;gap:8px"><button class="btn bg" onclick="generateAllUI()">全部生成</button><span class="st" id="genStatus"></span><label style="font-size:10px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="fbXinxin" style="width:auto;margin:0 2px" '+(zgUser==='欣欣'||!zgUser?'checked':'')+'>欣欣版</label><label style="font-size:10px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="fbBiscuit" style="width:auto;margin:0 2px" '+(zgUser==='饼干'?'checked':'')+'>饼干版</label><label style="font-size:10px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="fbFusion" style="width:auto;margin:0 2px">融合版</label><span style="font-size:11px;color:var(--go)" id="genWarn"></span><span style="flex:1"></span>'+(d.basePath?'<span style="font-size:10px;color:var(--sb);cursor:pointer;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px dashed var(--bd);padding:3px 6px;border-radius:4px" onclick="changeUnitPath()" title="点击更换输出路径">'+esc(d.basePath)+'</span>':'')+'</div>';
-el.innerHTML=h;initInheritDropdown();updateGenderPicker()}
+el.innerHTML=h;initInheritDropdown();updateGenderPicker();populateTitleDropdown();var curT=document.getElementById('etTitleManual');if(curT&&curT.value)setTimeout(function(){onTitleSelect(curT.value)},200)}
+function populateTitleDropdown(){
+  var sel=document.getElementById('etTitle');if(!sel)return;
+  var unitEl=document.getElementById('etUnit');var unitVal=unitEl?unitEl.value:'';
+  var m=unitVal.match(/(\d{4})/);var cycle=m?m[1]:'2606';
+  fetch(API+'/cycle-materials?cycle='+cycle).then(function(r){return r.json()}).then(function(mats){
+    var cur=document.getElementById('etTitleManual');var curVal=cur?cur.value:'';
+    sel.innerHTML='<option value="">课节标题（选素材）</option>'+mats.map(function(m){var sel2=curVal&&m.title===curVal?' selected':'';var extra=m.class_name?' ('+esc(m.class_name)+')':'';return'<option value="'+esc(m.title)+'"'+sel2+'>'+esc(m.title)+extra+'</option>'}).join('');
+  }).catch(function(){});
+}
+function onTitleSelect(title){
+  var manual=document.getElementById('etTitleManual');if(manual)manual.value=title;saveMeta();
+  if(!title){var p=document.getElementById('matPreview');if(p)p.style.display='none';return}
+  var unitEl=document.getElementById('etUnit');var unitVal=unitEl?unitEl.value:'';
+  var m2=unitVal.match(/(\d{4})/);var cycle=m2?m2[1]:'2606';
+  fetch(API+'/cycle-materials?cycle='+cycle).then(function(r){return r.json()}).then(function(mats){
+    // Merge all mats with same title
+    var merged={class_image:{},golden_quotes:[],cards:[],class_names:[]};
+    mats.filter(function(x){return x.title===title}).forEach(function(m){
+      if(m.class_name&&merged.class_names.indexOf(m.class_name)<0)merged.class_names.push(m.class_name);
+      if(m.class_image){if(typeof m.class_image==='string'){var s=_segFromClass(m.class_name);if(s)merged.class_image[s]=m.class_image}else{Object.keys(m.class_image).forEach(function(s){merged.class_image[s]=m.class_image[s]})}}
+      m.golden_quotes.forEach(function(g){merged.golden_quotes.push(g)});
+      m.cards.forEach(function(c){merged.cards.push(c)});
+    });
+    if(!Object.keys(merged.class_image).length&&!merged.golden_quotes.length)return;
+    var p=document.getElementById('matPreview');if(!p)return;p.style.display='block';
+    // Derive current segment from class_name
+    var clsEl=document.getElementById('etClass');var curCls=clsEl?clsEl.value:activeTab;
+    var curSeg=_segFromClass(curCls);
+    var segClasses=merged.class_names.filter(function(cn){return _segFromClass(cn)===curSeg});
+    var h='<div style="font-size:12px;font-weight:600;margin-bottom:6px">素材预览 — '+esc(segClasses.join('、')||curCls)+'</div>';
+    // Long images — filter by current segment
+    var imgUrl=merged.class_image[curSeg]||Object.values(merged.class_image)[0]||'';
+    if(imgUrl)h+='<div><div style="font-size:10px;color:var(--tx3);margin-bottom:2px">长图 ('+curSeg+')</div><img src="'+imgUrl+'" style="max-height:80px;border-radius:4px;border:1px solid var(--bd);cursor:pointer" onclick="showPreviewImage(\''+imgUrl+'\',\''+esc(title)+'\')"></div>';
+    // Golden quotes — filter by current segment
+    var curRecs=merged.golden_quotes.filter(function(g){var segs=(g.segment||'').split(',');return segs.indexOf(curSeg)>=0||!g.segment});
+    var seenP={};curRecs=curRecs.filter(function(g){if(seenP[g.path])return false;seenP[g.path]=true;return true});
+    if(curRecs.length){h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:start;margin-top:4px">';curRecs.forEach(function(g){h+='<div><div style="font-size:10px;color:var(--tx3);margin-bottom:2px">'+esc(g.name||'')+'</div><img src="'+g.path+'" style="max-height:80px;border-radius:4px;border:1px solid var(--bd);cursor:pointer" onclick="showPreviewImage(\''+g.path+'\',\''+esc(g.name||'')+'\')"></div>'});h+='</div>'}
+    p.innerHTML=h;populateMatPickers();
+  });
+}
 
-function initInheritDropdown(){fetch(API+'/topics/sources').then(function(r){return r.json()}).then(function(srcs){var sel=document.getElementById('inheritCls');if(!sel)return;sel.innerHTML='<option value="">无</option>'+srcs.filter(function(s){return s!==activeTab}).map(function(s){return'<option value="'+s+'">'+s+'</option>'}).join('')})}
+function initInheritDropdown(){fetch(API+'/topics/sources').then(function(r){return r.json()}).then(function(srcs){var sel=document.getElementById('inheritCls');if(!sel)return;var ss=_seasonSet();sel.innerHTML='<option value="">无</option>'+srcs.filter(function(s){return s!==activeTab&&ss[s]}).map(function(s){return'<option value="'+s+'">'+s+'</option>'}).join('')})}
 function onInheritClass(cls){
   var ls=document.getElementById('inheritLesson'),panel=document.getElementById('inheritTopics');
   if(!cls){ls.style.display='none';ls.innerHTML='<option value="">选择课节</option>';panel.style.display='none';return}
@@ -433,7 +495,7 @@ var d=tabs[activeTab];if(!d)return;
 var names=[];d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s,j){if(names.indexOf(s.name)<0)names.push(s.name)})});
 if(!names.length){el.innerHTML='';return}
 var boys=[];var gstr=d.meta.gender||'';
-if(gstr.indexOf('Male')===0)boys=gstr.replace('Male','').trim().split(/\\s+/).filter(Boolean);
+if(gstr.indexOf('Male')===0)boys=gstr.replace('Male','').trim().split(/\s+/).filter(Boolean);
 if(!boys.length){
   var students=_cachedStudents;
   if(!students||!students.length){
@@ -465,9 +527,9 @@ el.innerHTML=h;
 function setGenderMode(mode){}
 function saveGender(){}
 function renderPreview(){var el=document.getElementById('previewContent'),d=tabs[activeTab];if(!d||!d.topics.length){el.innerHTML='<span class="st">粘贴发言后在此预览</span>';return}if(!d._golden)d._golden={};window._gk={};var h='<div style="font-size:11px;color:var(--sb);margin-bottom:8px">点击切换金句 | <button class="btn bo" style="padding:2px 8px;font-size:11px;margin:0 4px" onclick="detectGoldenAsync();return false">自动标记</button> | <a href="#" onclick="clearGolden();return false">清除</a></div>';h+='<div class="pt">';d.topics.forEach(function(t,i){h+='<div style="font-weight:700;color:var(--accent);font-size:14px;margin:12px 0 4px">'+esc(t.title)+'</div><div style="color:var(--bd);margin-bottom:8px">'+Array(30).join('-')+'</div>';(t.speeches||[]).forEach(function(s,j){var key=s.name+':'+s.content;var isGold=d._golden[key];var bg=isGold?'background:#fff3cd;':'',gid='g_'+i+'_'+j;window._gk[gid]=key;h+='<div id="'+gid+'" style="margin:2px 0;padding:2px 4px;border-radius:3px;cursor:pointer;'+bg+'" onclick="toggleGolden(\''+gid+'\')"><b style="color:var(--rd)">'+esc(s.name)+'</b>: '+esc(s.content).replace(/\[img:\d+\]/g,'[图]')+'</div>'});var timgs=t._images||[];if(timgs.length){h+='<div style="display:flex;gap:4px;flex-wrap:wrap;padding:4px 0">';timgs.forEach(function(img,idx){h+='<img src=\"'+img+'\" style=\"max-height:60px;border-radius:4px;border:1px solid var(--bd)\">'});h+='</div>'}if(i<d.topics.length-1)h+='<div style="margin:16px 0 4px;color:var(--bd)">'+Array(30).join('=')+'</div>'});h+='</div>';el.innerHTML=h}
-function toggleGolden(gid){var el=document.getElementById(gid);if(!el)return;var d=tabs[activeTab];if(!d._golden)d._golden={};var key=window._gk[gid];if(!key)return;if(d._golden[key]){delete d._golden[key];el.style.background='transparent'}else{d._golden[key]=true;el.style.background='#fff3cd'}}
+function toggleGolden(gid){var el=document.getElementById(gid);if(!el)return;var d=tabs[activeTab];if(!d._golden)d._golden={};var key=window._gk[gid];if(!key)return;if(d._golden[key]!=null){delete d._golden[key];el.style.background='transparent'}else{d._golden[key]=0;el.style.background='#fff3cd'}}
 function clearGolden(){if(tabs[activeTab])tabs[activeTab]._golden={};renderPreview();renderPosterSectionUI()}
-function getGoldenQuotes(){var d=tabs[activeTab];if(!d||!d._golden)return{};var quotes={};Object.keys(d._golden).forEach(function(key){var m=key.match(/^([^:：]+)[：:](.+)$/);if(m){if(!quotes[m[1]])quotes[m[1]]=[];quotes[m[1]].push(m[2])}});return quotes}
+function getGoldenQuotes(){var d=tabs[activeTab];if(!d||!d._golden)return{};var quotes={};Object.keys(d._golden).forEach(function(key){var m=key.match(/^([^:：]+)[：:](.+)$/);if(m){if(!quotes[m[1]])quotes[m[1]]=[];var sc=d._golden[key]===true?0:(typeof d._golden[key]==='number'?d._golden[key]:0);quotes[m[1]].push({text:m[2],score:sc})}});Object.keys(quotes).forEach(function(n){quotes[n].sort(function(a,b){return b.score-a.score})});return quotes}
 function getPosterQuotes(){var posters={};document.querySelectorAll('#posterSection [data-name]').forEach(function(el){var cb=el.querySelector('input[type=checkbox]');if(cb&&!cb.checked)return;var n=el.getAttribute('data-name');var q=el.querySelector('textarea');var m=el.querySelector('.pmovie');var p=el.querySelector('.pposter');var r=el.querySelector('.prating');var l=el.querySelector('.pline');if(q&&q.value.trim()){posters[n]={quote:q.value.trim()};if(m&&m.value.trim())posters[n].movie=m.value.trim();if(p&&p.value.trim())posters[n].poster=p.value.trim();if(r&&r.value.trim())posters[n].rating=r.value.trim();if(l&&l.value.trim())posters[n].line=l.value.trim()}});return posters}
 function searchTMDB(btn){
   var row=btn.closest('[data-name]');var q=row.querySelector('.pmovie').value.trim();if(!q)return;
@@ -482,27 +544,68 @@ function renderPosterSection(){
   var gq=getGoldenQuotes();var names=Object.keys(gq);if(!names.length)return'';
   var h='<h3>金句日历 <span style="font-size:10px;color:var(--sb)">（每人一句）</span></h3>';
   names.sort().forEach(function(n){
-    var best=gq[n][0]||'';
+    var best=gq[n][0]?gq[n][0].text:'';
     h+='<div data-name="'+esc(n)+'" style="margin:6px 0;padding:6px 8px;background:#faf8f4;border:1px solid var(--bd);border-radius:6px">';
-    h+='<div style="display:flex;align-items:center;gap:6px"><input type="checkbox" onchange="savePosterMeta()" style="width:auto;margin:0"><b style="color:var(--rd);font-size:13px">'+esc(n)+'</b><button class="btn bo" style="font-size:10px;padding:2px 6px" onclick="previewPoster(this);return false">预览</button></div>';
+    h+='<div style="display:flex;align-items:center;gap:6px"><input type="checkbox" onchange="savePosterMeta()" style="width:auto;margin:0"><b style="color:var(--rd);font-size:13px">'+esc(n)+'</b><button class="btn bo" style="font-size:10px;padding:2px 6px" onclick="previewPoster(this);return false">预览</button><button class="btn bo" style="font-size:9px;padding:1px 4px" onclick="var d=this.closest(\'[data-name]\').querySelector(\'.posterDetail\');d.style.display=d.style.display==\'none\'?\'block\':\'none\'">展开</button><span style="flex:1"></span><select class="matPick" onchange="onMatPick(this,\''+esc(n)+'\')" style="width:auto;max-width:160px;padding:2px 4px;font-size:10px;border:1px solid var(--border);border-radius:3px;background:var(--bg);color:var(--tx)"><option value="">选素材</option></select></div>';
     h+='<textarea style="width:100%;min-height:40px;margin:4px 0" oninput="savePosterMeta()">'+esc(best)+'</textarea>';
-    h+='<div style="font-size:10px;color:var(--sb);cursor:pointer;margin-top:2px" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'block\':\'none\'">▶ 推荐素材（可选）</div>';
-    h+='<div style="display:none;margin-top:4px">';
-    h+='<div class="mr" style="gap:4px"><input class="pmovie" placeholder="电影/书名" style="flex:1;font-size:11px" oninput="savePosterMeta()"><button class="btn bo" onclick="searchTMDB(this);return false" style="font-size:10px;padding:2px 6px">TMDB</button></div>';
-    h+='<div class="tmdbResults" style="padding:4px 0;display:none"></div>';
-    h+='<div class="mr" style="gap:4px"><input class="pposter" placeholder="海报路径/URL" style="flex:1;font-size:11px" oninput="savePosterMeta()"><button class="btn bo" onclick="pickPoster(this)" style="font-size:10px;padding:2px 6px">选择</button></div>';
-    h+='<div class="mr" style="gap:4px"><input class="prating" placeholder="评分 e.g. 8.5" style="width:80px;font-size:11px" oninput="savePosterMeta()"><input class="pline" placeholder="推荐语" style="flex:1;font-size:11px" oninput="savePosterMeta()"></div>';
-    h+='</div></div>';
+    h+='<div class="posterDetail" style="display:none;margin-top:4px">';
+    h+='<div style="display:flex;gap:8px"><img class="pposterPreview" src="" style="width:60px;height:85px;object-fit:cover;border-radius:4px;border:1px dashed var(--border2);background:var(--bg);flex-shrink:0" onerror="this.style.opacity=\'0.2\'" onload="this.style.opacity=\'1\';this.style.border=\'1px solid var(--bd)\'">';
+    h+='<div style="flex:1;display:flex;flex-direction:column;gap:4px">';
+    h+='<div class="mr" style="gap:4px"><input class="pmovie" placeholder="电影/书名" style="flex:1;font-size:11px" oninput="savePosterMeta()"><button class="btn bo" onclick="searchDoubanPoster(this);return false" style="font-size:10px;padding:2px 4px">豆瓣</button><input class="prating" placeholder="评分" style="width:55px;font-size:11px" oninput="savePosterMeta()"></div>';
+    h+='<div class="mr" style="gap:4px"><input class="pposter" placeholder="海报URL" style="flex:1;font-size:10px" oninput="savePosterMeta();_showPPPoster(this.closest(\'[data-name]\'))"><input class="pline" placeholder="推荐语" style="flex:1;font-size:10px" oninput="savePosterMeta()"></div>';
+    h+='<div class="doubanPPResults" style="padding:2px 0;display:none;font-size:10px"></div>';
+    h+='</div></div></div>';
+    h+='</div>';
   });
   return h;
 }
 function pickPoster(btn){fetch(API+'/pick-folder').then(function(r){return r.json()}).then(function(d){if(d.path){var row=btn.closest('[data-name]');row.querySelector('.pposter').value=d.path}})}
-function renderPosterSectionUI(){var el=document.getElementById('posterSection');if(el)el.innerHTML=renderPosterSection()}
+function renderPosterSectionUI(){var el=document.getElementById('posterSection');if(el)el.innerHTML=renderPosterSection();populateMatPickers()}
+function populateMatPickers(){
+  var d=tabs[activeTab];if(!d)return;
+  var unitEl=document.getElementById('etUnit');var unitVal=unitEl?unitEl.value:'';
+  var m2=unitVal.match(/(\d{4})/);var cycle=m2?m2[1]:'2606';
+  var title=document.getElementById('etTitleManual');var titleVal=title?title.value:'';
+  if(!titleVal)return;
+  var clsEl=document.getElementById('etClass');var curCls=clsEl?clsEl.value:activeTab;
+  var curSeg=_segFromClass(curCls);
+  fetch(API+'/cycle-materials?cycle='+cycle).then(function(r){return r.json()}).then(function(mats){
+    var allRecs=[];mats.filter(function(x){return x.title===titleVal}).forEach(function(m){m.golden_quotes.forEach(function(g){var segs=(g.segment||'').split(',');if(segs.indexOf(curSeg)>=0||!g.segment)allRecs.push(g)})});
+    if(!allRecs.length)return;
+    var opts='<option value="">选素材</option>'+allRecs.map(function(g){return'<option value="'+esc(g.path)+'|'+esc(g.name)+'|'+(g.score||'')+'|'+esc(g.line||'').replace(/\|/g,' ')+'">'+esc(g.name)+(g.score?' ⭐'+esc(g.score):'')+'</option>'}).join('');
+    document.querySelectorAll('.matPick').forEach(function(s){s.innerHTML=opts});
+  }).catch(function(){});
+}
+function onMatPick(sel,name){
+  var val=sel.value;if(!val)return;
+  var parts=val.split('|');var path=parts[0],matName=parts[1]||'',score=parts[2]||'',line=parts[3]||'';
+  var row=sel.closest('[data-name]');if(!row)return;
+  var detail=row.querySelector('.posterDetail');if(detail)detail.style.display='block';
+  var pp=row.querySelector('.pposter');if(pp&&!pp.value)pp.value=path;
+  var pm=row.querySelector('.pmovie');if(pm&&!pm.value)pm.value=matName;
+  var pr=row.querySelector('.prating');if(pr&&!pr.value)pr.value=score;
+  var pl=row.querySelector('.pline');if(pl&&!pl.value)pl.value=line;
+  _showPPPoster(row);
+}
+function _showPPPoster(row){var p=row.querySelector('.pposterPreview');var v=row.querySelector('.pposter');if(p&&v&&v.value){var url=v.value;if(url.indexOf('http')===0)url=API+'/img-proxy?url='+encodeURIComponent(url);p.src=url;p.style.display='block'}}
+function searchDoubanPoster(btn){
+  var row=btn.closest('[data-name]');var q=row.querySelector('.pmovie').value.trim();if(!q)return;
+  fetch(API+'/douban/search?q='+encodeURIComponent(q)).then(function(r){return r.json()}).then(function(results){
+    if(results.error){alert(results.error);return}
+    if(!results.length){alert('未找到结果');return}
+    var list=row.querySelector('.doubanPPResults');list.innerHTML=results.map(function(r,i){var tag=r.kind==='书'?'[书]':'[影]';return'<span style="cursor:pointer;font-size:10px;color:var(--accent);margin-right:6px" onclick="pickDoubanPoster(this)" data-kind="'+esc(r.kind||'影')+'" data-poster="'+esc(r.poster||'')+'" data-rating="'+esc(r.rating||'')+'" data-title="'+esc(r.title)+'">'+tag+' '+esc(r.title)+' <b>'+esc(r.rating)+'</b></span>'}).join('');list.style.display='block'}).catch(function(){alert('搜索失败')});
+}
+function pickDoubanPoster(el){
+  var row=el.closest('[data-name]');var title=el.getAttribute('data-title')||'';var kind=el.getAttribute('data-kind')||'影';
+  row.querySelector('.pmovie').value=title;row.querySelector('.prating').value=el.getAttribute('data-rating')||'';var poster=el.getAttribute('data-poster')||'';if(poster){row.querySelector('.pposter').value=poster;_showPPPoster(row)}row.querySelector('.doubanPPResults').style.display='none';
+  row.querySelector('.pline').value='生成中...';
+  fetch(API+'/douban/recommendation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:title,kind:kind==='书'?'图书':'电影'})}).then(function(r){return r.json()}).then(function(d){if(d.recommendation)row.querySelector('.pline').value=d.recommendation;else row.querySelector('.pline').value=''}).catch(function(){row.querySelector('.pline').value=''})
+}
 function previewPoster(btn){
   var row=btn.closest('[data-name]'),d=tabs[activeTab];if(!d)return;
   var q=row.querySelector('textarea').value.trim();
   var m=row.querySelector('.pmovie'),p=row.querySelector('.pposter'),r=row.querySelector('.prating'),l=row.querySelector('.pline');
-  fetch(API+'/preview-poster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:d.meta.title||'',unit:d.meta.unit||'',date:d.meta.date||'',class:d.meta.class||'',quote:q,author:row.getAttribute('data-name'),topic:'',movie:m?m.value:'',poster:p?p.value:'',rating:r?r.value:'',line:l?l.value:''})}).then(function(resp){return resp.json()}).then(function(d){if(d.path)showPreviewImage(d.path,'海报预览 - '+row.getAttribute('data-name'))}).catch(function(){alert('Preview failed')})}
+  fetch(API+'/preview-poster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:d.meta.title||'',unit:d.meta.unit||'',date:d.meta.date||'',class:d.meta.class||'',quote:q,author:row.getAttribute('data-name'),topic:'',movie:m?m.value:'',poster:p?p.value:'',rating:r?r.value:'',line:l?l.value:''})}).then(function(resp){return resp.json()}).then(function(pd){if(pd.path){var c=document.getElementById('previewContent');var img=document.createElement('img');img.src=pd.path;img.style.cssText='max-width:100%;border-radius:6px;border:1px solid var(--bd)';var wrap=document.createElement('div');wrap.style.cssText='margin-top:10px;padding-top:10px;border-top:1px dashed var(--bd)';wrap.appendChild(img);c.appendChild(wrap);img.onload=function(){img.scrollIntoView({behavior:'smooth'})}}}).catch(function(){alert('Preview failed')})}
 function savePosterMeta(){}
 function togglePreview(){var p=document.getElementById('previewPanel'),c=document.getElementById('previewContent'),lbl=document.getElementById('pvLabel'),hint=document.getElementById('pvHint');if(c.style.display==='none'){c.style.display='block';p.style.width='420px';p.style.minWidth='420px';p.style.display='';lbl.textContent='预览';hint.textContent='点击收起'}else{c.style.display='none';p.style.width='90px';p.style.minWidth='90px';p.style.textAlign='left';lbl.textContent='展开';hint.textContent='预览'}}
 function showPreviewImage(path,name){
@@ -513,8 +616,8 @@ function showPreviewImage(path,name){
 }
 
 
-function detectGoldenAsync(){var d=tabs[activeTab];if(!d||!d.topics.length)return;var btn=document.querySelector('#previewContent .btn.bo');if(btn){btn.textContent='标记中... 预计10秒';btn.disabled=true}var sents=[];d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){sents.push({text:s.content,name:s.name})})});if(!sents.length)return;fetch(API+'/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sentences:sents,meta:d.meta,topics:d.topics.map(function(t){return t.title})})}).then(function(r){return r.json()}).then(function(data){if(!tabs[activeTab])return;var d=tabs[activeTab];if(!d._golden)d._golden={};var byName={};data.forEach(function(item){var n=item.name;if(!byName[n])byName[n]=[];byName[n].push(item)});var total=0;Object.keys(byName).forEach(function(n){var sp=0,tp=new Set();d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){if(s.name===n){sp++;tp.add(t.title)}})});var nhl=(sp>=5&&tp.size>=5)?3:2;byName[n].slice(0,nhl).forEach(function(item){var key=item.name+':'+item.text;if(!(key in d._golden))d._golden[key]=true;total++})});renderPreview();renderPosterSectionUI();var btn2=document.querySelector('#previewContent .btn.bo');if(btn2){btn2.textContent='已标'+total+'句';btn2.disabled=false;setTimeout(function(){btn2.textContent='自动标记'},3000)}}).catch(function(){var btn3=document.querySelector('#previewContent .btn.bo');if(btn3){btn3.textContent='自动标记';btn3.disabled=false}})}
-function generateAllUI(){if(!activeTab)return;saveMeta();saveTopics();renderPreview();var d=tabs[activeTab],gs=document.getElementById('genStatus'),gw=document.getElementById('genWarn');var allImages={};d.topics.forEach(function(t,i){if(t._images&&t._images.length)allImages[i]=t._images});function doGen(gq){gs.textContent='生成中...';gs.className='st';gw.textContent='';var genPayload={meta:d.meta,topics:d.topics,movies:getPosterQuotes(),gender:d.meta.gender||'',tab_name:d.folder||activeTab,golden_quotes:gq,poster_quotes:getPosterQuotes(),feedback_styles:(document.getElementById('fbXinxin').checked?'xinxin,':'')+(document.getElementById('fbBiscuit').checked?'biscuit,':'')+(document.getElementById('fbFusion').checked?'fusion':''),images:allImages};var genPromise=fetch(API+'/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(genPayload)}).then(function(r){return r.json()});showAttendanceModal(genPromise,d,gs,gw)}var mq=getGoldenQuotes();if(Object.keys(mq).length>0){doGen(mq);return}gs.textContent='AI 检测金句中...';gs.className='st';var sents=[];d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){sents.push({text:s.content,name:s.name})})});if(!sents.length){doGen({});return}fetch(API+'/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sentences:sents,meta:d.meta,topics:d.topics.map(function(t){return t.title})})}).then(function(r){return r.json()}).then(function(data){var byName={};data.forEach(function(item){var n=item.name;if(!byName[n])byName[n]=[];byName[n].push(item)});Object.keys(byName).forEach(function(n){var sp=0,tp=new Set();d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){if(s.name===n){sp++;tp.add(t.title)}})});var nhl=(sp>=5&&tp.size>=5)?3:2;byName[n]=byName[n].slice(0,nhl).map(function(x){return x.text})});doGen(byName)}).catch(function(){doGen({})})}
+function detectGoldenAsync(){var d=tabs[activeTab];if(!d||!d.topics.length)return;var btn=document.querySelector('#previewContent .btn.bo');if(btn){btn.textContent='标记中... 预计10秒';btn.disabled=true}var sents=[];d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){sents.push({text:s.content,name:s.name})})});if(!sents.length)return;fetch(API+'/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sentences:sents,meta:d.meta,topics:d.topics.map(function(t){return t.title})})}).then(function(r){return r.json()}).then(function(data){if(!tabs[activeTab])return;var d=tabs[activeTab];if(!d._golden)d._golden={};var byName={};data.forEach(function(item){var n=item.name;if(!byName[n])byName[n]=[];byName[n].push(item)});var total=0;Object.keys(byName).forEach(function(n){var sp=0,tp=new Set();d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){if(s.name===n){sp++;tp.add(t.title)}})});var nhl=(sp>=5&&tp.size>=5)?3:2;byName[n].slice(0,nhl).forEach(function(item){var key=item.name+':'+item.text;if(!(key in d._golden))d._golden[key]=item.score||0;total++})});renderPreview();renderPosterSectionUI();var btn2=document.querySelector('#previewContent .btn.bo');if(btn2){btn2.textContent='已标'+total+'句';btn2.disabled=false;setTimeout(function(){btn2.textContent='自动标记'},3000)}}).catch(function(){var btn3=document.querySelector('#previewContent .btn.bo');if(btn3){btn3.textContent='自动标记';btn3.disabled=false}})}
+function generateAllUI(){if(!activeTab)return;saveMeta();saveTopics();renderPreview();var d=tabs[activeTab],gs=document.getElementById('genStatus'),gw=document.getElementById('genWarn');var allImages={};d.topics.forEach(function(t,i){if(t._images&&t._images.length)allImages[i]=t._images});function doGen(gq){gs.textContent='生成中...';gs.className='st';gw.textContent='';var genPayload={meta:d.meta,topics:d.topics,movies:getPosterQuotes(),gender:d.meta.gender||'',tab_name:d.folder||activeTab,golden_quotes:gq,poster_quotes:getPosterQuotes(),feedback_styles:(document.getElementById('fbXinxin').checked?'xinxin,':'')+(document.getElementById('fbBiscuit').checked?'biscuit,':'')+(document.getElementById('fbFusion').checked?'fusion':''),images:allImages};var genPromise=fetch(API+'/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(genPayload)}).then(function(r){return r.json()}).then(function(data){if(data.status==='need_path'){gs.textContent='';return new Promise(function(resolve){fetch(API+'/pick-folder').then(function(r){return r.json()}).then(function(pd){if(!pd.path){gs.textContent='已取消';return}gs.textContent='绑定路径中...';fetch(API+'/classes/'+encodeURIComponent(data.cls)+'/units/'+data.unit_code,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:pd.path})}).then(function(r){return r.json()}).then(function(rd){if(rd.status!=='ok'){gs.textContent='绑定失败: '+rd.message;return}gs.textContent='路径已绑定，重新生成中...';fetch(API+'/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(genPayload)}).then(function(r){return r.json()}).then(resolve)}).catch(function(){gs.textContent='绑定失败，请重试'})})})}return data});showAttendanceModal(genPromise,d,gs,gw)}var mq=getGoldenQuotes();if(Object.keys(mq).length>0){var gqText={};Object.keys(mq).forEach(function(n){gqText[n]=mq[n].map(function(x){return x.text||x})});doGen(gqText);return}gs.textContent='AI 检测金句中...';gs.className='st';var sents=[];d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){sents.push({text:s.content,name:s.name})})});if(!sents.length){doGen({});return}fetch(API+'/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sentences:sents,meta:d.meta,topics:d.topics.map(function(t){return t.title})})}).then(function(r){return r.json()}).then(function(data){var byName={};data.forEach(function(item){var n=item.name;if(!byName[n])byName[n]=[];byName[n].push(item)});Object.keys(byName).forEach(function(n){var sp=0,tp=new Set();d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){if(s.name===n){sp++;tp.add(t.title)}})});var nhl=(sp>=5&&tp.size>=5)?3:2;byName[n]=byName[n].slice(0,nhl).map(function(x){return x.text})});doGen(byName)}).catch(function(){doGen({})})}
 
 function showAttendanceModal(genPromise,d,gs,gw){
   var cls=d.meta.class||activeTab;var unit=d.meta.unit||'';
@@ -581,15 +684,16 @@ function submitAttendance(cls,unitCode,lessonNum,title,date){
   }
   var makeupStudents=[];
   att.newStudents.forEach(function(s){
-    // Check if this student exists in student_ext (补课 vs 新生)
     var se=_cachedStudents?_cachedStudents.find(function(x){return x.student_name===s.name}):null;
     if(se&&se.enrolled_class&&se.enrolled_class!==cls){
       makeupStudents.push({name:s.name,from_class:se.enrolled_class});
+      records.push({name:s.name,status:'出席',note:'补自'+se.enrolled_class});
+    }else{
+      records.push({name:s.name,status:'出席',note:s.note||'新生'});
     }
-    records.push({name:s.name,status:'出席',note:s.note||'新生'});
   });
   // 根据 unit_code 推算周期标签，如 2606 → 2606春季班
-  var cycLabel='';var ucInt=parseInt(unitCode);if(ucInt>=2603)cycLabel=unitCode+'春季班';else if(ucInt>=2602)cycLabel=unitCode+'寒假班';else if(ucInt>=2500)cycLabel=unitCode+'正式课';else cycLabel=unitCode+'试听期';
+  var cycLabel='';var ucInt=parseInt(unitCode);if(ucInt>=2607)cycLabel=unitCode+'暑假班';else if(ucInt>=2603)cycLabel=unitCode+'春季班';else if(ucInt>=2602)cycLabel=unitCode+'寒假班';else if(ucInt>=2500)cycLabel=unitCode+'正式课';else cycLabel=unitCode+'试听期';
   var saveBtn=document.querySelector('#attOverlay .bg');if(saveBtn){saveBtn.textContent='保存中...';saveBtn.disabled=true}
   fetch(API+'/attendance/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({class_name:cls,unit_code:unitCode,lesson_num:parseInt(lessonNum),lesson_title:title,lesson_date:date,records:records,new_students:att.newStudents,makeup_students:makeupStudents,cycle:cycLabel})}).then(function(r){if(!r.ok)throw new Error('服务器错误 '+r.status);return r.json()}).then(function(rd){
     console.log('考勤已保存:',rd.count||0,'条');
@@ -613,6 +717,7 @@ function changeUnitPath(){
       }).catch(function(){alert('更新路径失败')});
   });
 }
+function _autoSave(){if(!activeTab)return;saveMeta();var d=tabs[activeTab];if(!d.folder||d.folder.indexOf('-new')>=0){var cls=d.meta.class||activeTab;var unitFull=d.meta.unit||'';var m=unitFull.match(/(\d{4})/);var unitCode=m?m[1]:'2605';d.folder=cls+'-'+unitCode+'-new';d.basePath=''}var saveImages={};d.topics.forEach(function(t,i){if(t._images&&t._images.length)saveImages[i]=t._images});fetch(API+'/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({meta:d.meta,topics:d.topics,folder:d.folder,images:saveImages})}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){_lastSaved=saveSnapshot(d);d.folder=rd.folder||d.folder}}).catch(function(){})}
 function saveToServer(){if(!activeTab)return;saveMeta();saveTopics();var d=tabs[activeTab];var st=document.getElementById('saveStatus');if(!st){alert('编辑器未加载，请先打开一个课节');return}st.style.display='inline';if(!d.folder||d.folder.indexOf('-new')>=0){var cls=d.meta.class||activeTab;var unitFull=d.meta.unit||'';var m=unitFull.match(/(\d{4})/);var unitCode=m?m[1]:'2605';d.folder=cls+'-'+unitCode+'-new';d.basePath=''}var saveImages={};d.topics.forEach(function(t,i){if(t._images&&t._images.length)saveImages[i]=t._images});st.textContent='保存中...';fetch(API+'/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({meta:d.meta,topics:d.topics,folder:d.folder,images:saveImages})}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){st.textContent='已保存 ✓';_lastSaved=saveSnapshot(d);d.folder=rd.folder||d.folder}else{st.textContent='保存失败'}setTimeout(function(){st.style.display='none'},3000)}).catch(function(){st.textContent='保存失败';setTimeout(function(){st.style.display='none'},3000)})}
 function saveAll(){localStorage.setItem('tabsData',JSON.stringify(tabs))}
 setInterval(saveAll,300000);
@@ -711,15 +816,155 @@ function renderOverviewTab(){
     ah+='</div>';alertEl.innerHTML=ah;
   }).catch(function(){var ae=document.getElementById('lowLessonAlert');if(ae)ae.textContent='加载失败'});
 }
+// ====== Tab: 素材 =====
+function renderMaterialTab(){
+  var el=document.getElementById('editorBody');if(!el)return;
+  var cycles=['2607&08','2607','2608'];var curCycle=document.getElementById('matCycle');curCycle=curCycle?curCycle.value:'2607&08';
+  var h='<div style="padding:16px"><div style="display:flex;align-items:center;margin-bottom:12px;gap:8px"><h3 style="margin:0;flex:1">素材库</h3><select id="matCycle" onchange="renderMaterialTab()" style="padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg);color:var(--tx);width:82px">'+cycles.map(function(c){return'<option value="'+c+'"'+(c===curCycle?' selected':'')+'>'+c+'</option>'}).join('')+'</select><button class="btn bg" style="padding:4px 12px;font-size:11px" onclick="showAddMaterialModal()">+ 新增素材</button></div>';
+  h+='<div id="matGrid">加载中...</div></div>';
+  el.innerHTML=h;
+  function fetchCycle(c){return fetch(API+'/cycle-materials?cycle='+c).then(function(r){return r.json()})}
+  var fetcher=curCycle==='2607&08'?Promise.all([fetchCycle('2607'),fetchCycle('2608')]).then(function(arr){return arr[0].concat(arr[1])}):fetchCycle(curCycle);
+  fetcher.then(function(mats){
+    var grid=document.getElementById('matGrid');if(!grid)return;
+    if(!mats.length){grid.innerHTML='<div class="section-card" style="text-align:center;padding:40px">此周期暂无素材，请先生成课节或点击「+ 新增素材」手动上传</div>';return}
+    // Group by title
+    var byTitle={};mats.forEach(function(m){
+      var t=m.title;if(!byTitle[t])byTitle[t]={class_image:{},golden_quotes:[],cards:[],class_names:[]};
+      // Derive segment from class_name or explicit segment field
+      var segs=m.segment?m.segment.split(','):[];
+      if(!segs.length){var s=_segFromClass(m.class_name);if(s)segs=[s]}
+      if(m.class_image&&segs.length){var ci=m.class_image;if(typeof ci==='string'){segs.forEach(function(s){if(s&&!byTitle[t].class_image[s])byTitle[t].class_image[s]=ci})}else{Object.keys(ci).forEach(function(s){if(s&&!byTitle[t].class_image[s])byTitle[t].class_image[s]=ci[s]})}}
+      if(m.class_name&&byTitle[t].class_names.indexOf(m.class_name)<0)byTitle[t].class_names.push(m.class_name);
+      m.golden_quotes.forEach(function(g){byTitle[t].golden_quotes.push(g)});
+      m.cards.forEach(function(c){byTitle[t].cards.push(c)});
+    });
+    h='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(560px,1fr));gap:12px">';
+    Object.keys(byTitle).forEach(function(title){
+      var tm=byTitle[title];var segOrder=['启航段','探索段','先锋段'];
+      h+='<div class="section-card" style="padding:12px">';
+      h+='<div style="display:flex;align-items:center"><div style="font-size:14px;font-weight:600;flex:1">'+esc(title)+'</div><button class="btn bo" style="padding:2px 8px;font-size:9px" onclick="editMaterial(\''+esc(title)+'\')">编辑</button></div>';
+      h+='<div style="font-size:10px;color:var(--tx3);margin-bottom:6px">'+esc(tm.class_names.join('、'))+'</div>';
+      // Long images — all in one row
+      var imgSegs=Object.keys(tm.class_image).sort(function(a,b){return segOrder.indexOf(a)-segOrder.indexOf(b)});
+      if(imgSegs.length){
+        h+='<div style="font-size:11px;margin-bottom:4px"><b>长图:</b><span style="display:inline-flex;align-items:center;gap:6px;margin-left:4px">';
+        imgSegs.forEach(function(s){h+='<span style="display:inline-flex;align-items:center;gap:2px"><span style="font-size:10px;color:var(--tx3)">'+s+'</span><img src="'+tm.class_image[s]+'" style="height:40px;border-radius:3px;border:1px solid var(--bd);cursor:pointer" onclick="showPreviewImage(\''+tm.class_image[s]+'\',\''+esc(title)+'\')"></span>'});
+        h+='</span></div>';
+      }
+      // Recommendation materials
+      if(tm.golden_quotes.length){
+        h+='<div style="font-size:11px;margin-top:6px;margin-bottom:4px"><b>推荐素材:</b></div>';
+        var seenPaths={};var deduped=tm.golden_quotes.filter(function(g){if(seenPaths[g.path])return false;seenPaths[g.path]=true;return true});recBySeg={};deduped.forEach(function(g){var segs=(g.segment||'').split(',').filter(function(s){return s});if(!segs.length)segs=[''];var key=segs.join('');if(!recBySeg[key])recBySeg[key]={segs:segs,items:[]};recBySeg[key].items.push(g)});
+        Object.keys(recBySeg).sort(function(a,b){var ia=segOrder.indexOf(recBySeg[a].segs[0]||''),ib=segOrder.indexOf(recBySeg[b].segs[0]||'');return ia-ib}).forEach(function(key){var grp=recBySeg[key];h+='<div style="margin:4px 0"><span style="font-size:10px;color:var(--tx3)">'+grp.segs.join('')+'</span>';grp.items.forEach(function(g){h+='<div style="display:inline-flex;align-items:center;gap:4px;margin:2px 8px 2px 0;vertical-align:top"><img src="'+g.path+'" style="width:32px;height:44px;object-fit:cover;border-radius:2px;border:1px solid var(--bd);cursor:pointer" onclick="showPreviewImage(\''+g.path+'\',\''+esc(g.name||'')+'\')" onerror="this.style.display=\'none\'"><div><span style="font-size:11px">'+esc(g.name||'')+'</span>'+(g.score?'<span style="font-size:10px;color:var(--accent)"> ⭐'+esc(g.score)+'</span>':'')+'</div></div>'});h+='</div>'});
+      }
+      if(tm.cards.length)h+='<div style="font-size:10px;color:var(--tx3);margin-top:4px">单人卡: '+tm.cards.length+'张</div>';
+      h+='</div>';
+    });
+    h+='</div>';grid.innerHTML=h;
+  }).catch(function(){var grid=document.getElementById('matGrid');if(grid)grid.innerHTML='加载失败'});
+}
+function showAddMaterialModal(){
+  var cycles=['2607&08','2607','2608'];var segs=['启航段','探索段','先锋段'];
+  var ov=document.createElement('div');ov.className='zg-modal-overlay';ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
+  var h='<div style="background:var(--surface);border-radius:12px;padding:20px;max-width:620px;width:95%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)"><h3>新增素材</h3>';
+  h+='<div class="mr" style="gap:6px"><select id="mfCycle" style="width:100px;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--tx)">'+cycles.map(function(c){return'<option value="'+c+'">'+c+'</option>'}).join('')+'</select><input id="mfTitle" placeholder="课节标题" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px"></div>';
+  // Long image
+  h+='<div style="margin-top:12px;display:flex;align-items:center;gap:8px"><span style="font-size:12px;font-weight:600;color:var(--tx);white-space:nowrap">长图 <span style="color:var(--rd)">*</span></span><span style="font-size:10px;color:var(--tx3)">'+segs.map(function(s){return'<label style="margin-left:6px;cursor:pointer;font-size:10px"><input type="checkbox" class="mfImgSeg" value="'+s+'" style="width:auto"> '+s+'</label>'}).join('')+'</span></div>';
+  h+='<div class="mr" style="gap:6px;margin-top:4px"><input id="mfImage" placeholder="长图路径" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px"><button class="btn bo" style="padding:6px 12px;font-size:11px" onclick="pickFileTo(\'mfImage\')">选择</button></div>';
+  // Recommendation materials
+  h+='<div style="margin-top:14px;display:flex;align-items:center;gap:8px"><span style="font-size:12px;font-weight:600;color:var(--tx);white-space:nowrap">推荐素材 <span style="color:var(--rd)">*</span></span><span style="font-size:10px;color:var(--tx3)">'+segs.map(function(s){return'<label style="margin-left:6px;cursor:pointer;font-size:10px"><input type="checkbox" class="recSegBatch" value="'+s+'" style="width:auto"> '+s+'</label>'}).join('')+'</span><span style="flex:1"></span><button class="btn bo" style="padding:2px 8px;font-size:10px" onclick="addRecRow()">+</button></div>';
+  h+='<div id="recRows" style="margin-top:4px"></div>';
+  h+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button onclick="closeModal(this)" class="btn bo" style="padding:6px 14px">取消</button><button onclick="saveMaterial()" class="btn bg" style="padding:6px 14px">保存</button></div></div>';
+  ov.innerHTML=h;document.body.appendChild(ov);
+  addRecRow();
+}
+function addRecRow(segData){
+  var segs=segData||['启航段','探索段','先锋段'];var batchChecked=[];document.querySelectorAll('.recSegBatch:checked').forEach(function(cb){batchChecked.push(cb.value)});
+  var div=document.createElement('div');div.className='rec-row';
+  div.style.cssText='margin:4px 0;padding:6px 8px;background:var(--bg);border-radius:6px;border:1px solid var(--border2)';
+  div.innerHTML='<div style="display:flex;gap:4px;align-items:center"><input class="recName" placeholder="素材名" style="width:150px;padding:6px 8px;border:1.5px solid var(--border);border-radius:4px;font-size:12px"><button class="btn bo" style="padding:4px 6px;font-size:9px" onclick="searchDoubanRec(this)">豆瓣</button><input class="recPath" placeholder="海报URL" style="flex:1;padding:6px 8px;border:1.5px solid var(--border);border-radius:4px;font-size:12px"><button class="btn bo" style="padding:4px 8px;font-size:10px" onclick="pickFileToClosest(this)">选</button><input class="recScore" placeholder="评分" style="width:55px;padding:6px 8px;border:1.5px solid var(--border);border-radius:4px;font-size:12px"><button class="btn bo" style="padding:2px 6px;font-size:10px;color:var(--rd)" onclick="this.closest(\'.rec-row\').remove()">-</button></div><div style="font-size:10px;color:var(--tx3);margin-top:2px">'+segs.map(function(s){var ch=batchChecked.indexOf(s)>=0?' checked':'';return'<label style="margin-right:6px;cursor:pointer;font-size:10px"><input type="checkbox" class="recSeg" value="'+s+'" style="width:auto"'+ch+'> '+s+'</label>'}).join('')+'</div><div style="display:flex;gap:6px"><textarea class="recLine" placeholder="推荐语（选豆瓣后自动生成）" style="flex:1;min-height:32px;padding:4px 8px;border:1.5px solid var(--border);border-radius:4px;font-size:12px;margin-top:3px;resize:vertical"></textarea><img class="recPreview" src="" style="width:50px;height:30px;object-fit:cover;border-radius:3px;border:1px dashed var(--border2);margin-top:3px;background:var(--bg);flex-shrink:0" onerror="this.style.opacity=&#39;0.2&#39;" onload="this.style.opacity=&#39;1&#39;;this.style.border=&#39;1px solid var(--bd)&#39;"></div><div class="doubanResults" style="padding:2px 0;display:none;font-size:10px"></div>';
+  document.getElementById('recRows').appendChild(div);
+}
+function searchDoubanRec(btn){
+  var row=btn.closest('.rec-row');var q=row.querySelector('.recName').value.trim();if(!q)return;
+  fetch(API+'/douban/search?q='+encodeURIComponent(q)).then(function(r){return r.json()}).then(function(results){
+    if(results.error){alert(results.error);return}
+    if(!results.length){alert('未找到结果');return}
+    var list=row.querySelector('.doubanResults');list.innerHTML=results.map(function(r,i){var tag=r.kind==='书'?'[书]':'[影]';return'<span style="cursor:pointer;font-size:10px;color:var(--accent);margin-right:6px" onclick="pickDoubanRec(this)" data-kind="'+esc(r.kind||'影')+'" data-poster="'+esc(r.poster||'')+'" data-rating="'+esc(r.rating||'')+'" data-title="'+esc(r.title)+'">'+tag+' '+esc(r.title)+' <b>'+esc(r.rating)+'</b></span>'}).join('');list.style.display='block';
+  }).catch(function(){alert('搜索失败')});
+}
+function pickDoubanRec(el){
+  var row=el.closest('.rec-row');var title=el.getAttribute('data-title')||'';var kind=el.getAttribute('data-kind')||'影';
+  if(!row.querySelector('.recName').value)row.querySelector('.recName').value=title;
+  var poster=el.getAttribute('data-poster')||'';if(poster){row.querySelector('.recPath').value=poster;_showRecPreview(row,poster)}
+  row.querySelector('.recScore').value=el.getAttribute('data-rating')||'';
+  row.querySelector('.doubanResults').style.display='none';
+  row.querySelector('.recLine').value='生成中...';
+  var kLabel=kind==='书'?'图书':'电影';
+  fetch(API+'/douban/recommendation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:title,kind:kLabel})}).then(function(r){return r.json()}).then(function(d){if(d.recommendation)row.querySelector('.recLine').value=d.recommendation;else row.querySelector('.recLine').value=''}).catch(function(){row.querySelector('.recLine').value=''})
+}
+function _showRecPreview(row,url){var img=row.querySelector('.recPreview');if(!img)return;if(url.indexOf('http')===0)url=API+'/img-proxy?url='+encodeURIComponent(url);img.src=url}
+function editMaterial(title){
+  var cycle=document.getElementById('matCycle');var curCycle=cycle?cycle.value:'2607&08';
+  showAddMaterialModal();
+  setTimeout(function(){
+    var c=document.getElementById('mfCycle');if(c)c.value=curCycle;
+    var t=document.getElementById('mfTitle');if(t){t.value=title;t.readOnly=true;t.style.background='var(--border2)'}
+    fetch(API+'/cycle-materials?cycle='+encodeURIComponent(curCycle)).then(function(r){return r.json()}).then(function(mats){
+      var found=mats.filter(function(m){return m.title===title});
+      if(!found.length)return;
+      // Fill long image — collect segment → URL mapping
+      var imgBySeg={};found.forEach(function(m){
+        if(!m.class_image)return;
+        if(typeof m.class_image==='string'){var s=m.segment||'';if(s)imgBySeg[s]=m.class_image}
+        else{Object.keys(m.class_image).forEach(function(s){imgBySeg[s]=m.class_image[s]})}
+      });
+      var imgInput=document.getElementById('mfImage');if(imgInput&&Object.keys(imgBySeg).length){imgInput.value=Object.values(imgBySeg)[0]}
+      // Check segment checkboxes for long image
+      Object.keys(imgBySeg).forEach(function(s){var cb=document.querySelector('.mfImgSeg[value=\"'+s+'\"]');if(cb)cb.checked=true});
+      // Fill rec rows
+      var allRecs=[];found.forEach(function(m){m.golden_quotes.forEach(function(g){allRecs.push(g)})});
+      if(allRecs.length){
+        document.getElementById('recRows').innerHTML='';
+        allRecs.forEach(function(g){
+          var rSegs=(g.segment||'').split(',').filter(function(s){return s});if(!rSegs.length)rSegs=['启航段','探索段','先锋段'];
+          addRecRow(rSegs);var row=document.getElementById('recRows').lastChild;
+          row.querySelector('.recName').value=g.name||'';row.querySelector('.recPath').value=g.path||'';
+          row.querySelector('.recScore').value=g.score||'';row.querySelector('.recLine').value=g.line||'';
+          if(g.path)setTimeout(function(){_showRecPreview(row,g.path)},100);
+          rSegs.forEach(function(s){var cb=row.querySelector('.recSeg[value=\"'+s+'\"]');if(cb)cb.checked=true});
+        });
+      }
+      // Check batch rec segment checkboxes
+      var allSegs=new Set();allRecs.forEach(function(g){(g.segment||'').split(',').forEach(function(s){if(s)allSegs.add(s)})});
+      allSegs.forEach(function(s){var cb=document.querySelector('.recSegBatch[value=\"'+s+'\"]');if(cb)cb.checked=true});
+    });
+  },300);
+}
+function pickFileTo(id){var el=document.getElementById(id);if(!el)return;el.value='选择中...';el.style.color='var(--tx3)';fetch(API+'/pick-file',{signal:AbortSignal.timeout(120000)}).then(function(r){return r.json()}).then(function(d){el.style.color='';if(d.path){el.value=d.path}else{el.value='';alert('未选择文件（可能点取消了）')}}).catch(function(){el.value='';el.style.color='';alert('文件选择超时或失败，请重试')})}
+function pickFileToClosest(btn){var row=btn.closest('.rec-row');var inp=row.querySelector('.recPath');var nm=row.querySelector('.recName');if(!inp)return;inp.value='选择中...';inp.style.color='var(--tx3)';fetch(API+'/pick-file',{signal:AbortSignal.timeout(120000)}).then(function(r){return r.json()}).then(function(d){inp.style.color='';if(d.path){inp.value=d.path;_showRecPreview(row,d.path);if(nm&&!nm.value){var fname=d.path.split('/').pop().replace(/\.[^.]+$/,'');nm.value=fname}}else{inp.value='';alert('未选择文件（可能点取消了）')}}).catch(function(){inp.value='';inp.style.color='';alert('文件选择超时或失败，请重试')})}
+
+function saveMaterial(){
+  var cycle=document.getElementById('mfCycle').value,title=document.getElementById('mfTitle').value.trim();
+  var img=document.getElementById('mfImage').value.trim();
+  if(!title)return alert('请输入课节标题');
+  if(!img)return alert('请上传长图');
+  var defaultSegs=[];document.querySelectorAll('.recSegBatch:checked').forEach(function(cb){defaultSegs.push(cb.value)});
+  var recs=[];document.querySelectorAll('#recRows .rec-row').forEach(function(r){var p=r.querySelector('.recPath').value.trim();var nm=r.querySelector('.recName').value.trim();if(p||nm){var rowSegs=[];r.querySelectorAll('.recSeg:checked').forEach(function(cb){rowSegs.push(cb.value)});if(!rowSegs.length)rowSegs=defaultSegs;recs.push({file_path:p,name:nm,score:r.querySelector('.recScore').value.trim(),line:r.querySelector('.recLine').value.trim(),segs:rowSegs})}});
+  if(!recs.length)return alert('请至少添加一个推荐素材');
+  var imgSegs=[];document.querySelectorAll('.mfImgSeg:checked').forEach(function(cb){imgSegs.push(cb.value)});
+  var payload={cycle:cycle,title:title,file_path:img,img_segs:imgSegs,recs:recs};
+  fetch(API+'/material',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){document.querySelectorAll('.zg-modal-overlay').forEach(function(x){x.remove()});renderMaterialTab()}else alert(rd.message)});
+}
 // ====== Tab 2: 排课表 (placeholder) =====
 // ====== Tab 4: 消课 =====
 function renderAttendanceTab(){
   var el=document.getElementById('editorBody');if(!el)return;
-  var h='<div style="padding:16px"><h3>消课记录</h3><div style="display:flex;gap:8px;align-items:center;margin:8px 0"><select id="attClassFilter" onchange="attPage=1;loadAttLessons()" style="width:auto;padding:4px 8px;font-size:12px"><option value="">全部班级</option></select><select id="attCycleFilter" onchange="attPage=1;loadAttLessons()" style="width:auto;padding:4px 8px;font-size:12px"><option value="">全部周期</option></select><span id="attLoadStatus" style="font-size:10px;color:var(--tx3)"></span></div><div id="attLessonList" style="font-size:12px">加载中...</div></div>';
+  var h='<div style="padding:16px"><h3>消课记录</h3><div style="display:flex;gap:8px;align-items:center;margin:8px 0"><select id="attClassFilter" onchange="attPage=1;loadAttLessons()" style="width:auto;padding:4px 8px;font-size:12px"><option value="">全部班级</option></select><select id="attCycleFilter" onchange="attPage=1;loadAttLessons()" style="width:auto;padding:4px 8px;font-size:12px"><option value="">全部周期</option></select><span id="attLoadStatus" style="font-size:10px;color:var(--tx3)"></span></div><div id="attLessonList" style="font-size:12px">'+(_attCache||'<div style="text-align:center;padding:60px 0;color:var(--tx3)">加载中...</div>')+'</div></div>';
   el.innerHTML=h;
   var sel=document.getElementById('attClassFilter');
   Object.keys(cfgInfo).forEach(function(c){sel.innerHTML+='<option value=\"'+c+'\">'+c+'</option>'});
-  // Populate cycle filter (uses separate endpoint, unchanged)
   fetch(API+'/attendance/cycles').then(function(r){return r.json()}).then(function(cycles){
     var cycSel=document.getElementById('attCycleFilter');if(!cycSel)return;
     cycSel.innerHTML='<option value=\"\">全部周期</option>';
@@ -727,6 +972,7 @@ function renderAttendanceTab(){
   });
   loadAttLessons();
 }
+var _attCache=null;
 function cycleColor(c){
   var colors={'2509试听期':'#94a3b8','2510正式课':'#3b82f6','2511正式课':'#6366f1','2512正式课':'#8b5cf6','2601正式课':'#14b8a6','2602寒假班':'#f59e0b','2603春季班':'#22c55e','2604春季班':'#ec4899','2605春季班':'#38bdf8','2606春季班':'#f97316'};
   return colors[c]||'#94a3b8';
@@ -848,8 +1094,9 @@ function renderCostTab(){
   }).catch(function(e){el.innerHTML='<div style="padding:16px;color:var(--rd)">加载失败: '+esc(e.message)+'</div>';});
 }
 function showAddCostModal(){
+  var today=new Date().toISOString().slice(0,10);
   var ov=document.createElement('div');ov.className='zg-modal-overlay';ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
-  ov.innerHTML='<div style="background:var(--surface);border-radius:12px;padding:20px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)"><h3>新增成本</h3><input id="cfReason" placeholder="支出原因" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:6px"><input id="cfType" placeholder="类型(平台费/工资/其他)" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfChannel" placeholder="渠道(淘宝/微信/银行)" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"></div><input id="cfCycle" placeholder="周期(如2601第四周)" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfAmt" type="number" step="0.01" placeholder="金额" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfDate" type="date" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfNotes" placeholder="备注" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button onclick="closeModal(this)" class="btn bo" style="padding:6px 14px">取消</button><button onclick="saveCost()" class="btn bg" style="padding:6px 14px">保存</button></div></div>';
+  ov.innerHTML='<div style="background:var(--surface);border-radius:12px;padding:20px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)"><h3>新增成本</h3><input id="cfReason" placeholder="支出原因" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:6px"><select id="cfType" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0;background:var(--bg);color:var(--tx)"><option value="">类型</option><option>平台服务费</option><option>平台保证金</option><option>薯条推广</option><option>运营成本</option><option>其他</option></select><select id="cfChannel" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0;background:var(--bg);color:var(--tx)"><option value="">渠道</option><option>AI</option><option>Neukol</option><option>小红书</option><option>淘宝</option><option>其他</option></select></div><input id="cfCycle" placeholder="周期(如2601第四周)" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfAmt" type="number" step="0.01" placeholder="金额" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfDate" type="date" value="'+today+'" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfNotes" placeholder="备注" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button onclick="closeModal(this)" class="btn bo" style="padding:6px 14px">取消</button><button onclick="saveCost()" class="btn bg" style="padding:6px 14px">保存</button></div></div>';
   document.body.appendChild(ov);
 }
 function renderRevenueSplitTab(){
@@ -1025,22 +1272,19 @@ function saveRevenue(){
   }).catch(function(){btn.textContent='保存';btn.disabled=false;alert('保存失败')});
 }
 function deletePurchase(id){if(!confirm('确定删除此收费记录？'))return;fetch(API+'/finance/delete-purchase',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok')renderFinanceTab()})}
-function showAddCostModal(){
-  var ov=document.createElement('div');ov.className="zg-modal-overlay";ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
-  ov.innerHTML='<div style="background:var(--surface);border-radius:12px;padding:20px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)"><h3>新增成本</h3><input id="cfReason" placeholder="支出原因" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:6px"><input id="cfType" placeholder="类型(平台费/工资/其他)" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfChannel" placeholder="渠道(淘宝/微信/银行)" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"></div><input id="cfAmt" type="number" step="0.01" placeholder="金额" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfDate" type="date" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button onclick="closeModal(this)" style="padding:6px 14px;border:1px solid #e2e8f0;border-radius:6px;background:var(--surface);color:var(--tx2)">取消</button><button onclick="saveCost()" class="btn bg" style="padding:6px 14px">保存</button></div></div>';
-  document.body.appendChild(ov);
-}
 function saveCost(){
-  var d={reason:document.getElementById('cfReason').value,cost_type:document.getElementById('cfType').value,channel:document.getElementById('cfChannel').value,amount:parseFloat(document.getElementById('cfAmt').value)||0,cost_date:document.getElementById('cfDate').value,cycle:document.getElementById('cfCycle').value,notes:document.getElementById('cfNotes').value};
+  var g=function(id){var el=document.getElementById(id);return el?el.value:'';};
+  var d={reason:g('cfReason'),cost_type:g('cfType'),channel:g('cfChannel'),amount:parseFloat(g('cfAmt'))||0,cost_date:g('cfDate'),cycle:g('cfCycle'),notes:g('cfNotes')};
   if(!d.reason)return alert('请输入支出原因');
-  fetch(API+'/finance/add-cost',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){document.querySelectorAll('#editorBody ~ div').forEach(function(x){if(x.style&&x.style.position==='fixed')x.remove()});if(activeMainTab==='costs')renderCostTab();else renderFinanceTab()}else alert(rd.message)});
+  fetch(API+'/finance/add-cost',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){document.querySelectorAll('.zg-modal-overlay').forEach(function(x){x.remove()});if(activeMainTab==='costs')renderCostTab();else renderFinanceTab()}else alert(rd.message)});
 }
 function deleteCost(id){if(!confirm('确定删除此成本记录？'))return;fetch(API+'/finance/delete-cost',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok')renderFinanceTab()})}
 var _cachedStudents=null;
 var studentFilter={status:['在读中','仅试听'],segment:'',class:'',search:''};
 function renderStudentTab(){
   var el=document.getElementById('editorBody');if(!el)return;
-  cachedFetch(API+'/students').then(function(r){return r.json()}).then(function(rows){
+  var fetcher=_cachedStudents?Promise.resolve({json:function(){return Promise.resolve(_cachedStudents)}}):cachedFetch(API+'/students');
+  fetcher.then(function(r){return r.json()}).then(function(rows){
     _cachedStudents=rows;
     var h='<div style="padding:16px"><h3 style="margin:0 0 8px">学生管理</h3>';
     h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">';
@@ -1050,7 +1294,7 @@ function renderStudentTab(){
     // Filter and group by class
     var filtered=rows.filter(function(r){return studentFilter.status.indexOf(r.status||'在读中')>=0});if(studentFilter.search)filtered=filtered.filter(function(r){return r.student_name.indexOf(studentFilter.search)>=0});var _ss=_seasonSet();filtered=filtered.filter(function(r){return !r.enrolled_class||_ss[r.enrolled_class]===true||r.status==='暂时停课'});
     var byClass={};filtered.forEach(function(r){var c=r.enrolled_class;if(!c&&r.status==='暂时停课')c='暂时停课-待分班';else if(!c)c='未分班';if(!byClass[c])byClass[c]=[];byClass[c].push(r)});
-    var sortedClasses=Object.keys(cfgInfo);var classOrder=[];sortedClasses.forEach(function(c){if(byClass[c])classOrder.push(c)});if(byClass['暂时停课-待分班']){classOrder.push('暂时停课-待分班')}Object.keys(byClass).sort().forEach(function(c){if(c!=='暂时停课-待分班'&&classOrder.indexOf(c)<0)classOrder.push(c)});
+    var sortedClasses=_classSortOrder();var classOrder=[];sortedClasses.forEach(function(c){if(byClass[c])classOrder.push(c)});if(byClass['暂时停课-待分班']){classOrder.push('暂时停课-待分班')}Object.keys(byClass).sort().forEach(function(c){if(c!=='暂时停课-待分班'&&classOrder.indexOf(c)<0)classOrder.push(c)});
     classOrder.forEach(function(cls){
       var students=byClass[cls];
       var clsLabel=cls==='暂时停课-待分班'?'暂时停课':cls;h+='<div class="section-card" id="classSection_'+esc(cls).replace(/\\s/g,'_')+'" style="padding:12px 16px;margin-bottom:12px"><div style="display:flex;align-items:center;margin-bottom:10px"><div style="font-size:13px;font-weight:700;color:var(--tx);flex:1">'+esc(clsLabel)+' <span style="font-weight:400;color:var(--tx3);font-size:11px">'+students.length+'人</span></div><button onclick="expandClassRecords(\''+esc(cls)+'\',\'att\')" style="padding:1px 6px;border-radius:3px;border:1px solid #dbeafe;background:var(--surface);color:#2563eb;font-size:9px;cursor:pointer;margin-left:4px">展开消课</button><button onclick="expandClassRecords(\''+esc(cls)+'\',\'pay\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:var(--surface);color:#16a34a;font-size:9px;cursor:pointer;margin-left:2px">展开缴费</button></div>';
@@ -1061,7 +1305,7 @@ function renderStudentTab(){
         var sid='studDetail_'+esc(r.student_name).replace(/\\s/g,'_');
         h+='<div style="background:'+(isGhost?'var(--bg)':'var(--surface2)')+';border-radius:8px;padding:10px;border:1px '+(isGhost?'dashed':'solid')+' '+(isGhost?'var(--border2)':'var(--border)')+'">';
         h+='<div style="display:flex;justify-content:space-between;align-items:center"><div><b style="font-size:13px;color:'+(isGhost?'var(--tx3)':'var(--tx)')+'">'+esc(r.student_name)+'</b>'+(r.gender?' <span style="font-size:9px;color:var(--tx3)">'+esc(r.gender)+'</span>':'')+'</div><span style="font-size:9px;padding:1px 6px;border-radius:999px;background:'+(isGhost?'#f0f0ff':'#fee2e2')+';color:'+(isGhost?'var(--accent)':'#dc2626')+'">'+(isGhost?'预排':esc(r.status||'?'))+'</span></div>';
-        if(!isGhost){h+='<div style="height:4px;background:#e2e8f0;border-radius:2px;margin:6px 0"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:2px"></div></div>';var purText='已购'+pur;var ref=parseInt(r.ref_lessons)||0;if(ref>0)purText='已购'+(pur-ref)+'+转介绍赠'+ref;h+='<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--sb)"><span>'+purText+'</span><span>已消'+used+'</span><span>余'+rem+'</span></div>';}
+        if(!isGhost){if(used===0){h+='<div style="height:4px;background:#e2e8f0;border-radius:2px;margin:6px 0"><div style="height:100%;width:12px;background:#94a3b8;border-radius:2px"></div></div>'}else{h+='<div style="height:4px;background:#e2e8f0;border-radius:2px;margin:6px 0"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:2px"></div></div>'}var purText='已购'+pur;var ref=parseInt(r.ref_lessons)||0;if(ref>0)purText='已购'+(pur-ref)+'+转介绍赠'+ref;h+='<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--sb)"><span>'+purText+'</span><span>已消'+used+'</span><span>余'+rem+'</span></div>';}
         h+='<div style="display:flex;gap:4px;margin-top:6px"><button onclick="showAddStudentModal(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bfdbfe;background:#eff6ff;color:#3b82f6;font-size:9px;cursor:pointer">编辑</button><button onclick="showAddPayForStudent(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:#f0fdf4;color:#16a34a;font-size:9px;cursor:pointer">+缴费</button>'+(isGhost?'':'<span style="flex:1"></span><button onclick="toggleStudAtt(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #dbeafe;background:var(--surface);color:#2563eb;font-size:9px;cursor:pointer">消课</button><button onclick="toggleStudPay(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:var(--surface);color:#16a34a;font-size:9px;cursor:pointer">缴费</button>')+'</div>';
         h+='<div id="studAtt_'+esc(r.student_name).replace(/\\s/g,'_')+'" style="display:none;margin-top:4px;padding:4px;background:var(--bg);border-radius:4px;font-size:9px"></div>';
         h+='<div id="studPay_'+esc(r.student_name).replace(/\\s/g,'_')+'" style="display:none;margin-top:4px;padding:4px;background:var(--bg);border-radius:4px;font-size:9px"></div>';
@@ -1143,8 +1387,8 @@ function showAddPayForStudent(name){
       var ov=document.createElement('div');ov.className="zg-modal-overlay";ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
       ov.innerHTML='<div style="background:var(--surface);border-radius:12px;padding:20px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)"><h3>新增缴费 - '+esc(name)+'</h3><input id="rfName" value="'+esc(name)+'" style="display:none"><div style="display:flex;gap:6px;margin:4px 0"><select id="rfSeg" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--tx)">'+segOpts+'</select><select id="rfType" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--tx)">'+typeOpts+'</select></div><div style="display:flex;gap:6px;margin:4px 0"><select id="rfDisc" onchange="_calcPayAmtForStud()" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--tx)">'+discOpts+'</select><input id="rfCnt" type="number" placeholder="课次" min="1" value="1" onchange="_calcPayAmtForStud()" style="width:80px;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px"></div><div style="display:flex;gap:6px;margin:4px 0"><select id="rfMethod" onchange="var o=document.getElementById(\x27rfOrderRow2\x27);if(o)o.style.display=this.value===\x27小红书订单\x27?\x27block\x27:\x27none\x27;if(this.value===\x27转介绍赠课\x27){var d=document.getElementById(\x27rfDisc\x27);if(d)d.value=\x27转介绍赠\x27;_calcPayAmtForStud()}" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--tx)">'+methodOpts+'</select><input id="rfDate" type="date" value="'+today+'" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px"></div><div id="rfOrderRow2" style="display:none;margin:4px 0"><input id="rfOrderId" placeholder="小红书订单号" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px"></div><input id="rfAmt" type="number" step="0.01" placeholder="金额（选择后自动计算）" onfocus="if(!this.value)_calcPayAmtForStud()" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;margin:4px 0;font-size:13px;font-weight:600"><input id="rfNotes" placeholder="备注（选填）" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;margin:4px 0;font-size:13px"><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button onclick="closeModal(this)" class="btn bo">取消</button><button onclick="saveRevenue()" class="btn bp" style="padding:6px 14px">保存</button></div></div>';
       document.body.appendChild(ov);
-      // Pre-fill last values
-      if(lastSeg){var s=document.getElementById('rfSeg');if(s)s.value=lastSeg}
+      // Pre-fill last values or defaults for new students
+      if(lastSeg){var s=document.getElementById('rfSeg');if(s)s.value=lastSeg}else{_defaultPayForGhost(name)}
       if(lastType){var t=document.getElementById('rfType');if(t)t.value=lastType}
       if(lastDisc){var d=document.getElementById('rfDisc');if(d)d.value=lastDisc}
       if(lastMethod){var m=document.getElementById('rfMethod');if(m){m.value=lastMethod;if(lastMethod==='小红书订单'){var o=document.getElementById('rfOrderRow2');if(o)o.style.display='block'}}}
@@ -1152,15 +1396,27 @@ function showAddPayForStudent(name){
       var ov=document.createElement('div');ov.className="zg-modal-overlay";ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
       ov.innerHTML='<div style="background:var(--surface);border-radius:12px;padding:20px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)"><h3>新增缴费 - '+esc(name)+'</h3><input id="rfName" value="'+esc(name)+'" style="display:none"><div style="display:flex;gap:6px;margin:4px 0"><select id="rfSeg" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--tx)">'+segOpts+'</select><select id="rfType" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--tx)">'+typeOpts+'</select></div><div style="display:flex;gap:6px;margin:4px 0"><select id="rfDisc" onchange="_calcPayAmtForStud()" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--tx)">'+discOpts+'</select><input id="rfCnt" type="number" placeholder="课次" min="1" value="1" onchange="_calcPayAmtForStud()" style="width:80px;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px"></div><div style="display:flex;gap:6px;margin:4px 0"><select id="rfMethod" onchange="var o=document.getElementById(\x27rfOrderRow2\x27);if(o)o.style.display=this.value===\x27小红书订单\x27?\x27block\x27:\x27none\x27;if(this.value===\x27转介绍赠课\x27){var d=document.getElementById(\x27rfDisc\x27);if(d)d.value=\x27转介绍赠\x27;_calcPayAmtForStud()}" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--tx)">'+methodOpts+'</select><input id="rfDate" type="date" value="'+today+'" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px"></div><div id="rfOrderRow2" style="display:none;margin:4px 0"><input id="rfOrderId" placeholder="小红书订单号" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px"></div><input id="rfAmt" type="number" step="0.01" placeholder="金额（选择后自动计算）" onfocus="if(!this.value)_calcPayAmtForStud()" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;margin:4px 0;font-size:13px;font-weight:600"><input id="rfNotes" placeholder="备注（选填）" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;margin:4px 0;font-size:13px"><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button onclick="closeModal(this)" class="btn bo">取消</button><button onclick="saveRevenue()" class="btn bp" style="padding:6px 14px">保存</button></div></div>';
       document.body.appendChild(ov);
+      _defaultPayForGhost(name);
     });
   });
+}
+function _defaultPayForGhost(name){
+  // 预排新生首次缴费：按班级默认填入分段 + 试听课默认值
+  var stud=_cachedStudents?_cachedStudents.find(function(s){return s.student_name===name}):null;
+  var cls=stud?stud.enrolled_class:'';
+  var seg='';if(cls.indexOf('启航')>=0)seg='启航段';else if(cls.indexOf('探索')>=0)seg='探索段';else if(cls.indexOf('先锋')>=0)seg='先锋段';else if(cls.indexOf('领航')>=0)seg='领航1V1';
+  if(seg){var s=document.getElementById('rfSeg');if(s)s.value=seg}
+  var t=document.getElementById('rfType');if(t)t.value='试听课';
+  var d=document.getElementById('rfDisc');if(d){d.value='试听折扣';setTimeout(function(){_calcPayAmtForStud()},100)}
+  var m=document.getElementById('rfMethod');if(m){m.value='小红书订单';var o=document.getElementById('rfOrderRow2');if(o)o.style.display='block'}
+  var a=document.getElementById('rfAmt');if(a)a.value='69.9';
 }
 function _calcPayAmtForStud(){
   var seg=document.getElementById('rfSeg').value,type=document.getElementById('rfType').value,disc=document.getElementById('rfDisc').value,cnt=parseInt(document.getElementById('rfCnt').value)||1;
   if(!seg||!type||!disc){return}
   _loadPricing(function(pricing){
     var found=pricing.filter(function(p){return p.segment===seg&&p.course_type===type&&p.discount_type===disc});
-    if(found.length){var p=found[0];var amt=Math.round(p.unit_price*p.discount_multiplier*cnt);document.getElementById('rfAmt').value=amt}
+    if(found.length){var p=found[0];var amt=parseFloat((p.unit_price*p.discount_multiplier*cnt).toFixed(2));document.getElementById('rfAmt').value=amt}
   });
 }
 var _pricingCache=null;
@@ -1170,14 +1426,11 @@ function toggleStudAtt(name){
   if(!det)return;
   if(det.style.display==='block'){det.style.display='none';return}
   det.style.display='block';det.textContent='加载中...';
-  fetch(API+'/attendance/by-lesson?limit=50&student='+encodeURIComponent(name)+'').then(function(r){return r.json()}).then(function(data){
-    var found=(data.rows||data).filter(function(r){return (r.students&&r.students.indexOf(name)>=0)||(r.trial_students&&r.trial_students.indexOf(name)>=0);});
-    if(!found.length){det.innerHTML='<span style=\"color:var(--tx3)\">暂无</span>';return}
+  fetch(API+'/finance/records?type=attendance&student='+encodeURIComponent(name)+'&limit=50').then(function(r){return r.json()}).then(function(rows){
+    if(!rows.length){det.innerHTML='<span style=\"color:var(--tx3)\">暂无</span>';return}
     var h='<table style=\"width:100%;font-size:9px;border-collapse:collapse\"><tr style=\"color:var(--tx3)\"><th>日期</th><th>班级</th><th>课节</th></tr>';
-    found.forEach(function(r){
-    var isMK=r.makeup_students&&r.makeup_students.some(function(m){return m.name===name});
-    var isNW=r.new_students&&r.new_students.some(function(m){return m.name===name});
-    h+='<tr><td>'+((r.lesson_date||'').slice(0,10))+'</td><td>'+esc(r.class_name)+'</td><td>'+esc(r.lesson_title||'')+(isMK?' <span style="color:var(--sky);font-size:8px">补课</span>':isNW?' <span style="color:var(--accent);font-size:8px">新生</span>':'')+'</td></tr>';
+    rows.forEach(function(r){
+    h+='<tr><td>'+((r.lesson_date||'').slice(0,10))+'</td><td>'+esc(r.class_name)+'</td><td>'+esc(r.lesson_title||'')+'</td></tr>';
   });
     h+='</table>';det.innerHTML=h;
   }).catch(function(){det.innerHTML='加载失败'});
@@ -1395,37 +1648,6 @@ function generateCrossSettlements(){
   fetch(API+'/settlements',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({batch:true,items:items,created_at:now})}).then(function(r){return r.json()}).then(function(d){if(d.status==='ok'){alert('已生成 '+d.count+' 条跨月结算单');renderSettleTab()}else alert('生成失败')});
 }
 function deleteSettlement(id){if(confirm('删除?')){fetch(API+'/settlements/'+id,{method:'DELETE'}).then(function(){renderSettleTab()})}}
-function uploadWeeklyMaterial(seg){
-  var inp=document.createElement('input');inp.type='file';inp.accept='image/*';
-  inp.onchange=function(){
-    var fd=new FormData();fd.append('file',inp.files[0]);fd.append('segment',seg);fd.append('weekly','1');var wk=document.getElementById('matWeek');fd.append('cycle',(window._summary&&window._summary.cycle)||'2606');fd.append('week',wk?wk.value:'第一周');
-    fetch(API+'/class-material',{method:'POST',body:fd}).then(function(r){return r.json()}).then(function(d){
-      if(d.status==='ok')refreshWeeklyMaterial()
-    });
-  };inp.click();
-}
-function deleteWeeklyMaterial(seg){
-  if(!confirm('删除本周'+seg+'课后素材？'))return;
-  var wkDel=document.getElementById('matWeek');fetch(API+'/class-material/'+encodeURIComponent(seg)+'?cycle='+((window._summary&&window._summary.cycle)||'2606')+'&week='+(wkDel?wkDel.value:'第一周'),{method:'DELETE'}).then(function(){refreshWeeklyMaterial()});
-}
-function downloadWeeklyMaterial(seg){
-  var cyc=((window._summary&&window._summary.cycle)||'2606');var wk=document.getElementById('matWeek');var wkLabel=wk?wk.value:'第一周';var path='static/class-material/每周素材-'+seg+'-'+cyc+'-'+wkLabel+'.png';
-  var a=document.createElement('a');a.href=path;a.download='本周课后素材-'+seg+'.png';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
-}
-function refreshWeeklyMaterial(){
-  ['启航段','探索段'].forEach(function(seg){
-    var prefix=seg==='启航段'?'QH':'TS';
-    var cyc=((window._summary&&window._summary.cycle)||'2606');var wk=document.getElementById('matWeek');var wkLabel=wk?wk.value:'第一周';var path='static/class-material/每周素材-'+seg+'-'+cyc+'-'+wkLabel+'.png';
-    var img=new Image();
-    img.onload=function(){
-      var dl=document.getElementById('wmDL'+prefix); if(dl){dl.onclick=function(){downloadWeeklyMaterial(seg);return false};dl.style.display='inline';dl.textContent='下载'}
-      var del=document.getElementById('wmDel'+prefix); if(del)del.style.display='inline'
-    };
-    img.onerror=function(){var dl=document.getElementById('wmDL'+prefix);if(dl)dl.style.display='none';var del=document.getElementById('wmDel'+prefix);if(del)del.style.display='none'};
-    img.src=path+'?t='+Date.now();
-  });
-}
 function updateSettleSelection(){}
 
 function showPricing(){activeMainTab='pricing';renderMainTabs();switchMainTab()}
@@ -1450,9 +1672,10 @@ function uploadExcel(file){
 
 
 // ── 春秋/寒暑切换 ──
-window._season='S';window._summerMonth='2607';
+window._season='V';window._summerMonth='2607';
 var _vacationWords=['暑假','寒假','临时','先锋','混龄'];
 function _isVac(cn){for(var i=0;i<_vacationWords.length;i++){if(cn.indexOf(_vacationWords[i])>=0)return true;}var units=cfgInfo[cn];if(units){var ucs=Object.keys(units);for(var j=0;j<ucs.length;j++){if(ucs[j]==='2607'||ucs[j]==='2608')return true;}}return false;}
+function _segFromClass(cn){if(!cn)return'';if(cn.indexOf('启航')>=0)return'启航段';if(cn.indexOf('探索')>=0)return'探索段';if(cn.indexOf('先锋')>=0)return'先锋段';return''}
 function setSeason(s){
   window._season=s;
   var btS=document.getElementById('seasonBtnS'),btV=document.getElementById('seasonBtnV');
