@@ -10,7 +10,14 @@ import os, datetime, random
 W, P = 420, 24
 NOTCH_R = 16; NOTCH_STEP = 34; DIV_R = 20
 POSTER_H = 180
-_FONT_CFG = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".font_path")
+_PROJ_DIR = os.path.dirname(os.path.abspath(__file__))
+_ICLOUD_DIR = os.path.expanduser("~/Library/Mobile Documents/com~apple~CloudDocs/追光π课后素材生成系统")
+def _resolve_asset(bd, name):
+    for d in [bd, _PROJ_DIR, _ICLOUD_DIR]:
+        p = os.path.join(d, name)
+        if os.path.exists(p): return p
+    return os.path.join(bd, name)
+_FONT_CFG = os.path.join(_PROJ_DIR, ".font_path")
 if os.path.exists(_FONT_CFG):
     with open(_FONT_CFG) as _f:
         FONT_PATH = _f.read().strip()
@@ -117,7 +124,7 @@ def make_card(meta, out="golden_card.png", base_dir=None):
 
     # ---- 计算各段高度 ----
     logo_h = 0
-    if os.path.exists(os.path.join(bd,"logo.png")):
+    if os.path.exists(_resolve_asset(bd,"logo.png")):
         logo_h = 50+4
 
     top_sec = 30 + logo_h + max(_d.textbbox((0,0),"金句日历",font=f_ctitle)[3], date_h) + 10
@@ -129,7 +136,7 @@ def make_card(meta, out="golden_card.png", base_dir=None):
 
     # slogan
     slogan=None; slogan_h=0
-    sp=os.path.join(bd,"slogan单人.png")
+    sp=_resolve_asset(bd,"slogan单人.png")
     if os.path.exists(sp):
         try:
             slogan=Image.open(sp).convert("RGBA")
@@ -163,7 +170,7 @@ def make_card(meta, out="golden_card.png", base_dir=None):
     y=30
 
     # Logo 右上
-    logo_path = os.path.join(bd,"logo.png")
+    logo_path = _resolve_asset(bd,"logo.png")
     if os.path.exists(logo_path):
         try:
             logo=Image.open(logo_path).convert("RGBA")
@@ -246,7 +253,28 @@ def make_card(meta, out="golden_card.png", base_dir=None):
     pl=False
     if meta.get("poster"):
         pp=meta["poster"]
-        if not os.path.isabs(pp): pp=os.path.join(bd,pp)
+        # Resolve /api/img-proxy to download external image
+        if pp.startswith("/api/img-proxy"):
+            try:
+                import urllib.request, tempfile
+                tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+                tmp.write(urllib.request.urlopen(f"http://localhost:5888{pp}", timeout=10).read())
+                tmp.close(); pp = tmp.name
+            except: pp = ""
+        # Resolve /api/material-file/ paths to local files
+        elif pp.startswith("/api/material-file/"):
+            fname = pp.replace("/api/material-file/", "")
+            fname = urllib.parse.unquote(fname)
+            pp = os.path.expanduser(f"~/Library/Mobile Documents/com~apple~CloudDocs/追光π课后素材生成系统/素材库/{fname}")
+        # Download external URLs
+        elif pp.startswith("http://") or pp.startswith("https://"):
+            try:
+                import urllib.request, tempfile
+                tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+                tmp.write(urllib.request.urlopen(pp, timeout=10).read())
+                tmp.close(); pp = tmp.name
+            except: pp = ""
+        elif not os.path.isabs(pp): pp=os.path.join(bd,pp)
         if os.path.exists(pp):
             try:
                 pi=Image.open(pp).convert("RGBA"); pw,ph=pi.size
@@ -266,7 +294,7 @@ def make_card(meta, out="golden_card.png", base_dir=None):
             draw.line([(P,y+i),(W-P-1,y+i)],fill=(40+i//8,42+i//10,58+i//7))
 
     ix,iy=P+18,y+22
-    draw.text((ix,iy),"🎬 推荐影片",fill=(255,210,140),font=f_unit); iy+=28
+    draw.text((ix,iy),"🎬 推荐素材",fill=(255,210,140),font=f_unit); iy+=28
     mv=meta.get("movie","")
     if mv: draw.text((ix,iy),mv,fill=(255,255,255),font=f_movie); iy+=30
     rt2=meta.get("rating","")

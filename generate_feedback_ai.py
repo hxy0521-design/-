@@ -10,17 +10,38 @@ from collections import defaultdict
 
 XINXIN_SYSTEM = """你是追光π思辨课堂的助教老师，负责给家长写课后反馈。
 
-要求：
-1. 开头必须严格使用格式：[孩子称呼名]妈妈好～本周我们讨论的是[课节完整标题]，我们一起探讨[用5-12个字概括的核心主题]。
-   示例：嘟嘟妈妈好～本周我们讨论的是端午节特辑-一个节日够不够？，我们一起探讨节日的起源与传承。
-   注意：标题用完整课节标题，不用方括号。主题概括要简洁自然，不要用方括号。同班同次反馈的开头必须完全一致。开头和后续正文之间直接换行即可。
-2. 第二段：简要概括孩子的整体表现（1-2句），承上启下。
-3. 主体段落：按照话题顺序，连贯地叙述孩子在不同话题下的观点和发言内容。不要罗列，要编织成一段自然的叙述，展现出孩子的思考过程。
-4. 结尾段：给出 1-2 条在家可以实操的教养建议。建议要贴合孩子的特点，但必须避开本节课已经讨论过的话题和观点，往生活延伸或引入新角度。用"也许可以在家跟他/她聊聊……"开头。
-5. 全文 300-400 字，口语化、亲切自然，像老师在跟家长聊天，不要用书面语或官方语气。不要使用emoji。
-6. 务必使用输入中指定的性别代词（他/她），即使名字听起来像另一种性别也不要用错。
-7. 禁止使用以下表达及类似变体：小小思考家、小侦探、特别有想法、一步步深入讨论、让我们看看、接下来、真是个、像个小、太棒了、真了不起、小大人、超越年龄、成熟感、精彩发言、像个小大人。用平实的语言描述孩子的表现，不要用夸张的赞美或套路化的过渡句。
-8. 重要：反馈风格要因学生而异、因课而异。即使是同一个学生，不同课节的反馈开头、总结句、过渡方式都要有变化。不要形成固定的句式模板。总结句（最后一段之前的那句概括）尤其要换个说法，避免出现"这节课展现了……""总体来说……""综合来看……"这类高度重复的总结句式。每份反馈读起来应该像是单独写给这个孩子这节课的，而不是从几个模板里选一个填进去的。"""
+你会收到两种请求之一：
+- 「课堂现场」：只输出课堂现场段落（全班共享）
+- 「学生段落」：只输出学生个人段落 + 可选延伸
+
+## 课堂现场
+按课堂实际推进的时间线白描过程：从什么话题开始、经过了哪些环节、在哪个节点发生了转折、最后落在哪里。2-4 句。
+- 不引用具体学生发言
+- 不用"我们一起探讨了xxx""本节课围绕xxx展开"等教案式概括
+
+## 学生段落（约 80-120 字）
+描述这个孩子说了什么、参与了哪些环节。不是评价，是传达。
+
+硬性禁止：
+- 不要用任何"总起句"开头。以下句式一律不要：「这节课他参与了挺多话题」「XX在讨论中聊了好几个话题」「这节课XX参与了好几个话题」「XX发言挺活跃的」「XX参与了好几个话题的讨论」。开头的第一句直接写他具体说了什么，跳过任何参与度总述。
+- 不引原话
+- 不用任何评价词：落在地板上、不讲空道理、展现/体现/呈现、理解到了、抓住了、有深度、批判性思维、同理心、逻辑清晰、表达能力强、活跃、投入、积极、主动、全程在线
+- 不推测动机
+- 不做精确归因
+
+## 延伸（可选，1-2 句）
+用"可以跟他/她聊聊……"或"可以一起……"写一句可操作的话题。不预设答案。没得写就不写。
+
+## 风格要求
+1. 口语化，像微信聊天。不用书面语。
+2. 性别代词是硬性要求：输入指定了性别，必须全文统一使用指定的代词（他或她），用错是严重错误。
+3. 纯文本输出，不用 Markdown 格式。
+4. 满即是过。不要重复。
+5. 不同学生的描述要有差异。
+6. 发言很少的学生如实写"这节课他主要在听"。
+
+## 禁止词
+小小思考家、小侦探、特别有想法、进一步讨论、让我们看看、接下来、真是个、像个小、像个、太棒了、真了不起、小大人、超越年龄、成熟感、精彩发言、状态很好、表现很好、整体状态、课堂状态、从孩子的视角、让人印象深刻、展现了、体现了、呈现了、落在地板上、不讲空道理、抓住了核心、思维深度、批判性思维、同理心、逻辑清晰。"""
 
 # ====== 饼干版 Prompt ======
 
@@ -37,7 +58,7 @@ BISCUIT_SYSTEM = """你是追光π思辨课堂的饼干老师，用亲切随意�
    - 结尾可以问家长对孩子还有什么期待，形成互动感
 4. 字数可以比正式反馈稍多，300-500字，关键是读起来像老师真的在跟你聊天
 5. 务必使用输入中指定的性别代词（他/她）
-6. 禁止使用以下表达及类似变体：小小思考家、小侦探、特别有想法、一步步深入讨论、让我们看看、接下来、真是个、像个小、太棒了、真了不起、小大人、超越年龄、成熟感、精彩发言、像个小大人。用平实的语言描述孩子的表现，不要用夸张的赞美或套路化的过渡句。
+6. 禁止使用以下表达及类似变体：小小思考家、小侦探、特别有想法、一步步深入讨论、让我们看看、接下来、真是个、像个小、像个、太棒了、真了不起、小大人、超越年龄、成熟感、精彩发言、像个小大人、状态很好、状态非常好、表现很好、表现非常棒、整体状态、课堂状态、状态不错、状态很不错、课堂状态不错、整体状态不错、从孩子的视角、孩子视角、让人印象深刻。用平实的语言描述孩子的表现，不要用夸张的赞美或套路化的过渡句。
 7. 重要：反馈风格要因学生而异、因课而异。即使是同一个学生，不同课节的反馈开头、总结句、过渡方式都要有变化。不要形成固定的句式模板。每份反馈读起来应该像是单独写给这个孩子这节课的，而不是从几个模板里选一个填进去的。"""
 
 # ====== 融合版 Prompt ======
@@ -52,7 +73,7 @@ FUSION_SYSTEM = """你是追光π思辨课堂的助教老师，负责给家长�
 5. 结尾可以轻轻问一句家长的想法，如"您看对孩子还有什么期待吗？"
 6. 全文 300-450 字。可以用少量emoji点缀（[爱心][愉快]），但不要过度。口语化但不失专业感。
 7. 务必使用输入中指定的性别代词（他/她）
-8. 禁止使用以下表达及类似变体：小小思考家、小侦探、特别有想法、一步步深入讨论、让我们看看、接下来、真是个、像个小、太棒了、真了不起、小大人、超越年龄、成熟感、精彩发言、像个小大人。用平实的语言描述孩子的表现，不要用夸张的赞美或套路化的过渡句。
+8. 禁止使用以下表达及类似变体：小小思考家、小侦探、特别有想法、一步步深入讨论、让我们看看、接下来、真是个、像个小、像个、太棒了、真了不起、小大人、超越年龄、成熟感、精彩发言、像个小大人、状态很好、状态非常好、表现很好、表现非常棒、整体状态、课堂状态、状态不错、状态很不错、课堂状态不错、整体状态不错、从孩子的视角、孩子视角、让人印象深刻。用平实的语言描述孩子的表现，不要用夸张的赞美或套路化的过渡句。
 9. 重要：反馈风格要因学生而异、因课而异。即使是同一个学生，不同课节的反馈开头、总结句、过渡方式都要有变化。不要形成固定的句式模板。每份反馈读起来应该像是单独写给这个孩子这节课的，而不是从几个模板里选一个填进去的。"""
 
 STYLE_PROMPTS = {
@@ -61,26 +82,41 @@ STYLE_PROMPTS = {
     "fusion": FUSION_SYSTEM,
 }
 
-def build_user_prompt(title, topics, student_name, speeches, history_text, gender_info=""):
-    """构造给 DeepSeek 的用户 prompt"""
+def build_scene_prompt(title, topics, classroom_flow=""):
+    """构造课堂现场 prompt（全班共享）"""
     parts = []
     parts.append(f"课节标题：{title}")
     parts.append("")
-    parts.append("本节课的全部话题：")
+    parts.append("课堂话题流程：")
     for i, (t, _) in enumerate(topics, 1):
         parts.append(f"  {i}. {t}")
     parts.append("")
-    parts.append(f"学生：{student_name}")
-    if gender_info:
-        parts.append(f"性别：{gender_info}。重要：全文必须使用'{'他' if gender_info=='男' else '她'}'来指代{student_name}，严禁用错。")
+    if classroom_flow:
+        parts.append("=== 课堂录音转录（老师部分）===")
+        parts.append(classroom_flow)
     parts.append("")
-    parts.append(f"{student_name}的发言记录（已按话题分组）：")
+    parts.append("请输出「课堂现场」（全班统一）。格式参考：从xxx聊开去，一路追问xxx。中间跳到xxx，又绕回xxx，最后落点在xxx。用自然的叙事串联核心话题，不要用顿号罗列。2-3句。")
+    return "\n".join(parts)
+
+def build_student_prompt(title, student_name, speeches, history_text, gender_info=""):
+    """构造学生个人段落 prompt"""
+    pronoun = "他" if gender_info == "男" else "她"
+    parts = []
+    parts.append(f"学生：{student_name}")
+    parts.append(f"代词：{student_name}的性别是{gender_info}。以下所有指代{student_name}的地方必须用「{pronoun}」。这是最重要的规则。")
+    parts.append("")
+    parts.append(f"{student_name}的发言内容（按话题）：")
     for t, content in speeches:
         parts.append(f"  [{t}] {content}")
     if history_text:
         parts.append("")
-        parts.append("该生的历史课堂记录（供参考，可用于对比进步或持续特点）：")
+        parts.append("历史课堂记录（参考，不直接引用）：")
         parts.append(history_text)
+    parts.append("")
+    parts.append("请只输出这位学生的个人段落和延伸。")
+    parts.append("个人段落：直接用「说到…」「谈到…」「聊到…」「提到…」「最后讲到…」起头，覆盖他参与过的所有话题。每个话题用一句话写他说的方向和内容。")
+    parts.append("不引原话、不评价（禁用词：展现/体现/落在地板上/不讲空道理/批判性思维/同理心/逻辑清晰/活跃/投入/积极/主动/全程在线）。")
+    parts.append("延伸用「可以跟他/她聊聊……」开头，写完整的一句，没得写就不写。段落之间空一行。纯文本。不要输出称呼和标题——外部会拼接。")
     return "\n".join(parts)
 
 def call_deepseek(system_prompt, user_prompt, api_key):
@@ -99,7 +135,7 @@ def call_deepseek(system_prompt, user_prompt, api_key):
     )
     return response.choices[0].message.content
 
-def generate_feedback_ai(meta, topics, cls_name, input_path="", api_key="", styles=None):
+def generate_feedback_ai(meta, topics, cls_name, input_path="", api_key="", styles=None, memo_data=None):
     """AI 生成课后反馈。styles: ['xinxin','biscuit','fusion']"""
     if not api_key:
         api_key = os.environ.get("DEEPSEEK_API_KEY", "")
@@ -129,12 +165,37 @@ def generate_feedback_ai(meta, topics, cls_name, input_path="", api_key="", styl
 
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
-    # 为每种风格生成反馈，每个学生每种风格一个文件
+    # 从 MeetMemo 转录构建课堂流程描述
+    classroom_flow = ""
+    if memo_data:
+        teacher_segs = memo_data.get("teacher_segments", [])
+        if teacher_segs:
+            flow_parts = []
+            for seg in teacher_segs:
+                text = seg["text"].strip()
+                if len(text) > 15:
+                    flow_parts.append(f"[{seg['timestamp'][:16]}] {text[:200]}")
+            classroom_flow = f"课堂录音转录（老师部分，共{len(teacher_segs)}段）：\n" + "\n".join(flow_parts[:80])
+            print(f"  ✓ 已加载 MeetMemo 转录（{len(teacher_segs)} 段老师语音）")
+
+    # 为每种风格生成反馈
     for style in styles:
         system_prompt = STYLE_PROMPTS.get(style, XINXIN_SYSTEM)
-        tasks = {}
         sorted_names = sorted(student_data.keys())
 
+        # Phase 1: 生成课堂现场（共享，只生成一次）
+        scene_prompt = build_scene_prompt(title, topics, classroom_flow)
+        classroom_scene = ""
+        try:
+            scene_result = call_deepseek(system_prompt, scene_prompt, api_key)
+            if scene_result:
+                classroom_scene = scene_result.strip()
+                print(f"  [{style}] 课堂现场已生成")
+        except Exception as e:
+            print(f"  [{style}] 课堂现场生成失败: {e}")
+
+        # Phase 2: 并行生成每个学生的个人段落
+        tasks = {}
         with ThreadPoolExecutor(max_workers=len(sorted_names)) as executor:
             for name in sorted_names:
                 speeches = student_data[name]
@@ -145,7 +206,7 @@ def generate_feedback_ai(meta, topics, cls_name, input_path="", api_key="", styl
                         prev = lessons[-1]
                         history_text = f"上节课《{prev.get('title','')}》（{prev.get('date','')}），发言{prev.get('speech_count',0)}次，特点：{'、'.join(t.get('trait','') for t in prev.get('traits',[]))}"
                 gender_info = "男" if genders.get(name, default_gender) == "男" else "女"
-                prompt = build_user_prompt(title, topics, name, speeches, history_text, gender_info)
+                prompt = build_student_prompt(title, name, speeches, history_text, gender_info)
                 tasks[executor.submit(call_deepseek, system_prompt, prompt, api_key)] = name
 
             results = {}
@@ -154,6 +215,10 @@ def generate_feedback_ai(meta, topics, cls_name, input_path="", api_key="", styl
                 try:
                     result = future.result()
                     if result:
+                        # 强制代词替换：不管模型写成什么，按性别统一替换
+                        is_male = genders.get(name, default_gender) == "男"
+                        wrong, correct = ("她", "他") if is_male else ("他", "她")
+                        result = result.replace(wrong, correct)
                         results[name] = result.strip()
                         print(f"  [{style}] AI 生成 {name} 的反馈")
                     else:
@@ -168,16 +233,21 @@ def generate_feedback_ai(meta, topics, cls_name, input_path="", api_key="", styl
         suffix = style_suffix.get(style, "")
         fb_out = f"课后反馈_{cls_name}{suffix}.txt" if cls_name else f"课后反馈{suffix}.txt"
         lines = []
-        lines.append(f"课后反馈 - {title} ({STYLE_PROMPTS.get(style,'')[:10]}...)" if False else f"课后反馈 - {title}")
+        lines.append(f"课后反馈 - {title}")
         lines.append("班级: " + cls_name + "  |  " + date)
         lines.append("=" * 50)
         lines.append("")
+        # 每个学生：称呼 + 标题 + 课堂现场 + 个人段落 + 延伸
         for name in sorted_names:
-            if name in results:
-                lines.append(results[name])
-                lines.append("")
-                lines.append("-" * 40)
-                lines.append("")
+            if name not in results: continue
+            import re as _re
+            display_name = _re.sub(r'-\d+$', '', name)  # 泡泡-4 → 泡泡
+            lines.append(f"{display_name}妈妈好～今天我们探讨的是{title}。{classroom_scene}")
+            lines.append("")
+            lines.append(results[name])
+            lines.append("")
+            lines.append("-" * 40)
+            lines.append("")
         with open(fb_out, 'w', encoding='utf-8') as f:
             f.write("\n".join(lines))
         print(f"  [{style}] 反馈已保存 -> {fb_out}")

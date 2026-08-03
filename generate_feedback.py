@@ -28,7 +28,9 @@ def parse_gender(filepath, profiles=None, cls_name=None):
     """@gender 男 Bruce 阿恒 -> 这俩人男，其余女
        无 @gender 时回退到 student_profiles.json 中该班的性别记忆
        @gender 男           -> 全男（无名字=全班默认）
-       @gender 女           -> 全女（默认行为）"""
+       @gender 女           -> 全女（默认行为）
+       注意：前端保证全班同一性别时用无名格式（如 @gender Male），
+       列名字时走"列出的=少数例外"语义，默认性别为相反。"""
     default = "女"
     gender_map = {}
     # 1. 从 txt 读 @gender

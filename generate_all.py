@@ -54,7 +54,7 @@ def safe_fn(s):
     for ch in r'/:*?"<>|\\': s = s.replace(ch, "")
     return s.strip()
 
-def generate_all(input_path, feedback_styles=None, golden_quotes=None, images_dir=None):
+def generate_all(input_path, feedback_styles=None, golden_quotes=None, images_dir=None, memo_data=None):
     if feedback_styles is None: feedback_styles = ["xinxin"]
     if golden_quotes is None: golden_quotes = {}
     meta, topics = parse_input_txt(input_path)
@@ -221,7 +221,7 @@ def generate_all(input_path, feedback_styles=None, golden_quotes=None, images_di
             scored.sort(key=lambda x: -x[0])
             student_best[name] = (scored[0][1], scored[0][2])
 
-    golden_dir = f"金句_{cls}" if cls else "金句"
+    golden_dir = "."
     golden_count = 0
     for name, quote in student_best.items():
         if name not in extra or "movie" not in extra[name]:
@@ -243,9 +243,6 @@ def generate_all(input_path, feedback_styles=None, golden_quotes=None, images_di
         }
         golden_count += 1
 
-    # 多人建文件夹，单人直接放外面
-    if golden_count > 1:
-        os.makedirs(golden_dir, exist_ok=True)
     golden_done = 0
     # 只生成有 poster_quotes 的学生（前端金句日历打勾的）
     has_poster_quotes = any(extra.get(n,{}).get("quote") for n in student_best)
@@ -260,8 +257,14 @@ def generate_all(input_path, feedback_styles=None, golden_quotes=None, images_di
                         topic_title = t
                         break
         poster = extra.get(name, {}).get("poster","")
-        if poster and not os.path.isabs(poster) and not poster.startswith("http"):
-            poster = os.path.join(input_dir, poster)
+        if poster:
+            # /api/material-file/... URL → 真实文件路径
+            if poster.startswith("/api/material-file/"):
+                _mat_base = os.environ.get("ZG_MATERIAL_BASE",
+                    os.path.join(os.path.expanduser("~/Library/Mobile Documents/com~apple~CloudDocs/追光π课后素材生成系统"), "素材库"))
+                poster = os.path.join(_mat_base, poster.replace("/api/material-file/", ""))
+            elif not os.path.isabs(poster) and not poster.startswith("http"):
+                poster = os.path.join(input_dir, poster)
         gmeta = {
             "title": meta.get("title",""), "unit": meta.get("unit",""),
             "date": meta.get("date",""), "class": meta.get("class",""),
@@ -269,10 +272,7 @@ def generate_all(input_path, feedback_styles=None, golden_quotes=None, images_di
             "movie": extra.get(name, {}).get("movie",""), "poster": poster,
             "rating": extra.get(name, {}).get("rating",""), "line": extra.get(name, {}).get("line",""),
         }
-        if golden_count > 1:
-            out = os.path.join(golden_dir, f"{name}.png")
-        else:
-            out = f"{name}_金句_{cls}.png" if cls else f"{name}_金句.png"
+        out = f"金句_{name}.png"
         make_golden_card(gmeta, out, base_dir=input_dir)
         golden_done += 1
 
@@ -291,7 +291,7 @@ def generate_all(input_path, feedback_styles=None, golden_quotes=None, images_di
     if ai_key and feedback_styles:
         style_names = {"xinxin": "欣欣版", "biscuit": "饼干版", "fusion": "融合版"}
         try:
-            generate_feedback_ai(meta, topics, cls, input_path=input_path, api_key=ai_key, styles=feedback_styles)
+            generate_feedback_ai(meta, topics, cls, input_path=input_path, api_key=ai_key, styles=feedback_styles, memo_data=memo_data)
             fb_done = True
             print(f"[4/5] AI 课后反馈 → {', '.join(style_names.get(s,s) for s in feedback_styles)}")
         except Exception as e:
@@ -320,6 +320,10 @@ def generate_all(input_path, feedback_styles=None, golden_quotes=None, images_di
 
 def _load_logo(bd, h=30):
     lp = os.path.join(bd, "logo.png")
+    if not os.path.exists(lp):
+        lp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.png")
+    if not os.path.exists(lp):
+        lp = os.path.expanduser("~/Library/Mobile Documents/com~apple~CloudDocs/追光π课后素材生成系统/logo.png")
     if os.path.exists(lp):
         try:
             logo = Image.open(lp).convert("RGBA")
@@ -330,6 +334,8 @@ def _load_logo(bd, h=30):
 
 def _load_slogan(bd):
     sp = os.path.join(bd, "slogan单人.png")
+    if not os.path.exists(sp):
+        sp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "slogan单人.png")
     if os.path.exists(sp):
         try:
             s = Image.open(sp).convert("RGBA")

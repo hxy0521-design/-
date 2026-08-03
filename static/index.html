@@ -122,7 +122,7 @@ function switchMainTab(){
   if(activeMainTab==='overview')renderOverviewTab();
   else if(activeMainTab==='materials')renderMaterialTab();
   else if(activeMainTab==='edit'){if(activeTab)renderEditor();else el.innerHTML='<div style=\"color:var(--sb);text-align:center;padding:60px 0\">请从左侧选择班级</div>'}
-  else if(activeMainTab==='attendance')renderAttendanceTab();
+  else if(activeMainTab==='attendance'){renderAttendanceTab();setTimeout(function(){fetch(API+'/attendance/by-lesson?limit=1')},100)}
   else if(activeMainTab==='students')renderStudentTab();
   else if(activeMainTab==='payments')renderPaymentTab();
   else if(activeMainTab==='costs')renderCostTab();
@@ -321,7 +321,7 @@ function newLesson(cls,unit,unitFull){
   var d=tabs[tabName];
   var el=document.getElementById('editorBody');if(el)el.innerHTML='<div style="text-align:center;padding:60px 0;color:var(--tx3)"><div style="display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite"></div><div style="margin-top:10px;font-size:13px">准备新课节...</div></div>';
   fetch(API+'/config').then(function(r){return r.json()}).then(function(cfg){
-    var u=cfg[cls]&&cfg[cls][unit];
+    var classes=cfg.classes||cfg;var u=classes[cls]&&classes[cls][unit];
     if(u){d.basePath=u.path||'';d.meta.unit=uname}
     if(!u||!u.path){if(confirm('班级「'+cls+'」单元「'+uname+'」尚未绑定存放路径，是否现在选择？')){fetch(API+'/pick-folder').then(function(r){return r.json()}).then(function(pd){if(pd.path){d.basePath=pd.path;var url=u?API+'/classes/'+encodeURIComponent(cls)+'/units/'+unitCode:API+'/classes/'+encodeURIComponent(cls)+'/units';var method=u?'PUT':'POST';var body=u?JSON.stringify({path:pd.path}):JSON.stringify({code:unitCode,name:uname,path:pd.path});fetch(url,{method:method,headers:{'Content-Type':'application/json'},body:body}).then(function(r){return r.json()}).then(function(){fetchConfig()})}})}};
     activeTab=tabName;renderTabs();switchMainTab();renderPreview();
@@ -342,7 +342,7 @@ function saveMeta(){if(!activeTab)return;var d=tabs[activeTab];d.meta.title=ge('
 function parseSpeechRaw(raw,topicTitle){var ss=[],allTitles=[];document.querySelectorAll('#topicList .tb').forEach(function(b){var t=b.querySelector('input');if(t&&t.value)allTitles.push(t.value)});var nlSep=(zgUser==='饼干')?'':'\n';raw.split('\n').forEach(function(line){// 先把所有 [img:N] 提到行首
 var imgTags='';line=line.replace(/\[img:\d+\]/g,function(m){imgTags+=m+' ';return''}).trim();line=imgTags+line;
 var m=line.match(/^(\[img:\d+\]\s*)*\s*([^:：]+)[：:](.*)$/);if(m){var nm=m[2].trim();nm=nm.replace(/\[img[^\]]*\]?/g,'').trim();// 衍生名映射：县令小米→小米（最长后缀匹配学生名册）
-if(_cachedStudents&&_cachedStudents.length){var best='',bestLen=0;_cachedStudents.forEach(function(s){var sn=s.student_name;if(sn.length>bestLen&&nm!==sn&&nm.endsWith(sn)){best=sn;bestLen=sn.length}});if(best)nm=best}
+if(_cachedStudents&&_cachedStudents.length){var exact=_cachedStudents.find(function(s){return s.student_name===nm});if(!exact){var best='',bestLen=0;_cachedStudents.forEach(function(s){var sn=s.student_name;if(sn.length>bestLen&&nm!==sn&&(nm.endsWith(sn)||sn.startsWith(nm))){best=sn;bestLen=sn.length}});if(best)nm=best}}
 if(!nm||nm.length>8)return;if(nm===topicTitle)return;if(allTitles.some(function(t){return t.indexOf(nm+':')===0}))return;var cont=(imgTags+m[3].trim()).trim();ss.push({name:nm,content:cont})}else if(imgTags.trim()&&!line.replace(/^(\[img:\d+\]\s*)+$/,'').trim()){if(ss.length)ss[ss.length-1].content+=' '+imgTags.trim();else ss.push({name:'',content:imgTags.trim()})}else if(line.trim()&&ss.length)ss[ss.length-1].content+=nlSep+line.trim()});return ss}
 function saveTopics(){if(!activeTab)return;var old=tabs[activeTab].topics||[];var ts=[];document.querySelectorAll('#topicList .tb').forEach(function(b,bi){var t=b.querySelector('input'),ta=b.querySelector('textarea');var title=t?t.value:'',raw=ta?ta.value:'';ts.push({title:title,speeches:parseSpeechRaw(raw,title),_raw:raw,_images:(old[bi]&&old[bi]._images)||[]})});tabs[activeTab].topics=ts;clearTimeout(window._autoSaveTO);window._autoSaveTO=setTimeout(function(){saveMeta();_autoSave()},10000)}
 window.formatTopic=function(idx){var ta=document.querySelectorAll('#topicList .tb textarea')[idx];if(!ta)return;var lines=ta.value.split('\n');var out=[];for(var i=0;i<lines.length;i++){var ln=lines[i];if(/^[^\s：:]{1,6}[：:]/.test(ln)){out.push(ln.trim())}else if(ln.trim()&&out.length){out[out.length-1]+=ln.trim()}}ta.value=out.join('\n');saveTopics();renderPreview()};
@@ -399,7 +399,7 @@ h+='<div class="mr" style="margin-bottom:10px"><input id="etClass" placeholder="
 	h+='<div id="posterSection">'+renderPosterSection()+'</div>';
 	h+='<hr style="border:none;border-top:2px dashed var(--bd);margin:14px 0">';h+='<div id="genderPicker" style="font-size:12px;margin-bottom:12px"></div>';
 h+='<hr style="border:none;border-top:2px dashed var(--bd);margin:14px 0">';
-h+='<div style="display:flex;align-items:center;gap:8px"><button class="btn bg" onclick="generateAllUI()">全部生成</button><span class="st" id="genStatus"></span><label style="font-size:10px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="fbXinxin" style="width:auto;margin:0 2px" '+(zgUser==='欣欣'||!zgUser?'checked':'')+'>欣欣版</label><label style="font-size:10px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="fbBiscuit" style="width:auto;margin:0 2px" '+(zgUser==='饼干'?'checked':'')+'>饼干版</label><label style="font-size:10px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="fbFusion" style="width:auto;margin:0 2px">融合版</label><span style="font-size:11px;color:var(--go)" id="genWarn"></span><span style="flex:1"></span>'+(d.basePath?'<span style="font-size:10px;color:var(--sb);cursor:pointer;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px dashed var(--bd);padding:3px 6px;border-radius:4px" onclick="changeUnitPath()" title="点击更换输出路径">'+esc(d.basePath)+'</span>':'')+'</div>';
+h+='<div style="display:flex;align-items:center;gap:8px"><button class="btn bg" onclick="generateAllUI()">全部生成</button><span class="st" id="genStatus"></span><label style="font-size:10px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="fbXinxin" style="width:auto;margin:0 2px" '+(zgUser==='欣欣'||!zgUser?'checked':'')+'>欣欣版</label><label style="font-size:10px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="fbBiscuit" style="width:auto;margin:0 2px" '+(zgUser==='饼干'?'checked':'')+'>饼干版</label><label style="font-size:10px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="fbFusion" style="width:auto;margin:0 2px">融合版</label><span style="display:inline-block;width:1px;height:12px;background:var(--bd);margin:0 4px"></span><label style="font-size:10px;cursor:pointer;white-space:nowrap" title="勾选后会尝试加载 MeetMemo 转录数据用于反馈生成"><input type="checkbox" id="fbMemo" style="width:auto;margin:0 2px">Memo转录</label><span style="font-size:11px;color:var(--go)" id="genWarn"></span><span style="flex:1"></span>'+(d.basePath?'<span style="font-size:10px;color:var(--sb);cursor:pointer;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px dashed var(--bd);padding:3px 6px;border-radius:4px" onclick="changeUnitPath()" title="点击更换输出路径">'+esc(d.basePath)+'</span>':'')+'</div>';
 el.innerHTML=h;initInheritDropdown();updateGenderPicker();populateTitleDropdown();var curT=document.getElementById('etTitleManual');if(curT&&curT.value)setTimeout(function(){onTitleSelect(curT.value)},200)}
 function populateTitleDropdown(){
   var sel=document.getElementById('etTitle');if(!sel)return;
@@ -407,7 +407,7 @@ function populateTitleDropdown(){
   var m=unitVal.match(/(\d{4})/);var cycle=m?m[1]:'2606';
   fetch(API+'/cycle-materials?cycle='+cycle).then(function(r){return r.json()}).then(function(mats){
     var cur=document.getElementById('etTitleManual');var curVal=cur?cur.value:'';
-    sel.innerHTML='<option value="">课节标题（选素材）</option>'+mats.map(function(m){var sel2=curVal&&m.title===curVal?' selected':'';var extra=m.class_name?' ('+esc(m.class_name)+')':'';return'<option value="'+esc(m.title)+'"'+sel2+'>'+esc(m.title)+extra+'</option>'}).join('');
+    var seenTitles={};sel.innerHTML='<option value="">课节标题（选素材）</option>'+mats.filter(function(m){if(seenTitles[m.title])return false;seenTitles[m.title]=true;return true}).map(function(m){var sel2=curVal&&m.title===curVal?' selected':'';return'<option value="'+esc(m.title)+'"'+sel2+'>'+esc(m.title)+'</option>'}).join('');
   }).catch(function(){});
 }
 function onTitleSelect(title){
@@ -442,7 +442,7 @@ function onTitleSelect(title){
   });
 }
 
-function initInheritDropdown(){fetch(API+'/topics/sources').then(function(r){return r.json()}).then(function(srcs){var sel=document.getElementById('inheritCls');if(!sel)return;var ss=_seasonSet();sel.innerHTML='<option value="">无</option>'+srcs.filter(function(s){return s!==activeTab&&ss[s]}).map(function(s){return'<option value="'+s+'">'+s+'</option>'}).join('')})}
+function initInheritDropdown(){fetch(API+'/topics/sources').then(function(r){return r.json()}).then(function(srcs){var sel=document.getElementById('inheritCls');if(!sel)return;var ss=_seasonSet();var sorted=_classSortOrder();sel.innerHTML='<option value="">无</option>'+srcs.filter(function(s){return s!==activeTab&&ss[s]}).sort(function(a,b){var ia=sorted.indexOf(a),ib=sorted.indexOf(b);if(ia<0)ia=9999;if(ib<0)ib=9999;return ia-ib}).map(function(s){return'<option value="'+s+'">'+s+'</option>'}).join('')})}
 function onInheritClass(cls){
   var ls=document.getElementById('inheritLesson'),panel=document.getElementById('inheritTopics');
   if(!cls){ls.style.display='none';ls.innerHTML='<option value="">选择课节</option>';panel.style.display='none';return}
@@ -494,26 +494,41 @@ var el=document.getElementById('genderPicker');if(!el)return;
 var d=tabs[activeTab];if(!d)return;
 var names=[];d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s,j){if(names.indexOf(s.name)<0)names.push(s.name)})});
 if(!names.length){el.innerHTML='';return}
-var boys=[];var gstr=d.meta.gender||'';
-if(gstr.indexOf('Male')===0)boys=gstr.replace('Male','').trim().split(/\s+/).filter(Boolean);
-if(!boys.length){
-  var students=_cachedStudents;
-  if(!students||!students.length){
-    fetch(API+'/students').then(function(r){return r.json()}).then(function(rows){_cachedStudents=rows;updateGenderPicker();}).catch(function(){});
-    return;
+var boys=[];
+  // 快速路径：先从已保存的 d.meta.gender 解析（无需等异步加载）
+  var gstr=d.meta.gender||'';
+  if(gstr.indexOf('Male')===0){
+    boys=gstr.replace('Male','').trim().split(/\s+/).filter(Boolean);
   }
-  names.forEach(function(n){
-    var se=students.find(function(s){
-      if(s.student_name===n)return true;
-      if(s.student_name.indexOf(n)===0)return true;
-      if(n.indexOf(s.student_name)===0)return true;
-      if(s.student_name.replace(/-\\d+$/,'')===n)return true;
-      return false;
+  // 如果快速路径没拿到名字，从 student_ext 查
+  if(!boys.length){
+    var students=_cachedStudents;
+    if(!students||!students.length){
+      fetch(API+'/students').then(function(r){return r.json()}).then(function(rows){_cachedStudents=rows;updateGenderPicker();}).catch(function(){});
+      // 即使缓存未加载，也能从无名格式推断全班性别
+      if(gstr==='Male ') d.meta.gender='Male ';
+      else if(gstr==='Female ') d.meta.gender='Female ';
+      return;
+    }
+    names.forEach(function(n){
+      var se=students.find(function(s){
+        if(s.student_name===n)return true;
+        if(s.student_name.indexOf(n)===0)return true;
+        if(n.indexOf(s.student_name)===0)return true;
+        if(s.student_name.replace(/-\d+$/,'')===n)return true;
+        return false;
+      });
+      if(se&&se.gender==='男')boys.push(n);
     });
-    if(se&&se.gender==='男')boys.push(n);
-  });
-  if(boys.length)d.meta.gender='Male '+boys.join(' ');
-}
+  }
+  // 全班同一性别时不列名字，否则列名字
+  if(boys.length===names.length){
+    d.meta.gender='Male ';
+  }else if(boys.length===0){
+    d.meta.gender='Female ';
+  }else{
+    d.meta.gender='Male '+boys.join(' ');
+  }
 // Deduplicate
 var uniqBoys=[];boys.forEach(function(b){if(uniqBoys.indexOf(b)<0)uniqBoys.push(b);});
 var uniqGirls=[];names.forEach(function(n){if(uniqBoys.indexOf(n)<0&&uniqGirls.indexOf(n)<0)uniqGirls.push(n);});
@@ -542,6 +557,9 @@ function pickTMDB(el){
 function renderPosterSection(){
   var d=tabs[activeTab];if(!d)return'';
   var gq=getGoldenQuotes();var names=Object.keys(gq);if(!names.length)return'';
+  // If all scores are 0 (manual selection), trigger AI scoring
+  var allZero=names.every(function(n){return gq[n].every(function(x){return !x.score})});
+  if(allZero){detectGoldenAsync();return'<div style=\"font-size:11px;color:var(--tx3);padding:8px\">AI 评选中...</div>'}
   var h='<h3>金句日历 <span style="font-size:10px;color:var(--sb)">（每人一句）</span></h3>';
   names.sort().forEach(function(n){
     var best=gq[n][0]?gq[n][0].text:'';
@@ -616,8 +634,8 @@ function showPreviewImage(path,name){
 }
 
 
-function detectGoldenAsync(){var d=tabs[activeTab];if(!d||!d.topics.length)return;var btn=document.querySelector('#previewContent .btn.bo');if(btn){btn.textContent='标记中... 预计10秒';btn.disabled=true}var sents=[];d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){sents.push({text:s.content,name:s.name})})});if(!sents.length)return;fetch(API+'/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sentences:sents,meta:d.meta,topics:d.topics.map(function(t){return t.title})})}).then(function(r){return r.json()}).then(function(data){if(!tabs[activeTab])return;var d=tabs[activeTab];if(!d._golden)d._golden={};var byName={};data.forEach(function(item){var n=item.name;if(!byName[n])byName[n]=[];byName[n].push(item)});var total=0;Object.keys(byName).forEach(function(n){var sp=0,tp=new Set();d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){if(s.name===n){sp++;tp.add(t.title)}})});var nhl=(sp>=5&&tp.size>=5)?3:2;byName[n].slice(0,nhl).forEach(function(item){var key=item.name+':'+item.text;if(!(key in d._golden))d._golden[key]=item.score||0;total++})});renderPreview();renderPosterSectionUI();var btn2=document.querySelector('#previewContent .btn.bo');if(btn2){btn2.textContent='已标'+total+'句';btn2.disabled=false;setTimeout(function(){btn2.textContent='自动标记'},3000)}}).catch(function(){var btn3=document.querySelector('#previewContent .btn.bo');if(btn3){btn3.textContent='自动标记';btn3.disabled=false}})}
-function generateAllUI(){if(!activeTab)return;saveMeta();saveTopics();renderPreview();var d=tabs[activeTab],gs=document.getElementById('genStatus'),gw=document.getElementById('genWarn');var allImages={};d.topics.forEach(function(t,i){if(t._images&&t._images.length)allImages[i]=t._images});function doGen(gq){gs.textContent='生成中...';gs.className='st';gw.textContent='';var genPayload={meta:d.meta,topics:d.topics,movies:getPosterQuotes(),gender:d.meta.gender||'',tab_name:d.folder||activeTab,golden_quotes:gq,poster_quotes:getPosterQuotes(),feedback_styles:(document.getElementById('fbXinxin').checked?'xinxin,':'')+(document.getElementById('fbBiscuit').checked?'biscuit,':'')+(document.getElementById('fbFusion').checked?'fusion':''),images:allImages};var genPromise=fetch(API+'/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(genPayload)}).then(function(r){return r.json()}).then(function(data){if(data.status==='need_path'){gs.textContent='';return new Promise(function(resolve){fetch(API+'/pick-folder').then(function(r){return r.json()}).then(function(pd){if(!pd.path){gs.textContent='已取消';return}gs.textContent='绑定路径中...';fetch(API+'/classes/'+encodeURIComponent(data.cls)+'/units/'+data.unit_code,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:pd.path})}).then(function(r){return r.json()}).then(function(rd){if(rd.status!=='ok'){gs.textContent='绑定失败: '+rd.message;return}gs.textContent='路径已绑定，重新生成中...';fetch(API+'/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(genPayload)}).then(function(r){return r.json()}).then(resolve)}).catch(function(){gs.textContent='绑定失败，请重试'})})})}return data});showAttendanceModal(genPromise,d,gs,gw)}var mq=getGoldenQuotes();if(Object.keys(mq).length>0){var gqText={};Object.keys(mq).forEach(function(n){gqText[n]=mq[n].map(function(x){return x.text||x})});doGen(gqText);return}gs.textContent='AI 检测金句中...';gs.className='st';var sents=[];d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){sents.push({text:s.content,name:s.name})})});if(!sents.length){doGen({});return}fetch(API+'/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sentences:sents,meta:d.meta,topics:d.topics.map(function(t){return t.title})})}).then(function(r){return r.json()}).then(function(data){var byName={};data.forEach(function(item){var n=item.name;if(!byName[n])byName[n]=[];byName[n].push(item)});Object.keys(byName).forEach(function(n){var sp=0,tp=new Set();d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){if(s.name===n){sp++;tp.add(t.title)}})});var nhl=(sp>=5&&tp.size>=5)?3:2;byName[n]=byName[n].slice(0,nhl).map(function(x){return x.text})});doGen(byName)}).catch(function(){doGen({})})}
+function detectGoldenAsync(){var d=tabs[activeTab];if(!d||!d.topics.length)return;var btn=document.querySelector('#previewContent .btn.bo');if(btn){btn.textContent='标记中... 预计10秒';btn.disabled=true}var sents=[];d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){sents.push({text:s.content,name:s.name})})});if(!sents.length)return;fetch(API+'/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sentences:sents,meta:d.meta,topics:d.topics.map(function(t){return t.title})})}).then(function(r){return r.json()}).then(function(data){if(!tabs[activeTab])return;var d=tabs[activeTab];if(!d._golden)d._golden={};var byName={};data.forEach(function(item){var n=item.name;if(!byName[n])byName[n]=[];byName[n].push(item)});var total=0;Object.keys(byName).forEach(function(n){var sp=0,tp=new Set();d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){if(s.name===n){sp++;tp.add(t.title)}})});var nhl=(sp>=5&&tp.size>=5)?3:2;byName[n].slice(0,nhl).forEach(function(item){var key=item.name+':'+item.text;d._golden[key]=item.score||0;total++})});renderPreview();renderPosterSectionUI();var btn2=document.querySelector('#previewContent .btn.bo');if(btn2){btn2.textContent='已标'+total+'句';btn2.disabled=false;setTimeout(function(){btn2.textContent='自动标记'},3000)}}).catch(function(){var btn3=document.querySelector('#previewContent .btn.bo');if(btn3){btn3.textContent='自动标记';btn3.disabled=false}})}
+function generateAllUI(){if(!activeTab)return;saveMeta();saveTopics();renderPreview();var d=tabs[activeTab],gs=document.getElementById('genStatus'),gw=document.getElementById('genWarn');var allImages={};d.topics.forEach(function(t,i){if(t._images&&t._images.length)allImages[i]=t._images});function doGen(gq){gs.textContent='生成中...';gs.className='st';gw.textContent='';var genPayload={meta:d.meta,topics:d.topics,movies:getPosterQuotes(),gender:d.meta.gender||'',tab_name:d.folder||activeTab,golden_quotes:gq,poster_quotes:getPosterQuotes(),feedback_styles:(document.getElementById('fbXinxin').checked?'xinxin,':'')+(document.getElementById('fbBiscuit').checked?'biscuit,':'')+(document.getElementById('fbFusion').checked?'fusion':''),has_memo:document.getElementById('fbMemo').checked,images:allImages};var genPromise=fetch(API+'/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(genPayload)}).then(function(r){return r.json()}).then(function(data){if(data.status==='need_path'){gs.textContent='';return new Promise(function(resolve){fetch(API+'/pick-folder').then(function(r){return r.json()}).then(function(pd){if(!pd.path){gs.textContent='已取消';return}gs.textContent='绑定路径中...';fetch(API+'/classes/'+encodeURIComponent(data.cls)+'/units/'+data.unit_code,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:pd.path})}).then(function(r){return r.json()}).then(function(rd){if(rd.status!=='ok'){gs.textContent='绑定失败: '+rd.message;return}gs.textContent='路径已绑定，重新生成中...';fetch(API+'/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(genPayload)}).then(function(r){return r.json()}).then(resolve)}).catch(function(){gs.textContent='绑定失败，请重试'})})})}return data});showAttendanceModal(genPromise,d,gs,gw)}var mq=getGoldenQuotes();if(Object.keys(mq).length>0){var gqText={};Object.keys(mq).forEach(function(n){gqText[n]=mq[n].map(function(x){return x.text||x})});doGen(gqText);return}gs.textContent='AI 检测金句中...';gs.className='st';var sents=[];d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){sents.push({text:s.content,name:s.name})})});if(!sents.length){doGen({});return}fetch(API+'/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sentences:sents,meta:d.meta,topics:d.topics.map(function(t){return t.title})})}).then(function(r){return r.json()}).then(function(data){var byName={};data.forEach(function(item){var n=item.name;if(!byName[n])byName[n]=[];byName[n].push(item)});Object.keys(byName).forEach(function(n){var sp=0,tp=new Set();d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s){if(s.name===n){sp++;tp.add(t.title)}})});var nhl=(sp>=5&&tp.size>=5)?3:2;byName[n]=byName[n].slice(0,nhl).map(function(x){return x.text})});doGen(byName)}).catch(function(){doGen({})})}
 
 function showAttendanceModal(genPromise,d,gs,gw){
   var cls=d.meta.class||activeTab;var unit=d.meta.unit||'';
@@ -777,7 +795,7 @@ function renderOverviewTab(){
     h+='<div style="background:var(--surface);padding:6px;min-height:60px;font-size:12px">';
     var dayEntries=week.filter(function(w){return w.weekday===d});
 	    dayEntries.sort(function(a,b){var ta=(a.time||'').replace(':',''),tb=(b.time||'').replace(':','');if(ta!==tb)return (parseInt(ta)||0)-(parseInt(tb)||0);var so={启航:1,探索:2,先锋:3};var sa=so[a.class_name.charAt(0)+a.class_name.charAt(1)]||0,sb=so[b.class_name.charAt(0)+b.class_name.charAt(1)]||0;return sa-sb;});
-	    dayEntries.forEach(function(w){h+='<div style="background:'+w.color+'20;border-left:3px solid '+w.color+';padding:5px 7px;margin:2px 0;border-radius:5px;font-size:12px"><b>'+esc(w.class_name)+'</b> <span style="color:var(--tx3)">'+esc(w.time)+'</span>'+(window._season==='V'?'<button class="btn bp" style="float:right;padding:1px 6px;font-size:9px" onclick="showPrefillModal(\''+esc(w.class_name)+'\')">预排</button>':'')+'<br><span style="color:var(--tx3)">'+esc(w.teacher||'')+' · '+w.students.length+'人</span><br><span style="font-size:11px;color:var(--tx3)">'+(w.prefill_map?w.students.map(function(n){var c=w.prefill_map[n];return c?n+'-'+c:n;}).join(', '):w.students.join(', '))+'</span><br><span style="font-size:11px;color:var(--accent)">'+getDates(d)+'</span>'+(window._season!=='V'?'<br><input class="pfNote" data-cls="'+esc(w.class_name)+'" placeholder="+备注" style="width:90%;padding:2px 4px;font-size:9px;border:1px dashed var(--border2);border-radius:3px;margin-top:2px;background:transparent" onchange="saveWeekNote(this)">':'')+'</div>'});
+	    dayEntries.forEach(function(w){h+='<div style="background:'+w.color+'20;border-left:3px solid '+w.color+';padding:5px 7px;margin:2px 0;border-radius:5px;font-size:12px"><b>'+esc(w.class_name)+'</b> <span style="color:var(--tx3)">'+esc(w.time)+'</span>'+(window._season==='V'?'<button class="btn bp" style="float:right;padding:1px 6px;font-size:9px" onclick="showPrefillModal(\''+esc(w.class_name)+'\')">预排</button>':'')+'<br><span style="color:var(--tx3)">'+esc(w.teacher||'')+' · '+w.students.length+'人</span><br><span style="font-size:11px;color:var(--tx3)">'+(w.prefill_map?w.students.map(function(n){var c=w.prefill_map[n];var dn=n.replace(/-0$/,'');return dn+'-'+(c||0)}).join(', '):w.students.map(function(n){return n.replace(/-0$/,'')}).join(', '))+'</span><br><span style="font-size:11px;color:var(--accent)">'+getDates(d)+'</span>'+(window._season!=='V'?'<br><input class="pfNote" data-cls="'+esc(w.class_name)+'" placeholder="+备注" style="width:90%;padding:2px 4px;font-size:9px;border:1px dashed var(--border2);border-radius:3px;margin-top:2px;background:transparent" onchange="saveWeekNote(this)">':'')+'</div>'});
     h+='</div>';
   });
   h+='</div></div>';
@@ -869,21 +887,24 @@ function showAddMaterialModal(){
   var ov=document.createElement('div');ov.className='zg-modal-overlay';ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
   var h='<div style="background:var(--surface);border-radius:12px;padding:20px;max-width:620px;width:95%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)"><h3>新增素材</h3>';
   h+='<div class="mr" style="gap:6px"><select id="mfCycle" style="width:100px;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--tx)">'+cycles.map(function(c){return'<option value="'+c+'">'+c+'</option>'}).join('')+'</select><input id="mfTitle" placeholder="课节标题" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px"></div>';
-  // Long image
-  h+='<div style="margin-top:12px;display:flex;align-items:center;gap:8px"><span style="font-size:12px;font-weight:600;color:var(--tx);white-space:nowrap">长图 <span style="color:var(--rd)">*</span></span><span style="font-size:10px;color:var(--tx3)">'+segs.map(function(s){return'<label style="margin-left:6px;cursor:pointer;font-size:10px"><input type="checkbox" class="mfImgSeg" value="'+s+'" style="width:auto"> '+s+'</label>'}).join('')+'</span></div>';
-  h+='<div class="mr" style="gap:6px;margin-top:4px"><input id="mfImage" placeholder="长图路径" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px"><button class="btn bo" style="padding:6px 12px;font-size:11px" onclick="pickFileTo(\'mfImage\')">选择</button></div>';
+  // Long images — three separate per segment
+  h+='<div style="margin-top:12px;font-size:12px;font-weight:600;color:var(--tx)">长图</div>';
+  segs.forEach(function(s,i){h+='<div class="mr" style="gap:6px;margin-top:4px"><span style="font-size:11px;color:var(--tx3);width:50px;text-align:right">'+s+'</span><input class="mfImg" data-seg="'+s+'" placeholder="长图路径" style="flex:1;padding:6px 8px;border:1.5px solid var(--border);border-radius:4px;font-size:12px"><button class="btn bo" style="padding:4px 8px;font-size:10px" onclick="pickFileToClosestSeg(this,\''+s+'\')">选</button></div>'});
   // Recommendation materials
-  h+='<div style="margin-top:14px;display:flex;align-items:center;gap:8px"><span style="font-size:12px;font-weight:600;color:var(--tx);white-space:nowrap">推荐素材 <span style="color:var(--rd)">*</span></span><span style="font-size:10px;color:var(--tx3)">'+segs.map(function(s){return'<label style="margin-left:6px;cursor:pointer;font-size:10px"><input type="checkbox" class="recSegBatch" value="'+s+'" style="width:auto"> '+s+'</label>'}).join('')+'</span><span style="flex:1"></span><button class="btn bo" style="padding:2px 8px;font-size:10px" onclick="addRecRow()">+</button></div>';
+  h+='<div style="margin-top:14px;display:flex;align-items:center;gap:8px"><span style="font-size:12px;font-weight:600;color:var(--tx);white-space:nowrap">推荐书/影视 <span style="color:var(--rd)">*</span></span><span style="flex:1"></span><button class="btn bo" style="padding:2px 8px;font-size:10px" onclick="addRecRow()">+</button></div>';
   h+='<div id="recRows" style="margin-top:4px"></div>';
   h+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button onclick="closeModal(this)" class="btn bo" style="padding:6px 14px">取消</button><button onclick="saveMaterial()" class="btn bg" style="padding:6px 14px">保存</button></div></div>';
   ov.innerHTML=h;document.body.appendChild(ov);
   addRecRow();
 }
+function pickFileToClosestSeg(btn,seg){var inp=btn.parentElement.querySelector('.mfImg');if(!inp)return;inp.value='选择中...';inp.style.color='var(--tx3)';fetch(API+'/pick-file',{signal:AbortSignal.timeout(120000)}).then(function(r){return r.json()}).then(function(d){inp.style.color='';if(d.path){inp.value=d.path}else{inp.value='';alert('未选择文件（可能点取消了）')}}).catch(function(){inp.value='';inp.style.color='';alert('文件选择超时或失败，请重试')})}
+function toggleAllSegs(cb){var row=cb.closest('.rec-row');row.querySelectorAll('.recSeg').forEach(function(s){s.checked=cb.checked})}
+function syncAllSegs(cb){var row=cb.closest('.rec-row');var all=row.querySelector('.recSegAll');var segs=row.querySelectorAll('.recSeg');var allChecked=true;segs.forEach(function(s){if(!s.checked)allChecked=false});all.checked=allChecked}
 function addRecRow(segData){
   var segs=segData||['启航段','探索段','先锋段'];var batchChecked=[];document.querySelectorAll('.recSegBatch:checked').forEach(function(cb){batchChecked.push(cb.value)});
   var div=document.createElement('div');div.className='rec-row';
   div.style.cssText='margin:4px 0;padding:6px 8px;background:var(--bg);border-radius:6px;border:1px solid var(--border2)';
-  div.innerHTML='<div style="display:flex;gap:4px;align-items:center"><input class="recName" placeholder="素材名" style="width:150px;padding:6px 8px;border:1.5px solid var(--border);border-radius:4px;font-size:12px"><button class="btn bo" style="padding:4px 6px;font-size:9px" onclick="searchDoubanRec(this)">豆瓣</button><input class="recPath" placeholder="海报URL" style="flex:1;padding:6px 8px;border:1.5px solid var(--border);border-radius:4px;font-size:12px"><button class="btn bo" style="padding:4px 8px;font-size:10px" onclick="pickFileToClosest(this)">选</button><input class="recScore" placeholder="评分" style="width:55px;padding:6px 8px;border:1.5px solid var(--border);border-radius:4px;font-size:12px"><button class="btn bo" style="padding:2px 6px;font-size:10px;color:var(--rd)" onclick="this.closest(\'.rec-row\').remove()">-</button></div><div style="font-size:10px;color:var(--tx3);margin-top:2px">'+segs.map(function(s){var ch=batchChecked.indexOf(s)>=0?' checked':'';return'<label style="margin-right:6px;cursor:pointer;font-size:10px"><input type="checkbox" class="recSeg" value="'+s+'" style="width:auto"'+ch+'> '+s+'</label>'}).join('')+'</div><div style="display:flex;gap:6px"><textarea class="recLine" placeholder="推荐语（选豆瓣后自动生成）" style="flex:1;min-height:32px;padding:4px 8px;border:1.5px solid var(--border);border-radius:4px;font-size:12px;margin-top:3px;resize:vertical"></textarea><img class="recPreview" src="" style="width:50px;height:30px;object-fit:cover;border-radius:3px;border:1px dashed var(--border2);margin-top:3px;background:var(--bg);flex-shrink:0" onerror="this.style.opacity=&#39;0.2&#39;" onload="this.style.opacity=&#39;1&#39;;this.style.border=&#39;1px solid var(--bd)&#39;"></div><div class="doubanResults" style="padding:2px 0;display:none;font-size:10px"></div>';
+  div.innerHTML='<div style="display:flex;gap:4px;align-items:center"><input class="recName" placeholder="素材名" style="width:150px;padding:6px 8px;border:1.5px solid var(--border);border-radius:4px;font-size:12px"><button class="btn bo" style="padding:4px 6px;font-size:9px" onclick="searchDoubanRec(this)">豆瓣</button><input class="recPath" placeholder="海报URL" style="flex:1;padding:6px 8px;border:1.5px solid var(--border);border-radius:4px;font-size:12px"><button class="btn bo" style="padding:4px 8px;font-size:10px" onclick="pickFileToClosest(this)">选</button><input class="recScore" placeholder="评分" style="width:55px;padding:6px 8px;border:1.5px solid var(--border);border-radius:4px;font-size:12px"><button class="btn bo" style="padding:2px 6px;font-size:10px;color:var(--rd)" onclick="this.closest(\'.rec-row\').remove()">-</button></div><div style="font-size:10px;color:var(--tx3);margin-top:2px"><label style="margin-right:4px;cursor:pointer;font-size:10px"><input type="checkbox" class="recSegAll" style="width:auto" checked onclick="toggleAllSegs(this)"> 全选</label><span style="color:var(--tx3);margin:0 4px">|</span>'+segs.map(function(s){var ch=batchChecked.indexOf(s)>=0?' checked':'';return'<label style="margin-right:4px;cursor:pointer;font-size:10px"><input type="checkbox" class="recSeg" value="'+s+'" style="width:auto"'+ch+' onchange="syncAllSegs(this)"> '+s+'</label>'}).join('')+'</div><div style="display:flex;gap:6px"><textarea class="recLine" placeholder="推荐语（选豆瓣后自动生成）" style="flex:1;min-height:32px;padding:4px 8px;border:1.5px solid var(--border);border-radius:4px;font-size:12px;margin-top:3px;resize:vertical"></textarea><img class="recPreview" src="" style="width:50px;height:30px;object-fit:cover;border-radius:3px;border:1px dashed var(--border2);margin-top:3px;background:var(--bg);flex-shrink:0" onerror="this.style.opacity=&#39;0.2&#39;" onload="this.style.opacity=&#39;1&#39;;this.style.border=&#39;1px solid var(--bd)&#39;"></div><div class="doubanResults" style="padding:2px 0;display:none;font-size:10px"></div>';
   document.getElementById('recRows').appendChild(div);
 }
 function searchDoubanRec(btn){
@@ -920,11 +941,12 @@ function editMaterial(title){
         if(typeof m.class_image==='string'){var s=m.segment||'';if(s)imgBySeg[s]=m.class_image}
         else{Object.keys(m.class_image).forEach(function(s){imgBySeg[s]=m.class_image[s]})}
       });
-      var imgInput=document.getElementById('mfImage');if(imgInput&&Object.keys(imgBySeg).length){imgInput.value=Object.values(imgBySeg)[0]}
-      // Check segment checkboxes for long image
-      Object.keys(imgBySeg).forEach(function(s){var cb=document.querySelector('.mfImgSeg[value=\"'+s+'\"]');if(cb)cb.checked=true});
-      // Fill rec rows
+      // Fill each segment's long image field
+      Object.keys(imgBySeg).forEach(function(s){var inp=document.querySelector('.mfImg[data-seg=\"'+s+'\"]');if(inp)inp.value=imgBySeg[s]});
+      // Fill rec rows — sort by segment: 启航→探索→先锋
       var allRecs=[];found.forEach(function(m){m.golden_quotes.forEach(function(g){allRecs.push(g)})});
+      var segOrder={'启航段':1,'探索段':2,'先锋段':3};
+      allRecs.sort(function(a,b){var sa=segOrder[(a.segment||'').split(',')[0]]||9;var sb=segOrder[(b.segment||'').split(',')[0]]||9;return sa-sb});
       if(allRecs.length){
         document.getElementById('recRows').innerHTML='';
         allRecs.forEach(function(g){
@@ -936,9 +958,6 @@ function editMaterial(title){
           rSegs.forEach(function(s){var cb=row.querySelector('.recSeg[value=\"'+s+'\"]');if(cb)cb.checked=true});
         });
       }
-      // Check batch rec segment checkboxes
-      var allSegs=new Set();allRecs.forEach(function(g){(g.segment||'').split(',').forEach(function(s){if(s)allSegs.add(s)})});
-      allSegs.forEach(function(s){var cb=document.querySelector('.recSegBatch[value=\"'+s+'\"]');if(cb)cb.checked=true});
     });
   },300);
 }
@@ -947,14 +966,13 @@ function pickFileToClosest(btn){var row=btn.closest('.rec-row');var inp=row.quer
 
 function saveMaterial(){
   var cycle=document.getElementById('mfCycle').value,title=document.getElementById('mfTitle').value.trim();
-  var img=document.getElementById('mfImage').value.trim();
   if(!title)return alert('请输入课节标题');
-  if(!img)return alert('请上传长图');
-  var defaultSegs=[];document.querySelectorAll('.recSegBatch:checked').forEach(function(cb){defaultSegs.push(cb.value)});
-  var recs=[];document.querySelectorAll('#recRows .rec-row').forEach(function(r){var p=r.querySelector('.recPath').value.trim();var nm=r.querySelector('.recName').value.trim();if(p||nm){var rowSegs=[];r.querySelectorAll('.recSeg:checked').forEach(function(cb){rowSegs.push(cb.value)});if(!rowSegs.length)rowSegs=defaultSegs;recs.push({file_path:p,name:nm,score:r.querySelector('.recScore').value.trim(),line:r.querySelector('.recLine').value.trim(),segs:rowSegs})}});
-  if(!recs.length)return alert('请至少添加一个推荐素材');
-  var imgSegs=[];document.querySelectorAll('.mfImgSeg:checked').forEach(function(cb){imgSegs.push(cb.value)});
-  var payload={cycle:cycle,title:title,file_path:img,img_segs:imgSegs,recs:recs};
+  // Collect long images: [{path, seg}]
+  var imgs=[];document.querySelectorAll('.mfImg').forEach(function(inp){var v=inp.value.trim();var s=inp.getAttribute('data-seg');if(v)imgs.push({path:v,segs:[s]})});
+  // Collect recs
+  var recs=[];document.querySelectorAll('#recRows .rec-row').forEach(function(r){var p=r.querySelector('.recPath').value.trim();var nm=r.querySelector('.recName').value.trim();var rowSegs=[];r.querySelectorAll('.recSeg:checked').forEach(function(cb){rowSegs.push(cb.value)});if(p||nm)recs.push({file_path:p,name:nm,score:r.querySelector('.recScore').value.trim(),line:r.querySelector('.recLine').value.trim(),segs:rowSegs})});
+  // Single request with all data
+  var payload={cycle:cycle,title:title,imgs:imgs,recs:recs};
   fetch(API+'/material',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){document.querySelectorAll('.zg-modal-overlay').forEach(function(x){x.remove()});renderMaterialTab()}else alert(rd.message)});
 }
 // ====== Tab 2: 排课表 (placeholder) =====
@@ -1051,7 +1069,7 @@ function loadAttLessons(){
 var payPage=1;
 function renderPaymentTab(){
   var el=document.getElementById('editorBody');if(!el)return;payPage=1;
-  el.innerHTML='<div style="padding:16px"><h3>缴费记录</h3><div style="display:flex;gap:6px;margin-bottom:8px;align-items:center"><input id="paySearch" placeholder="搜学生" style="width:80px;padding:6px;border:1.5px solid var(--border);border-radius:6px;font-size:12px"><select id="payMethod" onchange="payPage=1;loadPayments()" style="width:110px;padding:6px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg);color:var(--tx)"><option value="">全部方式</option><option>小红书订单</option><option>微信转账</option><option>支付宝转账</option><option>转介绍赠课</option><option>其他</option></select><button class="btn bp" style="padding:4px 10px;font-size:11px" onclick="payPage=1;loadPayments()">搜索</button><button class="btn bo" style="padding:4px 8px;font-size:10px" onclick="document.getElementById(\'paySearch\').value=\'\';document.getElementById(\'payMethod\').value=\'\';payPage=1;loadPayments()">清除</button><span id="payLoading" style="font-size:10px;color:var(--tx3);display:none">加载中...</span></div><div id="payTable" style="font-size:12px">加载中...</div><div id="payPager" style="text-align:center;margin-top:12px"></div></div>';
+  el.innerHTML='<div style="padding:16px"><h3>缴费记录</h3><div style="display:flex;gap:6px;margin-bottom:8px;align-items:center"><input id="paySearch" placeholder="搜学生" style="width:80px;padding:6px;border:1.5px solid var(--border);border-radius:6px;font-size:12px"><select id="payMethod" onchange="payPage=1;loadPayments()" style="width:110px;padding:6px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg);color:var(--tx)"><option value="">全部方式</option><option>小红书订单</option><option>微信转账</option><option>支付宝转账</option><option>转介绍赠课</option><option>补课课时</option><option>其他</option></select><button class="btn bp" style="padding:4px 10px;font-size:11px" onclick="payPage=1;loadPayments()">搜索</button><button class="btn bo" style="padding:4px 8px;font-size:10px" onclick="document.getElementById(\'paySearch\').value=\'\';document.getElementById(\'payMethod\').value=\'\';payPage=1;loadPayments()">清除</button><span id="payLoading" style="font-size:10px;color:var(--tx3);display:none">加载中...</span></div><div id="payTable" style="font-size:12px">加载中...</div><div id="payPager" style="text-align:center;margin-top:12px"></div></div>';
   loadPayments();
 }
 function loadPayments(){
@@ -1208,8 +1226,8 @@ function renderRevenueSplitTab(){
 function fv(v){return parseFloat(v)||0;}
 var _classBreakdown=null;
 function loadClassBreakdown(cb){if(_classBreakdown){cb(_classBreakdown);return}fetch(API+'/attendance/class-breakdown').then(function(r){return r.json()}).then(function(d){_classBreakdown=d;cb(d)})}
-function toggleRowDetail(rowId,cyc,cl){var row=document.getElementById(rowId);if(!row)return;if(row.style.display==='none'){row.style.display='';loadClassBreakdown(function(bd){var key=cyc+'|'+cl;var classes=bd[key]||[];var h='';classes.forEach(function(c){var names=c.trial_names?' ('+esc(c.trial_names)+')':'';h+='<span style="display:inline-block;margin:2px 8px 2px 0;padding:2px 8px;border-radius:4px;border:1px solid var(--border)">'+esc(c.class)+' <b style="color:var(--coral)">试听'+c.trial+'</b>'+names+' <b style="color:var(--accent)">正式'+c.formal+'</b></span>'});if(!h)h='<span style="color:var(--tx3)">无数据</span>';row.cells[0].innerHTML=h})}else{row.style.display='none'}}
-function expandAllRows(btn){loadClassBreakdown(function(bd){var rows=document.querySelectorAll('[id^=row_]');var anyClosed=false;rows.forEach(function(r){if(r.style.display==='none'){anyClosed=true}});rows.forEach(function(r){if(anyClosed){r.style.display='';var cyc=r.getAttribute('data-cyc'),cl=r.getAttribute('data-cl');var key=cyc+'|'+cl;var classes=bd[key]||[];var h='';classes.forEach(function(c){var names=c.trial_names?' ('+esc(c.trial_names)+')':'';h+='<span style="display:inline-block;margin:2px 8px 2px 0;padding:2px 8px;border-radius:4px;border:1px solid var(--border)">'+esc(c.class)+' <b style="color:var(--coral)">试听'+c.trial+'</b>'+names+' <b style="color:var(--accent)">正式'+c.formal+'</b></span>'});if(!h)h='<span style="color:var(--tx3)">无数据</span>';r.cells[0].innerHTML=h}else{r.style.display='none'}});if(btn)btn.textContent=anyClosed?'全部收起':'全部展开'})}
+function toggleRowDetail(rowId,cyc,cl){var row=document.getElementById(rowId);if(!row)return;if(row.style.display==='none'){row.style.display='';loadClassBreakdown(function(bd){var key=cyc+'|'+cl;var classes=bd[key]||[];var h='';classes.forEach(function(c){var tn=c.trial_names?' ('+(c.trial_names.replace(/√/g,'<b style=\"color:#2563eb\">√</b>').replace(/×/g,'<b style=\"color:#9ca3af\">×</b>'))+')':'';h+='<span style=\"display:inline-block;margin:2px 8px 2px 0;padding:2px 8px;border-radius:4px;border:1px solid var(--border)\">'+esc(c.class)+' <b style=\"color:var(--coral)\">试听'+c.trial+'</b>'+tn+' <b style=\"color:var(--accent)\">正式'+c.formal_people+'人/'+c.formal_total+'人次</b></span>'});if(!h)h='<span style=\"color:var(--tx3)\">无数据</span>';row.cells[0].innerHTML=h})}else{row.style.display='none'}}
+function expandAllRows(btn){loadClassBreakdown(function(bd){var rows=document.querySelectorAll('[id^=row_]');var anyClosed=false;rows.forEach(function(r){if(r.style.display==='none'){anyClosed=true}});rows.forEach(function(r){if(anyClosed){r.style.display='';var cyc=r.getAttribute('data-cyc'),cl=r.getAttribute('data-cl');var key=cyc+'|'+cl;var classes=bd[key]||[];var h='';classes.forEach(function(c){var tn=c.trial_names?' ('+(c.trial_names.replace(/√/g,'<b style=\"color:#2563eb\">√</b>').replace(/×/g,'<b style=\"color:#9ca3af\">×</b>'))+')':'';h+='<span style=\"display:inline-block;margin:2px 8px 2px 0;padding:2px 8px;border-radius:4px;border:1px solid var(--border)\">'+esc(c.class)+' <b style=\"color:var(--coral)\">试听'+c.trial+'</b>'+tn+' <b style=\"color:var(--accent)\">正式'+c.formal_people+'人/'+c.formal_total+'人次</b></span>'});if(!h)h='<span style=\"color:var(--tx3)\">无数据</span>';r.cells[0].innerHTML=h}else{r.style.display='none'}});if(btn)btn.textContent=anyClosed?'全部收起':'全部展开'})}
 function updateSplitCoef(id,teacher,val){var v=(parseFloat(val)||0)/100;var el=event.target;fetch(API+'/revenue-splits',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,coef_update:true,teacher:teacher,value:v})}).then(function(r){return r.json()}).then(function(d){if(d.status==='ok'){var row=el.closest('tr');if(!row)return;var cells=row.querySelectorAll('td');var t20Cell=8,shareCell,netCell=22;if(teacher==='xinxin')shareCell=10;else if(teacher==='sitong')shareCell=12;else if(teacher==='biscuit')shareCell=14;var t20=parseFloat(cells[t20Cell].textContent.replace('¥',''))||0;var newShare=Math.round(t20*v);if(cells[shareCell])cells[shareCell].textContent='¥'+newShare;var rev=parseFloat(cells[1].textContent.replace('¥',''))||0;var l50=parseFloat(cells[5].textContent.replace('¥',''))||0;var xs=teacher==='xinxin'?newShare:parseFloat(cells[10].textContent.replace('¥',''))||0;var ss=teacher==='sitong'?newShare:parseFloat(cells[12].textContent.replace('¥',''))||0;var bs=teacher==='biscuit'?newShare:parseFloat(cells[14].textContent.replace('¥',''))||0;var pf=parseFloat(cells[19].textContent.replace('¥',''))||0;var other=parseFloat((cells[20].querySelector('input')||{}).value)||0;var nb=Math.round(rev-l50-xs-ss-bs-pf-other);cells[netCell].textContent='¥'+nb;var c9=parseFloat((cells[9].querySelector('input')||{}).value)||0;var c11=parseFloat((cells[11].querySelector('input')||{}).value)||0;var c13=parseFloat((cells[13].querySelector('input')||{}).value)||0;var sum=c9+c11+c13,ok=sum===100;[9,11,13].forEach(function(i){var inp=cells[i].querySelector('input');if(inp){inp.style.border=(ok?'1px solid #dde1ed':'2px solid #f47289')}})}}).catch(function(){alert('保存失败')})}
 function updateSplitNum(id,field,val){var v=field==='notes'?val:(parseFloat(val)||0);fetch(API+'/revenue-splits',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,num_update:true,field:field,value:v})}).then(function(r){return r.json()}).then(function(d){if(d.status==='ok')renderRevenueSplitTab()})}
 function generateSplits(){if(!confirm('⚠️ 将重新生成所有分账数据\\n已填写的教研系数、备注、其他收入都会丢失\\n确定刷新？'))return;var btn=event.target;btn.textContent='刷新中...';btn.disabled=true;fetch(API+'/revenue-splits/generate',{method:'POST'}).then(function(r){return r.json()}).then(function(d){if(d.status==='ok'){renderRevenueSplitTab()}else{alert('刷新失败: '+d.message)}btn.textContent='刷新数据';btn.disabled=false})}
@@ -1290,14 +1308,14 @@ function renderStudentTab(){
     h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">';
     var sts=['在读中','暂时停课','终止课程','一课一消','仅试听'];
     sts.forEach(function(s){var active=studentFilter.status.indexOf(s)>=0;h+='<button class="filter-btn'+(active?' active':'')+'" onclick="studentFilter.status.indexOf(\''+s+'\')>=0?studentFilter.status=studentFilter.status.filter(function(x){return x!==\''+s+'\'}):studentFilter.status.push(\''+s+'\');renderStudentTab()">'+s+'</button>'});
-    h+='<input id="studSearch" placeholder="搜索学生..." style="width:120px;padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;margin-left:4px" oninput="studentFilter.search=this.value;clearTimeout(window._studSearchTO);window._studSearchTO=setTimeout(function(){renderStudentTab()},300)"><span style="flex:1"></span><button class="btn bo" style="padding:3px 10px;font-size:10px" onclick="renderStudentTab()">刷新</button><button class="btn bg" style="padding:3px 10px;font-size:10px;margin-left:4px" onclick="showAddStudentModal()">+ 新增</button></div>';
+    h+='<input id="studSearch" placeholder="搜索...（回车确认）" value="'+esc(studentFilter.search)+'" style="width:130px;padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;margin-left:4px" onkeydown="if(event.keyCode===13){studentFilter.search=this.value;renderStudentTab()}"><span style="flex:1"></span><button class="btn bo" style="padding:3px 10px;font-size:10px" onclick="renderStudentTab()">刷新</button><button class="btn bg" style="padding:3px 10px;font-size:10px;margin-left:4px" onclick="showAddStudentModal()">+ 新增</button></div>';
     // Filter and group by class
-    var filtered=rows.filter(function(r){return studentFilter.status.indexOf(r.status||'在读中')>=0});if(studentFilter.search)filtered=filtered.filter(function(r){return r.student_name.indexOf(studentFilter.search)>=0});var _ss=_seasonSet();filtered=filtered.filter(function(r){return !r.enrolled_class||_ss[r.enrolled_class]===true||r.status==='暂时停课'});
-    var byClass={};filtered.forEach(function(r){var c=r.enrolled_class;if(!c&&r.status==='暂时停课')c='暂时停课-待分班';else if(!c)c='未分班';if(!byClass[c])byClass[c]=[];byClass[c].push(r)});
-    var sortedClasses=_classSortOrder();var classOrder=[];sortedClasses.forEach(function(c){if(byClass[c])classOrder.push(c)});if(byClass['暂时停课-待分班']){classOrder.push('暂时停课-待分班')}Object.keys(byClass).sort().forEach(function(c){if(c!=='暂时停课-待分班'&&classOrder.indexOf(c)<0)classOrder.push(c)});
+    var filtered=rows.filter(function(r){return studentFilter.status.indexOf(r.status||'在读中')>=0});if(studentFilter.search)filtered=filtered.filter(function(r){return r.student_name.indexOf(studentFilter.search)>=0});var _ss=_seasonSet();filtered=filtered.filter(function(r){return !r.enrolled_class||r.enrolled_class==='待分班'||_ss[r.enrolled_class]===true||r.status==='暂时停课'});
+    var byClass={};filtered.forEach(function(r){var c=r.enrolled_class;if(c==='待分班')c='待分班';else if(!c&&r.status==='暂时停课')c='待分班';else if(!c)c='未分班';if(!byClass[c])byClass[c]=[];byClass[c].push(r)});
+    var sortedClasses=_classSortOrder();var classOrder=[];sortedClasses.forEach(function(c){if(byClass[c])classOrder.push(c)});if(byClass['待分班']){classOrder.push('待分班')}if(byClass['未分班']){classOrder.push('未分班')}Object.keys(byClass).sort().forEach(function(c){if(c!=='待分班'&&c!=='未分班'&&classOrder.indexOf(c)<0)classOrder.push(c)});
     classOrder.forEach(function(cls){
       var students=byClass[cls];
-      var clsLabel=cls==='暂时停课-待分班'?'暂时停课':cls;h+='<div class="section-card" id="classSection_'+esc(cls).replace(/\\s/g,'_')+'" style="padding:12px 16px;margin-bottom:12px"><div style="display:flex;align-items:center;margin-bottom:10px"><div style="font-size:13px;font-weight:700;color:var(--tx);flex:1">'+esc(clsLabel)+' <span style="font-weight:400;color:var(--tx3);font-size:11px">'+students.length+'人</span></div><button onclick="expandClassRecords(\''+esc(cls)+'\',\'att\')" style="padding:1px 6px;border-radius:3px;border:1px solid #dbeafe;background:var(--surface);color:#2563eb;font-size:9px;cursor:pointer;margin-left:4px">展开消课</button><button onclick="expandClassRecords(\''+esc(cls)+'\',\'pay\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:var(--surface);color:#16a34a;font-size:9px;cursor:pointer;margin-left:2px">展开缴费</button></div>';
+      var clsLabel=cls==='待分班'?'待分班':cls==='未分班'?'未分班':cls;h+='<div class="section-card" id="classSection_'+esc(cls).replace(/\\s/g,'_')+'" style="padding:12px 16px;margin-bottom:12px"><div style="display:flex;align-items:center;margin-bottom:10px"><div style="font-size:13px;font-weight:700;color:var(--tx);flex:1">'+esc(clsLabel)+' <span style="font-weight:400;color:var(--tx3);font-size:11px">'+students.length+'人</span></div><button onclick="expandClassRecords(\''+esc(cls)+'\',\'att\')" style="padding:1px 6px;border-radius:3px;border:1px solid #dbeafe;background:var(--surface);color:#2563eb;font-size:9px;cursor:pointer;margin-left:4px">展开消课</button><button onclick="expandClassRecords(\''+esc(cls)+'\',\'pay\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:var(--surface);color:#16a34a;font-size:9px;cursor:pointer;margin-left:2px">展开缴费</button></div>';
       h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">';
       students.forEach(function(r){
         var pur=parseInt(r.purchased_lessons)||0,used=parseInt(r.used_lessons)||0;var isGhost=pur===0;var pct=pur>0?Math.min(100,Math.round(used/pur*100)):0;
@@ -1305,7 +1323,7 @@ function renderStudentTab(){
         var sid='studDetail_'+esc(r.student_name).replace(/\\s/g,'_');
         h+='<div style="background:'+(isGhost?'var(--bg)':'var(--surface2)')+';border-radius:8px;padding:10px;border:1px '+(isGhost?'dashed':'solid')+' '+(isGhost?'var(--border2)':'var(--border)')+'">';
         h+='<div style="display:flex;justify-content:space-between;align-items:center"><div><b style="font-size:13px;color:'+(isGhost?'var(--tx3)':'var(--tx)')+'">'+esc(r.student_name)+'</b>'+(r.gender?' <span style="font-size:9px;color:var(--tx3)">'+esc(r.gender)+'</span>':'')+'</div><span style="font-size:9px;padding:1px 6px;border-radius:999px;background:'+(isGhost?'#f0f0ff':'#fee2e2')+';color:'+(isGhost?'var(--accent)':'#dc2626')+'">'+(isGhost?'预排':esc(r.status||'?'))+'</span></div>';
-        if(!isGhost){if(used===0){h+='<div style="height:4px;background:#e2e8f0;border-radius:2px;margin:6px 0"><div style="height:100%;width:12px;background:#94a3b8;border-radius:2px"></div></div>'}else{h+='<div style="height:4px;background:#e2e8f0;border-radius:2px;margin:6px 0"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:2px"></div></div>'}var purText='已购'+pur;var ref=parseInt(r.ref_lessons)||0;if(ref>0)purText='已购'+(pur-ref)+'+转介绍赠'+ref;h+='<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--sb)"><span>'+purText+'</span><span>已消'+used+'</span><span>余'+rem+'</span></div>';}
+        if(!isGhost){if(used===0){h+='<div style="height:4px;background:#e2e8f0;border-radius:2px;margin:6px 0"><div style="height:100%;width:12px;background:#94a3b8;border-radius:2px"></div></div>'}else{h+='<div style="height:4px;background:#e2e8f0;border-radius:2px;margin:6px 0"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:2px"></div></div>'}var purText='已购'+pur;var ref=parseInt(r.ref_lessons)||0;var bk=parseInt(r.buke_lessons)||0;var base=pur-ref-bk;if(ref>0||bk>0){purText='已购'+(base>0?base:0);if(ref>0)purText+='+转介绍赠'+ref;if(bk>0)purText+='+补课'+bk}h+='<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--sb)"><span>'+purText+'</span><span>已消'+used+'</span><span>余'+rem+'</span></div>';}
         h+='<div style="display:flex;gap:4px;margin-top:6px"><button onclick="showAddStudentModal(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bfdbfe;background:#eff6ff;color:#3b82f6;font-size:9px;cursor:pointer">编辑</button><button onclick="showAddPayForStudent(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:#f0fdf4;color:#16a34a;font-size:9px;cursor:pointer">+缴费</button>'+(isGhost?'':'<span style="flex:1"></span><button onclick="toggleStudAtt(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #dbeafe;background:var(--surface);color:#2563eb;font-size:9px;cursor:pointer">消课</button><button onclick="toggleStudPay(\''+esc(r.student_name)+'\')" style="padding:1px 6px;border-radius:3px;border:1px solid #bbf7d0;background:var(--surface);color:#16a34a;font-size:9px;cursor:pointer">缴费</button>')+'</div>';
         h+='<div id="studAtt_'+esc(r.student_name).replace(/\\s/g,'_')+'" style="display:none;margin-top:4px;padding:4px;background:var(--bg);border-radius:4px;font-size:9px"></div>';
         h+='<div id="studPay_'+esc(r.student_name).replace(/\\s/g,'_')+'" style="display:none;margin-top:4px;padding:4px;background:var(--bg);border-radius:4px;font-size:9px"></div>';
@@ -1377,7 +1395,7 @@ function showAddPayForStudent(name){
     var segOpts='<option value="">分段</option>'+segs.map(function(s){return'<option>'+s+'</option>'}).join('');
     var typeOpts='<option value="">课型</option>'+types.map(function(t){return'<option>'+t+'</option>'}).join('');
     var discOpts='<option value="">优惠方式</option>'+discs.map(function(d){return'<option>'+d+'</option>'}).join('');
-    var methods=['微信转账','支付宝转账','小红书订单','银行转账','转介绍赠课','亲友免试听','其他'];
+    var methods=['微信转账','支付宝转账','小红书订单','银行转账','转介绍赠课','补课课时','亲友免试听','其他'];
     var methodOpts='<option value="">方式</option>'+methods.map(function(m){return'<option>'+m+'</option>'}).join('');
     var today=new Date().toISOString().slice(0,10);
     // Try to get student's last payment info
@@ -1427,6 +1445,7 @@ function toggleStudAtt(name){
   if(det.style.display==='block'){det.style.display='none';return}
   det.style.display='block';det.textContent='加载中...';
   fetch(API+'/finance/records?type=attendance&student='+encodeURIComponent(name)+'&limit=50').then(function(r){return r.json()}).then(function(rows){
+    rows=rows.filter(function(r){return r.status==='出席'});
     if(!rows.length){det.innerHTML='<span style=\"color:var(--tx3)\">暂无</span>';return}
     var h='<table style=\"width:100%;font-size:9px;border-collapse:collapse\"><tr style=\"color:var(--tx3)\"><th>日期</th><th>班级</th><th>课节</th></tr>';
     rows.forEach(function(r){
@@ -1672,7 +1691,7 @@ function uploadExcel(file){
 
 
 // ── 春秋/寒暑切换 ──
-window._season='V';window._summerMonth='2607';
+window._season='V';window._summerMonth='2608';
 var _vacationWords=['暑假','寒假','临时','先锋','混龄'];
 function _isVac(cn){for(var i=0;i<_vacationWords.length;i++){if(cn.indexOf(_vacationWords[i])>=0)return true;}var units=cfgInfo[cn];if(units){var ucs=Object.keys(units);for(var j=0;j<ucs.length;j++){if(ucs[j]==='2607'||ucs[j]==='2608')return true;}}return false;}
 function _segFromClass(cn){if(!cn)return'';if(cn.indexOf('启航')>=0)return'启航段';if(cn.indexOf('探索')>=0)return'探索段';if(cn.indexOf('先锋')>=0)return'先锋段';return''}

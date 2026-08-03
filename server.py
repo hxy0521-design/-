@@ -76,31 +76,79 @@ def unit_path(cls_name, unit_code):
 # ====== Helpers ======
 
 def find_cards(folder, base_path):
-    cards = []
-    fp = os.path.join(base_path, folder)
-    if os.path.isdir(fp):
-        for c in sorted(os.listdir(fp)):
-            if c.startswith("单人总结_") and c.endswith(".png"):
-                cards.append({"name": c, "path": f"/api/file/{folder}/{c}"})
-    return cards
+    return []  # 单人总结卡是生成输出，不进入素材库
 
 def find_golden(folder, cls_name, base_path):
-    g = []
-    fp = os.path.join(base_path, folder)
-    if os.path.isdir(fp):
-        for f in sorted(os.listdir(fp)):
-            if "_金句_" in f and f.endswith(".png"):
-                g.append({"name": f"金句/{f}", "path": f"/api/file/{folder}/{f}"})
-    d2 = os.path.join(base_path, folder, f"金句_{cls_name}")
-    if os.path.isdir(d2):
-        for f in sorted(os.listdir(d2)):
-            if f.endswith(".png"):
-                g.append({"name": f"金句/{f}", "path": f"/api/file/{folder}/金句_{cls_name}/{f}"})
-    return g
+    return []  # 生成的金句图片不进入素材预览，素材预览只看 DB 手动上传的推荐素材
 
 def scan_lessons(cls_name, unit_code, unit_path_dir):
     """从 Turso 读取课节列表"""
     return db.lesson_list(cls_name, unit_code)
+
+def load_meetmemo_data(cls_name, lesson_title, lesson_date):
+    """从 MeetMemo 本地数据加载课堂转录，返回 {teacher_segments, student_segments, speaker_map}"""
+    import ast, glob as _glob
+    memo_dir = os.path.expanduser("~/Library/Containers/com.youcai.meetmemo/Data/Documents/Meetings/")
+    if not os.path.isdir(memo_dir):
+        return None
+    best = None
+    for fpath in _glob.glob(os.path.join(memo_dir, "*.json")):
+        try:
+            with open(fpath) as fp:
+                d = json.load(fp)
+            # 匹配课节标题或班级名+日期
+            t = d.get("title", "")
+            dt = (d.get("date", "") or "")[:10]
+            if lesson_title and lesson_title in t:
+                best = d; break
+            if cls_name and cls_name in t and dt == lesson_date:
+                best = d; break
+            # 日期匹配（同一天只可能有一节课）
+            if dt == lesson_date:
+                best = d; break
+        except: pass
+    if not best:
+        print(f"  ⚠ 未找到匹配的 MeetMemo 转录（cls={cls_name}, title={lesson_title}, date={lesson_date}）")
+        return None
+    # 解析 transcriptChunks
+    chunks_str = best.get("transcriptChunks", "[]")
+    try:
+        chunks = ast.literal_eval(chunks_str)
+    except:
+        try:
+            chunks = json.loads(chunks_str)
+        except:
+            print("  ⚠ 无法解析 MeetMemo transcriptChunks")
+            return None
+    # 分离老师和学生
+    teacher_segs = []
+    student_segs = []
+    for c in chunks:
+        src = c.get("source", "")
+        seg = {
+            "speaker": c.get("speakerTag", ""),
+            "text": c.get("text", ""),
+            "start": c.get("startTime", 0),
+            "end": c.get("endTime", 0),
+            "timestamp": (c.get("timestamp", "") or "")[:19],
+        }
+        if src == "MIC":
+            teacher_segs.append(seg)
+        elif src == "SYS":
+            student_segs.append(seg)
+    # 尝试从 speakerNameMappings 加载已保存的映射
+    try:
+        mappings = json.loads(best.get("speakerNameMappings", "{}"))
+    except:
+        mappings = {}
+    print(f"  ✓ MeetMemo 转录已加载: {len(teacher_segs)} 条老师, {len(student_segs)} 条学生, {len(mappings)} 个名字映射")
+    return {
+        "title": best.get("title", ""),
+        "date": (best.get("date", "") or "")[:10],
+        "teacher_segments": teacher_segs,
+        "student_segments": student_segs,
+        "speaker_mappings": mappings,
+    }
 
 # ====== API ======
 
@@ -454,7 +502,7 @@ def score_sentences():
                     prompt += f"{i}. {t}\n"
                 prompt += f"\n请按格式返回每句的分数：\n序号:分数"
                 resp = client.chat.completions.create(
-                    model="deepseek-chat",
+                    model="deepseek-v4-flash",
                     messages=[{"role":"user","content": prompt}],
                     temperature=0.3, max_tokens=300, stream=False)
                 text = resp.choices[0].message.content
@@ -528,6 +576,7 @@ def generate_all():
     golden_qs = data.get("golden_quotes",{})
     poster_qs = data.get("poster_quotes",{})
     feedback_styles = [s for s in data.get("feedback_styles","").split(",") if s]
+    has_memo = data.get("has_memo", False)
     images = data.get("images", {})
 
     cls = meta.get("class","未命名")
@@ -640,11 +689,15 @@ def generate_all():
             font_warning = "未找到任何中文字体，图片可能无法正常生成"
 
     # 生成输出到本地目录（unit_path）
-    cwd = os.getcwd(); os.chdir(base)
+    cwd = os.getcwd(); os.chdir(folder_path)
     try:
         from generate_all import generate_all as ga
         img_dir = os.path.join(folder_path, "images")
-        ga(txt_path, feedback_styles=feedback_styles, golden_quotes=golden_qs, images_dir=img_dir if os.path.isdir(img_dir) else None)
+        # 加载 MeetMemo 转录（如果勾选了 Memo转录 且有匹配文件）
+        memo_data = None
+        if has_memo:
+            memo_data = load_meetmemo_data(cls, title, date)
+        ga(txt_path, feedback_styles=feedback_styles, golden_quotes=golden_qs, images_dir=img_dir if os.path.isdir(img_dir) else None, memo_data=memo_data)
     except Exception as e:
         os.chdir(cwd)
         # 清理失败的生成物（只删输出文件夹，底表保留）
@@ -692,38 +745,49 @@ def generate_all():
     elif "先锋" in cls: seg = "先锋段"
     else: seg = None
     if seg and unit_code:
+        import urllib.parse
+        # Prefer material matching current title, fallback to any segment match
+        mats = db.material_list(cycle=unit_code, material_type="长图")
+        title_matches = [m for m in mats if seg in (m.get("segment") or "").split(",") and (title and title in (m.get("title") or ""))]
+        seg_matches = [m for m in mats if seg in (m.get("segment") or "").split(",")]
+        candidates = title_matches + seg_matches
         try:
-            for m in db.material_list(cycle=unit_code, material_type="长图"):
-                m_segs = (m.get("segment") or "").split(",")
-                if seg in m_segs:
-                    fp = m["file_path"]
-                    src = None
-                    if fp.startswith("素材库/"):
-                        src = os.path.join(MATERIAL_DIR, fp.replace("素材库/", ""))
-                    elif os.path.isfile(fp):
-                        src = fp
-                    if src and os.path.isfile(src):
-                        dest = os.path.join(folder_path, f"本周课后素材-{seg}.png")
-                        shutil.copy2(src, dest)
-                        break
+            for m in candidates:
+                fp = m["file_path"]
+                src = None
+                if fp.startswith("素材库/"):
+                    src = os.path.join(MATERIAL_DIR, fp.replace("素材库/", ""))
+                elif fp.startswith("/api/material-file/"):
+                    fname = urllib.parse.unquote(fp.replace("/api/material-file/", ""))
+                    src = os.path.join(MATERIAL_DIR, fname)
+                elif os.path.isfile(fp):
+                    src = fp
+                if src and os.path.isfile(src):
+                    dest = os.path.join(folder_path, f"本周课后素材-{seg}.png")
+                    shutil.copy2(src, dest)
+                    break
         except: pass
         # Also check combined cycle
         if unit_code and "&" not in unit_code:
             try:
                 for combined_cycle in ["2607&08", "2608&07"]:
-                    for m in db.material_list(cycle=combined_cycle, material_type="长图"):
-                        m_segs = (m.get("segment") or "").split(",")
-                        if seg in m_segs:
-                            fp = m["file_path"]
-                            src = None
-                            if fp.startswith("素材库/"):
-                                src = os.path.join(MATERIAL_DIR, fp.replace("素材库/", ""))
-                            elif os.path.isfile(fp):
-                                src = fp
-                            if src and os.path.isfile(src):
-                                dest = os.path.join(folder_path, f"本周课后素材-{seg}.png")
-                                shutil.copy2(src, dest)
-                                break
+                    mats2 = db.material_list(cycle=combined_cycle, material_type="长图")
+                    t2 = [m for m in mats2 if seg in (m.get("segment") or "").split(",") and (title and title in (m.get("title") or ""))]
+                    s2 = [m for m in mats2 if seg in (m.get("segment") or "").split(",")]
+                    for m in t2 + s2:
+                        fp = m["file_path"]
+                        src2 = None
+                        if fp.startswith("素材库/"):
+                            src2 = os.path.join(MATERIAL_DIR, fp.replace("素材库/", ""))
+                        elif fp.startswith("/api/material-file/"):
+                            fname2 = urllib.parse.unquote(fp.replace("/api/material-file/", ""))
+                            src2 = os.path.join(MATERIAL_DIR, fname2)
+                        elif os.path.isfile(fp):
+                            src2 = fp
+                        if src2 and os.path.isfile(src2):
+                            dest = os.path.join(folder_path, f"本周课后素材-{seg}.png")
+                            shutil.copy2(src2, dest)
+                            break
             except: pass
     return jsonify({"status":"ok","outputs":outputs,"folder":folder,"font_warning":font_warning})
 
@@ -821,42 +885,55 @@ def douban_search():
         except: pass
     _fetch_posters(f"https://movie.douban.com/j/subject_suggest?q={urllib.parse.quote(q)}")
     _fetch_posters(f"https://book.douban.com/j/subject_suggest?q={urllib.parse.quote(q)}")
-    # Step 2: get ratings from douban-mcp-cli
+    # Step 2: merge suggest results + fetch ratings from doubaninfo API
     results = []
-    def _parse(output, kind):
-        for line in output.strip().split("\n"):
-            line = line.strip()
-            if not line: continue
-            m = re.match(r'\d+\.\s+\*\*(.+?)\*\*\s*(⭐([\d.]+))?', line)
-            if m:
-                raw = m.group(1).strip()
-                title = re.sub(r'\s+[A-Za-z].*', '', raw).strip()
-                rating = m.group(3) or ""
-                if rating: db.douban_cache_set(title, rating, kind)
-                poster = posters.get(title, "")
-                if not poster:
-                    for k, v in posters.items():
-                        if title in k or k in title: poster = v; break
-                results.append({"title": title, "year": "", "rating": rating, "poster": poster, "id": "", "kind": kind})
+    DOUBANINFO_KEY = "0dd74d7f77c1d7ecd46bce47b85264470e9baec7f8f8dd2a5bbea3ca93509f96"
+    def _fetch_doubaninfo_rating(dbid, kind):
+        """Fetch rating from doubaninfo.com by Douban ID"""
+        try:
+            r = sess.get(f"https://doubaninfo.com/api/v1_douban.php?url={dbid}&key={DOUBANINFO_KEY}", headers=headers, timeout=10)
+            data = r.json()
+            if data.get("success"):
+                rating = str(data.get("douban_rating",""))
+                if rating: db.douban_cache_set(data.get("title",""), rating, kind)
+                return rating
+        except: pass
+        return ""
+    # Merge movie suggest results
     try:
-        r = subprocess.run(["npx", "-y", "douban-mcp-cli", "search-movie", "--q", q, "--count", "5"], capture_output=True, text=True, timeout=20)
-        _parse(r.stdout, "影")
-    except Exception as e: print(f"Douban movie failed: {e}")
-    # Book search: try CLI for ratings, fall back to suggest API for titles+posters
-    try:
-        r = subprocess.run(["npx", "-y", "douban-mcp-cli", "search-book", "--q", q, "--count", "5"], capture_output=True, text=True, timeout=20)
-        _parse(r.stdout, "书")
-    except Exception as e: print(f"Douban book CLI failed: {e}")
-    # Fill any missing books from suggest API (for titles not found by CLI)
+        for m in (sess.get(f"https://movie.douban.com/j/subject_suggest?q={urllib.parse.quote(q)}", headers=headers, timeout=10).json() or [])[:5]:
+            title = m.get("title","")
+            poster = m.get("img","") or ""
+            dbid = m.get("id","")
+            cached_rating, _ = db.douban_cache_get(title)
+            rating = cached_rating or _fetch_doubaninfo_rating(dbid, "影") if dbid else ""
+            results.append({"title": title, "year": m.get("year",""), "rating": rating, "poster": poster, "id": dbid, "kind": "影"})
+    except: pass
+    # Merge book suggest results (doubaninfo only supports movies, use cached ratings for books)
     try:
         for m in (sess.get(f"https://book.douban.com/j/subject_suggest?q={urllib.parse.quote(q)}", headers=headers, timeout=10).json() or [])[:5]:
             title = m.get("title","")
-            if not any(r["title"] == title for r in results):
-                poster = m.get("pic","") or ""
-                cached_rating, cached_kind = db.douban_cache_get(title)
-                rating = cached_rating or ""
-                results.append({"title": title, "year": m.get("year",""), "rating": rating, "poster": poster, "id": m.get("id",""), "kind": "书"})
-    except Exception as e: print(f"Douban book suggest failed: {e}")
+            poster = m.get("pic","") or ""
+            dbid = m.get("id","")
+            cached_rating, _ = db.douban_cache_get(title)
+            if not any(r["title"] == title and r["kind"] == "书" for r in results):
+                results.append({"title": title, "year": m.get("year",""), "rating": cached_rating or "", "poster": poster, "id": dbid, "kind": "书"})
+    except: pass
+    # Fallback: if no movie results from Douban, try TMDB (without rating)
+    if not any(r["kind"]=="影" for r in results):
+        try:
+            api_key = os.environ.get("TMDB_API_KEY", "97f5317f472b218e43f77db067ca7784")
+            tmdb_url = f"https://api.themoviedb.org/3/search/movie?api_key={api_key}&query={urllib.parse.quote(q)}&language=zh-CN&sort_by=popularity.desc"
+            tmdb_r = urllib.request.urlopen(tmdb_url, timeout=10)
+            results_raw = json.loads(tmdb_r.read()).get("results",[])
+            results_raw = [m for m in results_raw if m.get("vote_count",0) > 10]
+            for m in results_raw[:5]:
+                poster = f"/api/tmdb/image/w500{m['poster_path']}" if m.get("poster_path") else ""
+                title = m.get("title","")
+                if not any(r["title"]==title and r["kind"]=="影" for r in results):
+                    # TMDB只提供标题和海报，不提供评分
+                    results.append({"title": title, "year": (m.get("release_date","")[:4]), "rating": "", "poster": poster, "id": "", "kind": "影"})
+        except: pass
     return jsonify(results)
 
 @app.route("/api/douban/recommendation", methods=["POST"])
@@ -870,7 +947,7 @@ def douban_recommendation():
         from openai import OpenAI
         client = OpenAI(api_key=os.environ.get("DEEPSEEK_API_KEY",""), base_url="https://api.deepseek.com")
         resp = client.chat.completions.create(
-            model="deepseek-chat",
+            model="deepseek-v4-flash",
             messages=[{"role":"user","content":f"请为{kind}《{title}》写一段推荐语，50字以内，适合推荐给中小学生。只输出推荐语，不要其他内容。"}],
             max_tokens=100, temperature=0.7)
         rec = resp.choices[0].message.content.strip()
@@ -947,7 +1024,7 @@ def attendance_suggest():
         fuzzy = {}
         for rn in roster:
             for sn in speakers:
-                if sn != rn and (rn in sn or sn.startswith(rn)):
+                if sn != rn and sn not in roster and (rn in sn or sn.startswith(rn) or sn in rn or rn.startswith(sn)):
                     fuzzy[sn] = rn
         # 花名册中的学生
         for name in roster:
@@ -994,28 +1071,49 @@ def attendance_save():
         batch = []
         cycle = data.get("cycle", "")
         content_label = data.get("content_label", "")
+        lesson_title = data.get("lesson_title", "")
+        # 自动识别专题标签（如果前端没传）
+        if not content_label and lesson_title:
+            import re as _re
+            topic_map = [
+                (r'考卷|高考|作文思辨', '考卷上的问号'),
+                (r'我喜欢的那个人|喜欢.*那件事', '我喜欢的那个人…'),
+                (r'城市|规划', '城市规划'),
+                (r'艺术审美|创造美|寻找美|审美', '艺术审美'),
+            ]
+            for pattern, label in topic_map:
+                if _re.search(pattern, lesson_title):
+                    content_label = label
+                    break
         roster_names_list = db.roster_get(cls_name)
         roster_names = set(roster_names_list)
         # Fuzzy map: normalize derivative names (县令小米 → 小米)
         def _resolve_name(name, roster):
             if name in roster: return name
             for rn in roster:
-                if rn and rn != name and (rn in name or name.startswith(rn)):
+                if rn and rn != name and name not in roster and (rn in name or name.startswith(rn) or name in rn or rn.startswith(name)):
                     return rn
             return name
         for r in records:
             r["name"] = _resolve_name(r["name"], roster_names_list)
             is_mk = 1 if r["name"] in makeup_names else 0
             # Auto-detect补课: not in roster, enrolled in another class
+            auto_note = r.get("note", "")
             if not is_mk and r["name"] not in roster_names:
                 se = _execute(get_db(), "SELECT enrolled_class FROM student_ext WHERE student_name=%s", [r["name"]]).fetchone()
                 if se and se["enrolled_class"] and se["enrolled_class"] != cls_name:
                     is_mk = 1
+                    auto_note = "补自" + se["enrolled_class"]
+            # Auto-detect新生: not in roster, no enrolled_class, not makeup
+            if not is_mk and r["name"] not in roster_names and (not auto_note or auto_note == r.get("note","")):
+                se2 = _execute(get_db(), "SELECT enrolled_class FROM student_ext WHERE student_name=%s", [r["name"]]).fetchone()
+                if not se2 or not se2["enrolled_class"]:
+                    auto_note = "新生"
             batch.append({
                 "class_name": cls_name, "unit_code": unit_code,
                 "lesson_num": lesson_num, "lesson_title": lesson_title,
                 "lesson_date": lesson_date, "student_name": r["name"],
-                "status": r.get("status", "出席"), "note": r.get("note", ""),
+                "status": r.get("status", "出席"), "note": auto_note,
                 "cycle": cycle, "content_label": content_label,
                 "is_makeup": is_mk
             })
@@ -1023,7 +1121,7 @@ def attendance_save():
         # 更新 student_ext 的消课计数
         names = list(set(r["name"] for r in records if r.get("status","出席") == "出席"))
         for name in names:
-            used = _execute(get_db(), "SELECT COUNT(*) as cnt FROM attendance WHERE student_name=%s AND status='出席' AND consumed_price>0", [name]).fetchone()
+            used = _execute(get_db(), "SELECT COUNT(*) as cnt FROM attendance WHERE student_name=%s AND status='出席'", [name]).fetchone()
             if used:
                 _execute(get_db(), "UPDATE student_ext SET used_lessons=%s, remaining_lessons=purchased_lessons-%s WHERE student_name=%s", [used["cnt"], used["cnt"], name])
         _clear_config_cache(); return jsonify({"status": "ok", "count": len(batch)})
@@ -1346,8 +1444,11 @@ def students_list():
     # Batch fetch all ref_lessons in one query (fix N+1)
     refs = _execute(get_db(), "SELECT student_name, COALESCE(SUM(lesson_count),0) as t FROM purchases WHERE discount_type=%s GROUP BY student_name", ["转介绍赠"]).fetchall()
     ref_map = {r["student_name"]: int(r["t"]) for r in refs}
+    bukes = _execute(get_db(), "SELECT student_name, COALESCE(SUM(lesson_count),0) as t FROM purchases WHERE discount_type=%s GROUP BY student_name", ["补课课时"]).fetchall()
+    buke_map = {r["student_name"]: int(r["t"]) for r in bukes}
     for r in rows:
         r["ref_lessons"] = ref_map.get(r["student_name"], 0)
+        r["buke_lessons"] = buke_map.get(r["student_name"], 0)
     return jsonify(rows)
 
 @app.route("/api/students/next-code")
@@ -1418,7 +1519,7 @@ def attendance_by_lesson():
         now = __import__('time').time()
         if cache_key in _ATT_CACHE:
             cached = _ATT_CACHE[cache_key]
-            if now - cached["ts"] < 300:  # 5分钟缓存
+            if now - cached["ts"] < 1800:  # 30分钟缓存
                 return jsonify(cached["data"])
         result, total = db.attendance_by_lesson(class_name=cls or None, cycle=cycle or None, student_name=student or None, limit=limit, page=page)
         data = {"rows": result, "total": total, "page": page, "limit": limit}
@@ -1451,7 +1552,7 @@ def revenue_splits_generate():
     # 保存当前系数、neukol、备注、其他到持久表（锁死），再清空重建
     for old in _execute(get_db(), "SELECT cycle, content_label, xinxin_coef, sitong_coef, biscuit_coef, notes, other_cost, neukol_fee FROM revenue_splits").fetchall():
         _execute(get_db(), """REPLACE INTO split_coefficients (cycle, content_label, xinxin_coef, sitong_coef, biscuit_coef) VALUES (%s,%s,%s,%s,%s)""",
-                 [old['cycle'], old['content_label'], float(old['xinxin_coef'] or 0.9), float(old['sitong_coef'] or 0.1), float(old['biscuit_coef'] or 0.0)])
+                 [old['cycle'], old['content_label'], float(old['xinxin_coef'] or 1.0), float(old['sitong_coef'] or 0.0), float(old['biscuit_coef'] or 0.0)])
         if float(old['neukol_fee'] or 0) != 0 or float(old['other_cost'] or 0) != 0 or (old['notes'] or ''):
             _execute(get_db(), """REPLACE INTO split_notes (cycle, content_label, other_cost, notes) VALUES (%s,%s,%s,%s)""",
                      [old['cycle'], old['content_label'], float(old['other_cost'] or 0), old['notes'] or ''])
@@ -1582,6 +1683,15 @@ def revenue_splits_generate():
     for se in _execute(get_db(), "SELECT student_name, added_by FROM student_ext").fetchall():
         se_all[se['student_name']] = (se['added_by'] or '').strip()
 
+    # 新生计数：试听生首发专题即为新生归属
+    trial_first = {}
+    trial_students = _execute(get_db(), "SELECT DISTINCT student_name FROM purchases WHERE discount_type IN ('试听折扣','亲友试听')").fetchall()
+    for ts in trial_students:
+        first = _execute(get_db(), "SELECT cycle, content_label FROM attendance WHERE student_name=%s AND status='出席' ORDER BY lesson_date LIMIT 1", [ts['student_name']]).fetchone()
+        if first and first['cycle'] and first['content_label']:
+            key = (first['cycle'], first['content_label'])
+            trial_first[key] = trial_first.get(key, 0) + 1
+
     for r in rows:
         rev = float(r['revenue'])
         key = (r['cycle'], r['content_label'])
@@ -1600,7 +1710,7 @@ def revenue_splits_generate():
             inherit = None
             for (c_cyc, c_cl), cv in coef_map.items():
                 if c_cyc == r['cycle']: inherit = cv
-            xc, sc, bc = inherit if inherit else (0, 0, 0)
+            xc, sc, bc = inherit if inherit else (1.0, 0.0, 0.0)
         coe_sum = xc + sc + bc
         if coe_sum > 0 and abs(coe_sum - 1.0) > 0.001:
             xc = round(xc / coe_sum, 2); sc = round(sc / coe_sum, 2); bc = round(1.0 - xc - sc, 2)
@@ -1609,20 +1719,18 @@ def revenue_splits_generate():
         neukol_val = nk_map.get(ck, 0.0)
         other_val, notes_val = nt_map.get(ck, (0.0, ''))
         # 生源拆分: 招生 / 转化 / 续费
-        trial = int(r['trial_count'])
-        converted_cnt = 0
-        trial_names = []
-        if trial > 0:
-            trial_names = [row['student_name'] for row in _execute(get_db(), """
-                SELECT DISTINCT a.student_name FROM attendance a
-                WHERE a.cycle=%s AND a.content_label=%s AND a.status='出席' AND a.consumed_price IN (69.9, 99.9)
-                AND a.lesson_date = (SELECT MIN(lesson_date) FROM attendance WHERE student_name=a.student_name AND status='出席')
-            """, [r['cycle'], r['content_label']]).fetchall()]
-            if trial_names:
-                placeholders = ','.join(['%s']*len(trial_names))
-                later_rows = _execute(get_db(), f"SELECT DISTINCT student_name FROM attendance WHERE student_name IN ({placeholders}) AND status='出席' AND consumed_price>70 AND (cycle!=%s OR content_label!=%s)", trial_names + [r['cycle'], r['content_label']]).fetchall()
-                converted_names = {lr['student_name'] for lr in later_rows}
-                converted_cnt = sum(1 for n in trial_names if n in converted_names)
+        trial = trial_first.get((r['cycle'], r['content_label']), 0)
+        # 转化生：有试听购买 + 非试听购买的学生
+        conv_students_set = set()
+        for cr2 in _execute(get_db(), "SELECT DISTINCT p1.student_name FROM purchases p1 WHERE p1.discount_type IN ('试听折扣','亲友试听') AND EXISTS (SELECT 1 FROM purchases p2 WHERE p2.student_name=p1.student_name AND p2.discount_type NOT IN ('试听折扣','亲友试听','转介绍赠','补课课时'))").fetchall():
+            conv_students_set.add(cr2['student_name'])
+        trial_names = [row['student_name'] for row in _execute(get_db(), """
+            SELECT DISTINCT a.student_name FROM attendance a
+            WHERE a.cycle=%s AND a.content_label=%s AND a.status='出席'
+            AND a.student_name IN (SELECT DISTINCT student_name FROM purchases WHERE discount_type IN ('试听折扣','亲友试听'))
+            AND a.lesson_date = (SELECT MIN(lesson_date) FROM attendance WHERE student_name=a.student_name AND status='出席')
+        """, [r['cycle'], r['content_label']]).fetchall()]
+        converted_cnt = sum(1 for n in trial_names if n in conv_students_set)
         # Teacher split ratio
         total_les = xin_lesson + bis_lesson
         les_xin_ratio = xin_lesson / total_les if total_les > 0 else 1.0
@@ -1632,7 +1740,8 @@ def revenue_splits_generate():
             t_rows = _execute(get_db(), """
                 SELECT ANY_VALUE(ct.teacher) as t FROM attendance a
                 LEFT JOIN (SELECT class_name, ANY_VALUE(created_by) as teacher FROM config GROUP BY class_name) ct ON a.class_name=ct.class_name
-                WHERE a.cycle=%s AND a.content_label=%s AND a.status='出席' AND a.consumed_price IN (69.9, 99.9)
+                WHERE a.cycle=%s AND a.content_label=%s AND a.status='出席'
+                AND a.student_name IN (SELECT DISTINCT student_name FROM purchases WHERE discount_type IN ('试听折扣','亲友试听'))
                 AND a.lesson_date = (SELECT MIN(lesson_date) FROM attendance WHERE student_name=a.student_name AND status='出席')
                 GROUP BY a.student_name
             """, [r['cycle'], r['content_label']]).fetchall()
@@ -1683,7 +1792,7 @@ def revenue_splits_generate():
              lesson_50pct,xinxin_lesson_share,biscuit_lesson_share,teaching_20pct,
              xinxin_coef,xinxin_share,sitong_coef,sitong_share,biscuit_coef,biscuit_share,source_20pct,neukol_fee,other_cost,notes,net_balance)
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-            [r['cycle'], r['content_label'], rev, int(r['trial_count']), int(r['formal_count']), ref, pf, trial, recruitment, 1.0, recruit_xin, recruit_bis, conversion, conversion_xin, conversion_bis, retention, retention_xin, retention_bis,
+            [r['cycle'], r['content_label'], rev, trial, int(r['formal_count']), ref, pf, trial, recruitment, 1.0, recruit_xin, recruit_bis, conversion, conversion_xin, conversion_bis, retention, retention_xin, retention_bis,
              l50, xin_lesson, bis_lesson, t20,
              xc, xs, sc, ss, bc, bs, retention, neukol_val, other_val, notes_val, nb])
     return jsonify({"status":"ok"})
@@ -1695,7 +1804,7 @@ def revenue_splits_lock():
     rows = _execute(get_db(), "SELECT cycle, content_label, xinxin_coef, sitong_coef, biscuit_coef FROM revenue_splits WHERE xinxin_coef IS NOT NULL").fetchall()
     for r in rows:
         _execute(get_db(), """REPLACE INTO split_coefficients (cycle, content_label, xinxin_coef, sitong_coef, biscuit_coef) VALUES (%s,%s,%s,%s,%s)""",
-                 [r['cycle'], r['content_label'], float(r['xinxin_coef'] or 0.9), float(r['sitong_coef'] or 0.1), float(r['biscuit_coef'] or 0.0)])
+                 [r['cycle'], r['content_label'], float(r['xinxin_coef'] or 1.0), float(r['sitong_coef'] or 0.0), float(r['biscuit_coef'] or 0.0)])
     return jsonify({"status":"ok","locked":len(rows)})
 
 @app.route("/api/revenue-splits")
@@ -1821,12 +1930,23 @@ def teacher_coefficients_save():
 @app.route("/api/attendance/class-breakdown")
 def class_breakdown():
     from db import get_db, _execute
+    # 预查转化生：有试听购买+非试听购买的学生
+    conv_students = set()
+    for cr in _execute(get_db(), "SELECT DISTINCT p1.student_name FROM purchases p1 WHERE p1.discount_type IN ('试听折扣','亲友试听') AND EXISTS (SELECT 1 FROM purchases p2 WHERE p2.student_name=p1.student_name AND p2.discount_type NOT IN ('试听折扣','亲友试听','转介绍赠','补课课时'))").fetchall():
+        conv_students.add(cr['student_name'])
     rows = _execute(get_db(), """
         SELECT a.cycle, a.content_label, a.class_name,
-            COUNT(CASE WHEN a.consumed_price IN (69.9, 99.9) THEN 1 END) as trial,
-            COUNT(CASE WHEN a.consumed_price NOT IN (69.9, 99.9) THEN 1 END) as formal,
-            GROUP_CONCAT(DISTINCT CASE WHEN a.consumed_price IN (69.9, 99.9) THEN CONCAT(a.student_name, '-', COALESCE(se.added_by,'欣欣')) END SEPARATOR ', ') as trial_names
-        FROM attendance a LEFT JOIN student_ext se ON a.student_name=se.student_name
+            COUNT(DISTINCT CASE WHEN a.student_name IN (SELECT DISTINCT student_name FROM purchases WHERE discount_type IN ('试听折扣','亲友试听'))
+                AND a.lesson_date = (SELECT MIN(a2.lesson_date) FROM attendance a2 WHERE a2.student_name=a.student_name AND a2.status='出席')
+                THEN a.student_name END) as trial,
+            COUNT(DISTINCT CASE WHEN a.student_name NOT IN (SELECT DISTINCT student_name FROM purchases WHERE discount_type IN ('试听折扣','亲友试听'))
+                OR a.lesson_date != (SELECT MIN(a2.lesson_date) FROM attendance a2 WHERE a2.student_name=a.student_name AND a2.status='出席')
+                THEN a.student_name END) as formal_people,
+            COUNT(CASE WHEN a.consumed_price NOT IN (69.9, 99.9) THEN 1 END) as formal_total,
+            GROUP_CONCAT(DISTINCT CASE WHEN a.student_name IN (SELECT DISTINCT student_name FROM purchases WHERE discount_type IN ('试听折扣','亲友试听'))
+                AND a.lesson_date = (SELECT MIN(a2.lesson_date) FROM attendance a2 WHERE a2.student_name=a.student_name AND a2.status='出席')
+                THEN a.student_name END SEPARATOR ', ') as trial_names
+        FROM attendance a
         WHERE a.status='出席' AND a.cycle!='' AND a.content_label!=''
         GROUP BY a.cycle, a.content_label, a.class_name
         ORDER BY a.cycle, a.content_label, a.class_name
@@ -1835,7 +1955,18 @@ def class_breakdown():
     for r in rows:
         key = r['cycle'] + '|' + r['content_label']
         if key not in result: result[key] = []
-        result[key].append({'class': r['class_name'], 'trial': int(r['trial'] or 0), 'formal': int(r['formal'] or 0), 'trial_names': r['trial_names'] or ''})
+        trial_names = (r['trial_names'] or '').split(', ') if r['trial_names'] else []
+        trial_marks = []
+        for n in trial_names:
+            mark = '√' if n in conv_students else '×'
+            trial_marks.append(n + mark)
+        result[key].append({
+            'class': r['class_name'],
+            'trial': int(r['trial'] or 0),
+            'formal_people': int(r['formal_people'] or 0),
+            'formal_total': int(r['formal_total'] or 0),
+            'trial_names': ', '.join(trial_marks)
+        })
     return jsonify(result)
 
 @app.route("/api/img-proxy")
@@ -1858,8 +1989,10 @@ os.makedirs(MATERIAL_DIR, exist_ok=True)
 @app.route("/api/material", methods=["POST"])
 def material_save():
     data = request.json
-    if not data.get("title") or not data.get("file_path"):
-        return jsonify({"status": "error", "message": "标题和长图必填"}), 400
+    if not data.get("title"):
+        return jsonify({"status": "error", "message": "标题必填"}), 400
+    if not data.get("file_path") and not data.get("recs"):
+        return jsonify({"status": "error", "message": "长图或推荐素材至少填一项"}), 400
     cycle = data.get("cycle","")
     title = data.get("title","")
     # Delete existing materials for this title+cycle before re-saving
@@ -1869,9 +2002,10 @@ def material_save():
     except: pass
     # Helper: copy file to 素材库 and return relative path
     def _copy_to_lib(src):
-        if not src or not os.path.isfile(src): return src
+        if not src or (not os.path.isfile(src) and not src.startswith("http")):
+            return src
+        if src.startswith("http"): return src  # external URL, keep as-is
         fname = os.path.basename(src)
-        # avoid overwrite: prefix with timestamp if needed
         dest = os.path.join(MATERIAL_DIR, fname)
         if os.path.exists(dest):
             import time
@@ -1879,14 +2013,19 @@ def material_save():
             dest = os.path.join(MATERIAL_DIR, f"{name}_{int(time.time())}{ext}")
         shutil.copy2(src, dest)
         return f"素材库/{os.path.basename(dest)}"
-    # Save long image
-    img_segs = ",".join(data.get("img_segs", []))
-    db.material_add(cycle=cycle, title=title, file_path=_copy_to_lib(data["file_path"]), material_type="长图", segment=img_segs)
+    # Save long images (new format: imgs array)
+    for img in data.get("imgs", []):
+        segs = ",".join(img.get("segs", []))
+        db.material_add(cycle=cycle, title=title, file_path=_copy_to_lib(img.get("path","")), material_type="长图", segment=segs)
+    # Backward compat: single file_path + img_segs
+    if not data.get("imgs") and data.get("file_path"):
+        img_segs = ",".join(data.get("img_segs", []))
+        db.material_add(cycle=cycle, title=title, file_path=_copy_to_lib(data["file_path"]), material_type="长图", segment=img_segs)
     # Save recommendation materials
     for rec in data.get("recs", []):
-        if rec.get("file_path"):
+        if rec.get("file_path") or rec.get("name"):
             rec_segs = ",".join(rec.get("segs", []))
-            db.material_add(cycle=cycle, title=title, file_path=_copy_to_lib(rec["file_path"]),
+            db.material_add(cycle=cycle, title=title, file_path=_copy_to_lib(rec.get("file_path","")),
                 student_name=rec.get("name",""), material_type="推荐素材",
                 score=rec.get("score",""), recommendation=rec.get("line",""),
                 segment=rec_segs)
