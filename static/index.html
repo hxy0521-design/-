@@ -514,7 +514,8 @@ var boys=[];
       var se=students.find(function(s){
         if(s.student_name===n)return true;
         if(s.student_name.indexOf(n)===0)return true;
-        if(n.indexOf(s.student_name)===0)return true;
+        // 只有非 -数字 后缀才算同一人（楠楠-5 ≠ 楠楠）
+        if(n.indexOf(s.student_name)===0 && !/^-\d/.test(n.slice(s.student_name.length)))return true;
         if(s.student_name.replace(/-\d+$/,'')===n)return true;
         return false;
       });
