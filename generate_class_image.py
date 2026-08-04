@@ -465,9 +465,13 @@ def auto_select_highlights(topics, per_student=None, title=""):
                 tp_count = len(set(t for t, ss in topics for n, c in ss if n == name))
                 n_hl = per_student if (sp_count >= 5 and tp_count >= 5) else max(2, per_student - 1)
                 # 长图: per_student=HIGHLIGHTS_PER(3), so active=3, others=2
+                # 随机打乱顺序避免 AI 位置偏见
+                idxs = list(range(len(sents)))
+                random.shuffle(idxs)
+                shuffled = [sents[i] for i in idxs]
                 prompt = f"课节标题：{title}\n\n{topic_text}学生：{name}\n\n以下是{name}的发言句子，请按「思辨深度」选出最精彩的 {n_hl} 句。\n"
                 prompt += "标准：逻辑严密、观点独立、联系生活、视角独特、总结精辟。\n\n"
-                for i, t in enumerate(sents, 1):
+                for i, t in enumerate(shuffled, 1):
                     prompt += f"{i}. {t}\n"
                 prompt += f"\n请返回选中的句子序号，每行一个数字，共 {n_hl} 个。"
                 resp = client.chat.completions.create(
@@ -478,9 +482,12 @@ def auto_select_highlights(topics, per_student=None, title=""):
                 import re
                 picks = [int(x) for x in re.findall(r'\d+', text)[:n_hl]]
                 top = []
-                for idx in picks:
-                    if 1 <= idx <= len(sents) and sents[idx-1] not in top:
-                        top.append(sents[idx-1])
+                for shuf_idx in picks:
+                    if 1 <= shuf_idx <= len(shuffled):
+                        orig_idx = idxs[shuf_idx - 1]
+                        orig_sent = sents[orig_idx]
+                        if orig_sent not in top:
+                            top.append(orig_sent)
                 if len(top) < n_hl:
                     # 不够的用关键词打分补
                     remaining = [s for s in sents if s not in top]

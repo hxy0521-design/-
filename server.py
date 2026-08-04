@@ -496,9 +496,14 @@ def score_sentences():
             if topic_list:
                 topic_text = "本节课讨论的话题：\n" + "\n".join(f"· {t}" for t in topic_list[:10]) + "\n\n"
             def score_one(name, sents):
+                # 随机打乱顺序避免 AI 位置偏见（前面的句子容易得高分）
+                import random
+                idxs = list(range(len(sents)))
+                random.shuffle(idxs)
+                shuffled = [sents[i] for i in idxs]
                 prompt = f"课节标题：{title}\n\n{topic_text}学生：{name}\n\n以下是{name}在课堂上的所有发言句子，请按「思辨深度」给每句话打 1-10 分。\n"
                 prompt += "标准：句子的逻辑性、多角度思考、联系生活经验、反驳他人观点、总结提炼能力。\n\n"
-                for i, t in enumerate(sents, 1):
+                for i, t in enumerate(shuffled, 1):
                     prompt += f"{i}. {t}\n"
                 prompt += f"\n请按格式返回每句的分数：\n序号:分数"
                 resp = client.chat.completions.create(
@@ -511,8 +516,10 @@ def score_sentences():
                     m = _re.search(r'(\d+)\s*[：:.\-]\s*(\d+)', line.strip())
                     if m: scores[int(m.group(1))] = int(m.group(2))
                 result = []
-                for i, t in enumerate(sents, 1):
-                    sc = scores.get(i, 5)
+                for i, t in enumerate(sents):
+                    # 映射回原始位置：shuffled[shuf_idx] = t, 原始 i 对应的 shuffled 索引
+                    shuf_idx = idxs.index(i)
+                    sc = scores.get(shuf_idx + 1, 5)
                     result.append({"text": t, "score": sc, "name": name})
                 return result
             all_results = []
