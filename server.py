@@ -568,6 +568,7 @@ def inherit_topics():
 
 @app.route("/api/generate", methods=["POST"])
 def generate_all():
+    import re
     data = request.json
     meta = data.get("meta",{})
     topics_data = data.get("topics",[])

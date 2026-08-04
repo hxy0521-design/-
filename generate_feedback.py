@@ -443,7 +443,7 @@ def generate_feedback(meta, topics, output_path, input_path=""):
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write("\n".join(lines))
     print("反馈已保存 -> " + output_path)
-    print("学生画像已更新 -> " + PROFILE_FILE)
+    print("学生画像已更新 (SQLite)")
 
 if __name__ == "__main__":
     ip = None
