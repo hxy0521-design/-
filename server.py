@@ -1118,12 +1118,6 @@ def attendance_save():
                 "is_makeup": is_mk
             })
         db.attendance_batch(batch)
-        # 更新 student_ext 的消课计数
-        names = list(set(r["name"] for r in records if r.get("status","出席") == "出席"))
-        for name in names:
-            used = _execute(get_db(), "SELECT COUNT(*) as cnt FROM attendance WHERE student_name=%s AND status='出席'", [name]).fetchone()
-            if used:
-                _execute(get_db(), "UPDATE student_ext SET used_lessons=%s, remaining_lessons=purchased_lessons-%s WHERE student_name=%s", [used["cnt"], used["cnt"], name])
         _clear_config_cache(); return jsonify({"status": "ok", "count": len(batch)})
     except Exception as e:
         import traceback; traceback.print_exc()

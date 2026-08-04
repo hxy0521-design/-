@@ -293,7 +293,14 @@ def attendance_batch(records):
         is_makeup = int(r.get("is_makeup", 0) or 0)
         _execute(db, "DELETE FROM attendance WHERE class_name=%s AND lesson_date=%s AND student_name=%s", [r["class_name"], r.get("lesson_date",""), r["student_name"]])
         _execute(db, "INSERT INTO attendance (class_name,unit_code,lesson_num,lesson_title,lesson_date,student_name,status,note,recorded_at,cycle,content_label,consumed_price,is_makeup) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", [r["class_name"], r.get("unit_code",""), r["lesson_num"], r.get("lesson_title",""), r.get("lesson_date",""), r["student_name"], r.get("status","出席"), r.get("note",""), now, cycle, content_label, consumed_price, is_makeup])
-    _sync_student_used(r["student_name"])
+    # 同步所有涉及的学生的消课计数（不只是最后一个）
+    synced = set()
+    for r in records:
+        if r.get("status", "出席") == "出席":
+            name = r["student_name"]
+            if name not in synced:
+                _sync_student_used(name)
+                synced.add(name)
 
 def attendance_get(class_name=None, date_from=None, date_to=None, student_name=None, limit=None):
     db = get_db()
