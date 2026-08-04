@@ -452,9 +452,9 @@ def _gen_student_cards(meta, topics, output_dir, highlights, base_dir=None):
         draw.line([(40, y), (card_w-40, y)], fill=(210,205,200), width=1)
         y += 20
 
-        stxt = f"{score:.1f}" if score != int(score) else f"{int(score)}"
+        stxt = "3"
         draw.text((card_w-120, y-10), stxt, fill=(200,80,30), font=score_font)
-        stars = "★"*int(score) + ("☆" if score != int(score) else "")
+        stars = "★★★"
         draw.text((card_w-120, y+55), stars, fill=(240,165,40), font=comment_font)
         draw.text((40, y+10), comment, fill=(80,80,85), font=comment_font)
         stats = f"本节课共 {len(topics)} 个小话题 · 参与 {total_speeches} 次发言"
