@@ -316,7 +316,7 @@ function newUnit(cls, unitCode, unitFull){
 }
 function newLesson(cls,unit,unitFull){
   var uname=unitFull||unit;var tabName=cls+'-'+unit+'-new';
-  var unitCode=unit;var m2=uname.match(/(\d{4})/);if(m2)unitCode=m2[1];
+  var unitCode=unit;if(unit.indexOf('&')<0){var m2=uname.match(/(\d{4})/);if(m2)unitCode=m2[1];}
   tabs[tabName]={meta:{title:'',unit:uname,date:new Date().toISOString().slice(0,10),class:cls,gender:''},topics:[],_golden:{},folder:cls+'-'+unitCode+'-new'};
   var d=tabs[tabName];
   var el=document.getElementById('editorBody');if(el)el.innerHTML='<div style="text-align:center;padding:60px 0;color:var(--tx3)"><div style="display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite"></div><div style="margin-top:10px;font-size:13px">准备新课节...</div></div>';
@@ -639,7 +639,7 @@ function generateAllUI(){if(!activeTab)return;saveMeta();saveTopics();renderPrev
 
 function showAttendanceModal(genPromise,d,gs,gw){
   var cls=d.meta.class||activeTab;var unit=d.meta.unit||'';
-  var m=unit.match(/(\d{4})/);var unitCode=m?m[1]:'2605';
+  var m=unit.match(/(\d{4}(?:&\d{2,4})?)/);var unitCode=m?m[1]:'2605';
   var lessonNum='1';if(d.folder){var parts=d.folder.split('-'+unitCode+'-');if(parts.length>1)lessonNum=parts[1]}
   fetch(API+'/attendance/suggest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({class_name:cls,topics:d.topics})})
   .then(function(r){if(!r.ok)throw new Error('服务器错误 '+r.status);return r.json()}).then(function(sug){
@@ -735,8 +735,8 @@ function changeUnitPath(){
       }).catch(function(){alert('更新路径失败')});
   });
 }
-function _autoSave(){if(!activeTab)return;saveMeta();var d=tabs[activeTab];if(!d.folder||d.folder.indexOf('-new')>=0){var cls=d.meta.class||activeTab;var unitFull=d.meta.unit||'';var m=unitFull.match(/(\d{4})/);var unitCode=m?m[1]:'2605';d.folder=cls+'-'+unitCode+'-new';d.basePath=''}var saveImages={};d.topics.forEach(function(t,i){if(t._images&&t._images.length)saveImages[i]=t._images});fetch(API+'/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({meta:d.meta,topics:d.topics,folder:d.folder,images:saveImages})}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){_lastSaved=saveSnapshot(d);d.folder=rd.folder||d.folder}}).catch(function(){})}
-function saveToServer(){if(!activeTab)return;saveMeta();saveTopics();var d=tabs[activeTab];var st=document.getElementById('saveStatus');if(!st){alert('编辑器未加载，请先打开一个课节');return}st.style.display='inline';if(!d.folder||d.folder.indexOf('-new')>=0){var cls=d.meta.class||activeTab;var unitFull=d.meta.unit||'';var m=unitFull.match(/(\d{4})/);var unitCode=m?m[1]:'2605';d.folder=cls+'-'+unitCode+'-new';d.basePath=''}var saveImages={};d.topics.forEach(function(t,i){if(t._images&&t._images.length)saveImages[i]=t._images});st.textContent='保存中...';fetch(API+'/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({meta:d.meta,topics:d.topics,folder:d.folder,images:saveImages})}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){st.textContent='已保存 ✓';_lastSaved=saveSnapshot(d);d.folder=rd.folder||d.folder}else{st.textContent='保存失败'}setTimeout(function(){st.style.display='none'},3000)}).catch(function(){st.textContent='保存失败';setTimeout(function(){st.style.display='none'},3000)})}
+function _autoSave(){if(!activeTab)return;saveMeta();var d=tabs[activeTab];if(!d.folder||d.folder.indexOf('-new')>=0){var cls=d.meta.class||activeTab;var unitFull=d.meta.unit||'';var m=unitFull.match(/(\d{4}(?:&\d{2,4})?)/);var unitCode=m?m[1]:'2605';d.folder=cls+'-'+unitCode+'-new';d.basePath=''}var saveImages={};d.topics.forEach(function(t,i){if(t._images&&t._images.length)saveImages[i]=t._images});fetch(API+'/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({meta:d.meta,topics:d.topics,folder:d.folder,images:saveImages})}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){_lastSaved=saveSnapshot(d);d.folder=rd.folder||d.folder}}).catch(function(){})}
+function saveToServer(){if(!activeTab)return;saveMeta();saveTopics();var d=tabs[activeTab];var st=document.getElementById('saveStatus');if(!st){alert('编辑器未加载，请先打开一个课节');return}st.style.display='inline';if(!d.folder||d.folder.indexOf('-new')>=0){var cls=d.meta.class||activeTab;var unitFull=d.meta.unit||'';var m=unitFull.match(/(\d{4}(?:&\d{2,4})?)/);var unitCode=m?m[1]:'2605';d.folder=cls+'-'+unitCode+'-new';d.basePath=''}var saveImages={};d.topics.forEach(function(t,i){if(t._images&&t._images.length)saveImages[i]=t._images});st.textContent='保存中...';fetch(API+'/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({meta:d.meta,topics:d.topics,folder:d.folder,images:saveImages})}).then(function(r){return r.json()}).then(function(rd){if(rd.status==='ok'){st.textContent='已保存 ✓';_lastSaved=saveSnapshot(d);d.folder=rd.folder||d.folder}else{st.textContent='保存失败'}setTimeout(function(){st.style.display='none'},3000)}).catch(function(){st.textContent='保存失败';setTimeout(function(){st.style.display='none'},3000)})}
 function saveAll(){localStorage.setItem('tabsData',JSON.stringify(tabs))}
 setInterval(saveAll,300000);
 window.addEventListener('beforeunload',saveAll);

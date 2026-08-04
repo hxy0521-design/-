@@ -66,7 +66,7 @@ def unit_from_folder(folder):
     import re
     if folder.endswith('-new'):
         folder = folder[:-4]
-    m = re.match(r'.+-(\d{4})-\d+', folder) or re.match(r'.+-(\d{4})$', folder)
+    m = re.match(r'.+-(\d{4}(?:&\d{2,4})?)-\d+', folder) or re.match(r'.+-(\d{4}(?:&\d{2,4})?)$', folder)
     return m.group(1) if m else "2605"
 
 def unit_path(cls_name, unit_code):
