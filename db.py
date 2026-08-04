@@ -801,9 +801,7 @@ def dashboard_weekly():
             rem_rows = _execute(get_db(), "SELECT student_name, remaining_lessons FROM student_ext WHERE student_name IN ({})".format(','.join(['%s']*len(roster))), roster).fetchall()
             for r in rem_rows:
                 prefill_map[r["student_name"]] = int(r["remaining_lessons"] or 0)
-        # 无花名册时，用预填数据填充
-        if not roster:
-            roster = [r["student_name"] for r in prefill_rows]
+        # 无花名册时跳过（暑假班由下面 is_vacation 兜底）
         # 跳过无学生且非临时/非暑假的班级
         is_vacation = bool('临时' in cn or any(uc in units for uc in ['2607','2608']))
         if not roster and not is_vacation: continue
