@@ -614,7 +614,7 @@ def generate_all():
             try: n = int(l["lesson"]); max_n = max(max_n, n)
             except: pass
         folder = f"{prefix}-{max_n + 1}"
-    elif f"-{unit_code}-" in folder_base:
+    elif f"-{unit_code}-" in folder_base or re.search(r'-\d{4}(?:&\d{2,4})?-\d+$', folder_base):
         folder = folder_base
     else:
         folder = f"{folder_base}-{unit_code}-1"
