@@ -411,13 +411,8 @@ def _gen_student_cards(meta, topics, output_dir, highlights, base_dir=None):
         else: comment = "、".join(parts) + "，继续保持~"
         if score >= 5: comment += " 🌟"
 
-        # 优先展示含金句的话题，不足5个用其余发言补齐，上限5
-        hl_items = [(t,c) for t,c in speeches if any(h in c for h in hl_list)]
-        other_items = [(t,c) for t,c in speeches if not any(h in c for h in hl_list)]
-        show_items = hl_items + other_items
-        show_items = show_items[:5]
-        if len(show_items) < 2 and len(speeches) >= 2:
-            show_items = speeches[:2]
+        # 按原始话题顺序展示，上限5
+        show_items = speeches[:5]
 
         name_font = ImageFont.truetype(FONT_PATH, 36)
         topic_font = ImageFont.truetype(FONT_PATH, 20)

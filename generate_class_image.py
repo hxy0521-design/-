@@ -1166,9 +1166,8 @@ def generate_student_cards(meta, topics, output_dir, highlights=None):
             comment += " 🌟"
 
         # 卡片: 只展示高亮句 + 统计（太多发言卡片太长）
-        show_items = [(t, c) for t, c in speeches if any(h in c for h in hl_list)]
-        if len(show_items) < 2:
-            show_items = speeches[:2]
+        # 按原始话题顺序展示，上限5
+        show_items = speeches[:5]
 
         # 预计算卡片高度
         card_w = 800
