@@ -639,7 +639,8 @@ def generate_all():
                     except: pass
 
     # 构建 TXT 内容
-    short = folder.split(f"-{unit_code}-")[0]
+    save_unit_code = unit_from_folder(folder) if folder else unit_code
+    short = folder.split(f"-{save_unit_code}-")[0] if f"-{save_unit_code}-" in folder else folder.split(f"-{unit_code}-")[0]
     txt_path = os.path.join(folder_path, f"{short}.txt")
     content_lines = [f"# ====== 课节信息 ======\n@title {title}\n@unit {unit}\n@date {date}\n@class {cls}\n"]
     # 性别：优先用前端传的，否则从 student_ext 查
@@ -686,12 +687,12 @@ def generate_all():
     # 写本地临时文件供生成脚本读取（生成完后删除）
     with open(txt_path, 'w', encoding='utf-8') as f:
         f.write(content)
-    # 保存到 TiDB 云端
-    lesson_num = folder.split(f"-{unit_code}-")[-1] if f"-{unit_code}-" in folder else "1"
+    # 保存到 TiDB 云端（用文件夹中的 unit_code，而非 meta 解析的）
+    lesson_num = folder.split(f"-{save_unit_code}-")[-1] if f"-{save_unit_code}-" in folder else "1"
     # 新课（TiDB 中不存在）自动写入；已存在的课节不覆盖（保护手动编辑的内容）
-    existing_title, _ = db.lesson_get(cls, unit_code, int(lesson_num))
+    existing_title, _ = db.lesson_get(cls, save_unit_code, int(lesson_num))
     if not existing_title:
-        db.lesson_save(cls, unit_code, int(lesson_num), title, content)
+        db.lesson_save(cls, save_unit_code, int(lesson_num), title, content)
     _clear_config_cache()
 
     font_path = os.path.expanduser("~/Library/Fonts/荆南麦圆体.ttf")
