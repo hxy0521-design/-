@@ -510,7 +510,9 @@ def score_sentences():
                     model="deepseek-chat",
                     messages=[{"role":"user","content": prompt}],
                     temperature=0.3, max_tokens=300, stream=False)
-                text = resp.choices[0].message.content
+                text = (resp.choices[0].message.content or "").strip()
+                if not text:
+                    raise Exception("API returned empty response")
                 scores = {}
                 for line in text.split("\n"):
                     m = _re.search(r'(\d+)\s*[：:.\-]\s*(\d+)', line.strip())
