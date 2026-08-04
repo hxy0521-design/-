@@ -442,7 +442,7 @@ function onTitleSelect(title){
   });
 }
 
-function initInheritDropdown(){fetch(API+'/topics/sources').then(function(r){return r.json()}).then(function(srcs){var sel=document.getElementById('inheritCls');if(!sel)return;var ss=_seasonSet();var sorted=_classSortOrder();sel.innerHTML='<option value="">无</option>'+srcs.filter(function(s){return s!==activeTab&&ss[s]}).sort(function(a,b){var ia=sorted.indexOf(a),ib=sorted.indexOf(b);if(ia<0)ia=9999;if(ib<0)ib=9999;return ia-ib}).map(function(s){return'<option value="'+s+'">'+s+'</option>'}).join('')})}
+function initInheritDropdown(){fetch(API+'/topics/sources').then(function(r){return r.json()}).then(function(srcs){var sel=document.getElementById('inheritCls');if(!sel)return;var sorted=_classSortOrder();sel.innerHTML='<option value="">无</option>'+srcs.filter(function(s){if(s===activeTab)return false;if(window._season==='V')return _isVac(s);var ss=_seasonSet();return ss[s];}).sort(function(a,b){var ia=sorted.indexOf(a),ib=sorted.indexOf(b);if(ia<0)ia=9999;if(ib<0)ib=9999;return ia-ib}).map(function(s){return'<option value="'+s+'">'+s+'</option>'}).join('')})}
 function onInheritClass(cls){
   var ls=document.getElementById('inheritLesson'),panel=document.getElementById('inheritTopics');
   if(!cls){ls.style.display='none';ls.innerHTML='<option value="">选择课节</option>';panel.style.display='none';return}

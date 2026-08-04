@@ -139,10 +139,19 @@ def config_remove_unit(cls_name, unit_code):
 
 def config_get_unit(cls_name, unit_code):
     r = _execute(get_db(), "SELECT unit_name, path FROM config WHERE class_name=%s AND unit_code=%s", [cls_name, unit_code]).fetchone()
-    if not r and len(unit_code) == 4 and unit_code.isdigit():
-        # fallback: 2607 → 2607&08
-        combined = unit_code + "&08"
-        r = _execute(get_db(), "SELECT unit_name, path FROM config WHERE class_name=%s AND unit_code=%s", [cls_name, combined]).fetchone()
+    if not r:
+        # fallback: 2607 或 2608 → 匹配 2607&08 等合并单元
+        cfg = config_all()
+        class_units = cfg.get(cls_name, {})
+        for cu in class_units:
+            if "&" in cu:
+                parts = set(cu.split("&"))
+                for p in list(parts):
+                    if len(p) == 2 and p.isdigit():
+                        parts.add("26" + p)
+                if unit_code in parts:
+                    r = _execute(get_db(), "SELECT unit_name, path FROM config WHERE class_name=%s AND unit_code=%s", [cls_name, cu]).fetchone()
+                    break
     return {"name": r["unit_name"], "path": r["path"]} if r else {}
 
 def config_update_unit_path(cls_name, unit_code, path):
@@ -164,10 +173,17 @@ def lesson_list_batch():
         actual_uc = uc
         if uc not in class_units:
             # 检查该类是否有合并单元（如 2607&08）包含此 uc
+            # 2607&08 的 parts 是 ['2607','08']，需要同时匹配 2607 和 2608
             for cu in class_units:
-                if "&" in cu and uc in cu.split("&"):
-                    actual_uc = cu
-                    break
+                if "&" in cu:
+                    parts = set(cu.split("&"))
+                    # 补全两位年份：08 → 2608
+                    for p in list(parts):
+                        if len(p) == 2 and p.isdigit():
+                            parts.add("26" + p)
+                    if uc in parts:
+                        actual_uc = cu
+                        break
         unit_name = class_units.get(actual_uc, {}).get("name", actual_uc)
         if cn not in result: result[cn] = {}
         if actual_uc not in result[cn]: result[cn][actual_uc] = []
