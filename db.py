@@ -139,6 +139,10 @@ def config_remove_unit(cls_name, unit_code):
 
 def config_get_unit(cls_name, unit_code):
     r = _execute(get_db(), "SELECT unit_name, path FROM config WHERE class_name=%s AND unit_code=%s", [cls_name, unit_code]).fetchone()
+    if not r and len(unit_code) == 4 and unit_code.isdigit():
+        # fallback: 2607 → 2607&08
+        combined = unit_code + "&08"
+        r = _execute(get_db(), "SELECT unit_name, path FROM config WHERE class_name=%s AND unit_code=%s", [cls_name, combined]).fetchone()
     return {"name": r["unit_name"], "path": r["path"]} if r else {}
 
 def config_update_unit_path(cls_name, unit_code, path):
@@ -156,10 +160,18 @@ def lesson_list_batch():
     result = {}
     for r in rows:
         cn, uc = r["class_name"], r["unit_code"]
-        unit_name = cfg.get(cn, {}).get(uc, {}).get("name", uc)
+        class_units = cfg.get(cn, {})
+        actual_uc = uc
+        if uc not in class_units:
+            # 检查该类是否有合并单元（如 2607&08）包含此 uc
+            for cu in class_units:
+                if "&" in cu and uc in cu.split("&"):
+                    actual_uc = cu
+                    break
+        unit_name = class_units.get(actual_uc, {}).get("name", actual_uc)
         if cn not in result: result[cn] = {}
-        if uc not in result[cn]: result[cn][uc] = []
-        result[cn][uc].append({
+        if actual_uc not in result[cn]: result[cn][actual_uc] = []
+        result[cn][actual_uc].append({
             "folder": f"{cn}-{uc}-{r['lesson_num']}",
             "lesson": str(r["lesson_num"]),
             "title": r["title"],

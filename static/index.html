@@ -1693,7 +1693,7 @@ function uploadExcel(file){
 // ── 春秋/寒暑切换 ──
 window._season='V';window._summerMonth='2608';
 var _vacationWords=['暑假','寒假','临时','先锋','混龄'];
-function _isVac(cn){for(var i=0;i<_vacationWords.length;i++){if(cn.indexOf(_vacationWords[i])>=0)return true;}var units=cfgInfo[cn];if(units){var ucs=Object.keys(units);for(var j=0;j<ucs.length;j++){if(ucs[j]==='2607'||ucs[j]==='2608')return true;}}return false;}
+function _isVac(cn){for(var i=0;i<_vacationWords.length;i++){if(cn.indexOf(_vacationWords[i])>=0)return true;}var units=cfgInfo[cn];if(units){var ucs=Object.keys(units);for(var j=0;j<ucs.length;j++){if(ucs[j]==='2607'||ucs[j]==='2608'||ucs[j]==='2607&08')return true;}}return false;}
 function _segFromClass(cn){if(!cn)return'';if(cn.indexOf('启航')>=0)return'启航段';if(cn.indexOf('探索')>=0)return'探索段';if(cn.indexOf('先锋')>=0)return'先锋段';return''}
 function setSeason(s){
   window._season=s;
@@ -1715,7 +1715,7 @@ function setSummerMonth(m){
 function _seasonSet(){
   var s={};Object.keys(cfgInfo).forEach(function(cn){
     var v=_isVac(cn);
-    if(window._season==='V'){if(!v)return;var units=cfgInfo[cn];if(!units)return;if(window._summerMonth==='2607'&&!units['2607'])return;if(window._summerMonth==='2608'&&!units['2608'])return;s[cn]=true;}
+    if(window._season==='V'){if(!v)return;var units=cfgInfo[cn];if(!units)return;if(units['2607&08']){s[cn]=true;return;}if(window._summerMonth==='2607'&&!units['2607'])return;if(window._summerMonth==='2608'&&!units['2608'])return;s[cn]=true;}
     else{if(!v)s[cn]=true;}
   });return s;
 }
