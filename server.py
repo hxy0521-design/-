@@ -641,6 +641,20 @@ def generate_all():
     short = folder.split(f"-{unit_code}-")[0]
     txt_path = os.path.join(folder_path, f"{short}.txt")
     content_lines = [f"# ====== 课节信息 ======\n@title {title}\n@unit {unit}\n@date {date}\n@class {cls}\n"]
+    # 性别：优先用前端传的，否则从 student_ext 查
+    if not gender:
+        all_names = list(set(s["name"] for t in topics_data for s in t.get("speeches", [])))
+        if all_names:
+            from db import get_db as _gdb, _execute as _ex
+            placeholders = ','.join(['%s'] * len(all_names))
+            rows = _ex(_gdb(), f"SELECT student_name, gender FROM student_ext WHERE student_name IN ({placeholders})", all_names).fetchall()
+            boy_names = [r["student_name"] for r in rows if r["gender"] == "男"]
+            if len(boy_names) == len(all_names):
+                gender = "Male "
+            elif len(boy_names) == 0:
+                gender = "Female "
+            else:
+                gender = "Male " + " ".join(boy_names)
     if gender: content_lines.append(f"@gender {gender}\n")
     content_lines.append("\n# ====== 推荐 ======\n")
     for name, info in movies.items():
