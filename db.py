@@ -934,10 +934,23 @@ def config_and_lessons():
     lessons = {}
     for r in lesson_rows:
         cn, uc = r["class_name"], r["unit_code"]
-        unit_name = cfg.get(cn, {}).get(uc, {}).get("name", uc)
+        # 合并单元映射（与 lesson_list_batch 保持一致）
+        actual_uc = uc
+        class_units = cfg.get(cn, {})
+        if uc not in class_units:
+            for cu in class_units:
+                if "&" in cu:
+                    parts = set(cu.split("&"))
+                    for p in list(parts):
+                        if len(p) == 2 and p.isdigit():
+                            parts.add("26" + p)
+                    if uc in parts:
+                        actual_uc = cu
+                        break
+        unit_name = class_units.get(actual_uc, {}).get("name", actual_uc)
         if cn not in lessons: lessons[cn] = {}
-        if uc not in lessons[cn]: lessons[cn][uc] = []
-        lessons[cn][uc].append({"folder": f"{cn}-{uc}-{r['lesson_num']}", "lesson": str(r["lesson_num"]), "title": r["title"], "date": (r["updated_at"] or "")[:10], "unit_name": unit_name})
+        if actual_uc not in lessons[cn]: lessons[cn][actual_uc] = []
+        lessons[cn][actual_uc].append({"folder": f"{cn}-{uc}-{r['lesson_num']}", "lesson": str(r["lesson_num"]), "title": r["title"], "date": (r["updated_at"] or "")[:10], "unit_name": unit_name})
 
     cur.execute("SELECT COUNT(*) as cnt FROM student_ext WHERE status=%s", ["在读中"])
     active = Row([d[0] for d in cur.description], list(cur.fetchone()))
