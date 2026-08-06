@@ -442,7 +442,17 @@ function onTitleSelect(title){
   });
 }
 
-function initInheritDropdown(){fetch(API+'/topics/sources').then(function(r){return r.json()}).then(function(srcs){var sel=document.getElementById('inheritCls');if(!sel)return;var sorted=_classSortOrder();sel.innerHTML='<option value="">无</option>'+srcs.filter(function(s){if(s===activeTab)return false;if(window._season==='V')return _isVac(s);var ss=_seasonSet();return ss[s];}).sort(function(a,b){var ia=sorted.indexOf(a),ib=sorted.indexOf(b);if(ia<0)ia=9999;if(ib<0)ib=9999;return ia-ib}).map(function(s){return'<option value="'+s+'">'+s+'</option>'}).join('')})}
+function _inheritSortOrder(){
+  // 暑假继承排序：7月班先，8月班后；同月内按 启航1→探索1→启航2→探索2→先锋 交替
+  var order=[];
+  // 7月班
+  var julys=['启航1班','探索1班','先锋1班','启航2班','探索2班','启航3班'];
+  // 8月班 (2607&08)
+  var augs=['启航4班','探索3班','启航5班','探索4班','先锋2班'];
+  order=julys.concat(augs);
+  return order;
+}
+function initInheritDropdown(){fetch(API+'/topics/sources').then(function(r){return r.json()}).then(function(srcs){var sel=document.getElementById('inheritCls');if(!sel)return;var sorted=_inheritSortOrder();sel.innerHTML='<option value="">无</option>'+srcs.filter(function(s){if(s===activeTab)return false;if(window._season==='V')return _isVac(s);var ss=_seasonSet();return ss[s];}).sort(function(a,b){var ia=sorted.indexOf(a),ib=sorted.indexOf(b);if(ia<0)ia=9999;if(ib<0)ib=9999;return ia-ib}).map(function(s){return'<option value="'+s+'">'+s+'</option>'}).join('')})}
 function onInheritClass(cls){
   var ls=document.getElementById('inheritLesson'),panel=document.getElementById('inheritTopics');
   if(!cls){ls.style.display='none';ls.innerHTML='<option value="">选择课节</option>';panel.style.display='none';return}
