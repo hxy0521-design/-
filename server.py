@@ -58,8 +58,8 @@ def cls_from_folder(folder):
     import re
     if folder.endswith('-new'):
         folder = folder[:-4]
-    # 匹配 班名-单元码-序号 或 班名-单元码（新建未编号）
-    m = re.match(r'(.+)-(\d{4})-\d+', folder) or re.match(r'(.+)-(\d{4})$', folder)
+    # 匹配 班名-单元码-序号 或 班名-单元码（支持2607&08）
+    m = re.match(r'(.+?)-(\d{4}(?:&\d{2,4})?)-\d+', folder) or re.match(r'(.+?)-(\d{4}(?:&\d{2,4})?)$', folder)
     return m.group(1) if m else folder
 
 def unit_from_folder(folder):
