@@ -220,6 +220,9 @@ def generate_feedback_ai(meta, topics, cls_name, input_path="", api_key="", styl
                         is_male = genders.get(name, default_gender) == "男"
                         wrong, correct = ("她", "他") if is_male else ("他", "她")
                         result = result.replace(wrong, correct)
+                        # 去掉"延伸："等标签
+                        import re as _re
+                        result = _re.sub(r'^\s*(延伸|延伸建议|延伸话题)[：:]\s*', '', result, flags=_re.MULTILINE)
                         results[name] = result.strip()
                         print(f"  [{style}] AI 生成 {name} 的反馈")
                     else:
