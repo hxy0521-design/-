@@ -221,7 +221,7 @@ def generate_feedback_ai(meta, topics, cls_name, input_path="", api_key="", styl
         try:
             scene_result = call_deepseek(system_prompt, scene_prompt, api_key)
             if scene_result:
-                classroom_scene = scene_result.strip()
+                classroom_scene = scene_result.strip().replace('挺', '很').replace('蛮', '很')
                 print(f"  [{style}] 课堂现场已生成")
         except Exception as e:
             print(f"  [{style}] 课堂现场生成失败: {e}")
