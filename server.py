@@ -652,14 +652,32 @@ def generate_all():
     short = folder.split(f"-{save_unit_code}-")[0] if f"-{save_unit_code}-" in folder else folder.split(f"-{unit_code}-")[0]
     txt_path = os.path.join(folder_path, f"{short}.txt")
     content_lines = [f"# ====== 课节信息 ======\n@title {title}\n@unit {unit}\n@date {date}\n@class {cls}\n"]
-    # 性别：优先用前端传的，否则从 student_ext 查
+    # 性别：优先用前端传的，否则从 student_ext 查（本班优先 + 去-数字后缀，避免楠楠/楠楠-5错配）
     if not gender:
         all_names = list(set(s["name"] for t in topics_data for s in t.get("speeches", [])))
         if all_names:
             from db import get_db as _gdb, _execute as _ex
-            placeholders = ','.join(['%s'] * len(all_names))
-            rows = _ex(_gdb(), f"SELECT student_name, gender FROM student_ext WHERE student_name IN ({placeholders})", all_names).fetchall()
-            boy_names = [r["student_name"] for r in rows if r["gender"] == "男"]
+            # 先查本班学生，再查全部，做两级匹配
+            def _match_gender(name):
+                def _m(rows):
+                    # 精确匹配
+                    for r in rows:
+                        if r["student_name"] == name:
+                            return r["gender"]
+                    # 去-数字后缀匹配（楠楠-5 → 楠楠）
+                    for r in rows:
+                        import re as _re
+                        if _re.sub(r'-\d+$', '', r["student_name"]) == name:
+                            return r["gender"]
+                    return None
+                # 本班优先
+                local = _ex(_gdb(), "SELECT student_name, gender FROM student_ext WHERE enrolled_class=%s", [cls]).fetchall()
+                g = _m(local)
+                if g:
+                    return g
+                allrows = _ex(_gdb(), "SELECT student_name, gender FROM student_ext").fetchall()
+                return _m(allrows)
+            boy_names = [n for n in all_names if _match_gender(n) == "男"]
             if len(boy_names) == len(all_names):
                 gender = "Male "
             elif len(boy_names) == 0:
