@@ -1110,7 +1110,7 @@ def attendance_save():
             # 同时注册到 student_ext，确保学生 tab 可见
             exist = _execute(get_db(), "SELECT student_name FROM student_ext WHERE student_name=%s", [ns["name"]]).fetchone()
             if not exist:
-                _execute(get_db(), "INSERT INTO student_ext (student_name,student_code,source,status,segment,enrolled_class,purchased_lessons,used_lessons,remaining_lessons,notes) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", [ns["name"], '', '考勤新增', '仅试听', '', cls_name, 0, 0, 0, ns.get("note","")])
+                _execute(get_db(), "INSERT INTO student_ext (student_name,student_code,source,status,segment,enrolled_class,purchased_lessons,used_lessons,remaining_lessons,notes) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", [ns["name"], '', '考勤新增', '仅试听', '', cls_name, 0, 1, -1, ns.get("note","")])
         batch = []
         cycle = data.get("cycle", "")
         content_label = data.get("content_label", "")
