@@ -270,7 +270,7 @@ def cycle_from_unit(unit_code):
     # 回退：根据月份推算课型
     try:
         m = int(unit_code[2:4]) if len(unit_code) >= 4 else 0
-        sem = "试听期" if m == 9 else ("寒假班" if m in (1,2) else ("春季班" if 3<=m<=6 else "正式课"))
+        sem = "试听期" if m == 9 else ("寒假班" if m in (1,2) else ("春季班" if 3<=m<=6 else ("暑假班" if m in (7,8) else "正式课")))
         return f"{unit_code}{sem}"
     except: return unit_code
 

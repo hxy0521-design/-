@@ -725,7 +725,7 @@ function submitAttendance(cls,unitCode,lessonNum,title,date){
     }
   });
   // 根据 unit_code 推算周期标签，如 2606 → 2606春季班
-  var cycLabel='';var ucInt=parseInt(unitCode);if(ucInt>=2607)cycLabel=unitCode+'暑假班';else if(ucInt>=2603)cycLabel=unitCode+'春季班';else if(ucInt>=2602)cycLabel=unitCode+'寒假班';else if(ucInt>=2500)cycLabel=unitCode+'正式课';else cycLabel=unitCode+'试听期';
+  var cycLabel='';var effUnit=unitCode;if(unitCode&&unitCode.indexOf('&')>=0){effUnit='26'+unitCode.split('&')[1];}var ucInt=parseInt(effUnit);if(ucInt>=2607)cycLabel=effUnit+'暑假班';else if(ucInt>=2603)cycLabel=effUnit+'春季班';else if(ucInt>=2602)cycLabel=effUnit+'寒假班';else if(ucInt>=2500)cycLabel=effUnit+'正式课';else cycLabel=effUnit+'试听期';
   var saveBtn=document.querySelector('#attOverlay .bg');if(saveBtn){saveBtn.textContent='保存中...';saveBtn.disabled=true}
   fetch(API+'/attendance/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({class_name:cls,unit_code:unitCode,lesson_num:parseInt(lessonNum),lesson_title:title,lesson_date:date,records:records,new_students:att.newStudents,makeup_students:makeupStudents,cycle:cycLabel})}).then(function(r){if(!r.ok)throw new Error('服务器错误 '+r.status);return r.json()}).then(function(rd){
     console.log('考勤已保存:',rd.count||0,'条');
