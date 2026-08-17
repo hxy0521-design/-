@@ -601,7 +601,7 @@ def purchase_delete(rid):
             if r2 is not None:
                 cur = int(r2["purchased_lessons"] or 0)
                 new_pur = max(0, cur - cnt)
-                new_rem = max(0, new_pur - (int(_execute(db, "SELECT COUNT(*) as cnt FROM attendance WHERE student_name=%s AND status='出席'", [name]).fetchone()["cnt"] or 0)))
+                new_rem = new_pur - (int(_execute(db, "SELECT COUNT(*) as cnt FROM attendance WHERE student_name=%s AND status='出席'", [name]).fetchone()["cnt"] or 0))
                 _execute(db, "UPDATE student_ext SET purchased_lessons=%s, remaining_lessons=%s WHERE student_name=%s", [new_pur, new_rem, name])
 
 def purchase_add(data):
@@ -640,7 +640,7 @@ def purchase_add(data):
             cur_pur = float(r2["purchased_lessons"] or 0)
             cur_used = float(r2["used_lessons"] or 0)
             new_pur = max(0, cur_pur + cnt)
-            new_rem = max(0, new_pur - cur_used)
+            new_rem = new_pur - cur_used
             _execute(db, "UPDATE student_ext SET purchased_lessons=%s, remaining_lessons=%s WHERE student_name=%s", [new_pur, new_rem, name])
     exist = _execute(db, "SELECT id FROM purchases WHERE student_name=%s AND actual_pay_date=%s AND lesson_count=%s AND amount=%s AND COALESCE(segment,'')=%s AND COALESCE(course_type,'')=%s AND COALESCE(method,'')=%s AND COALESCE(discount_type,'')=%s", [name, date, cnt, amt, seg, ct, method, dt]).fetchone()
     if exist:
@@ -651,9 +651,9 @@ def purchase_add(data):
         debt_rows = _execute(db, "SELECT id, class_name FROM attendance WHERE student_name=%s AND consumed_price=-1 AND status='出席' ORDER BY lesson_date ASC", [name]).fetchall()
         clear_count = min(int(cnt), len(debt_rows))
         for dr in debt_rows[:clear_count]:
-            # 取该班级的正价
-            pr = _execute(db, "SELECT consumed_price FROM attendance WHERE class_name=%s AND status='出席' ORDER BY id DESC LIMIT 1", [dr['class_name']]).fetchone()
-            price = float(pr['consumed_price']) if pr else 160.0
+            # 取该班级的正价（排除欠费 -1 记录）
+            pr = _execute(db, "SELECT consumed_price FROM attendance WHERE class_name=%s AND status='出席' AND consumed_price > 0 ORDER BY id DESC LIMIT 1", [dr['class_name']]).fetchone()
+            price = float(pr['consumed_price']) if pr and float(pr['consumed_price']) > 0 else 144.0
             _execute(db, "UPDATE attendance SET consumed_price=%s, note='' WHERE id=%s", [price, dr['id']])
     return "new"
 
