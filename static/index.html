@@ -505,35 +505,32 @@ var d=tabs[activeTab];if(!d)return;
 var names=[];d.topics.forEach(function(t){(t.speeches||[]).forEach(function(s,j){if(names.indexOf(s.name)<0)names.push(s.name)})});
 if(!names.length){el.innerHTML='';return}
 var boys=[];
-  // 快速路径：先从已保存的 d.meta.gender 解析（无需等异步加载）
-  var gstr=d.meta.gender||'';
-  if(gstr.indexOf('Male')===0){
-    boys=gstr.replace('Male','').trim().split(/\s+/).filter(Boolean);
-  }
-  // 如果快速路径没拿到名字，从 student_ext 查
-  if(!boys.length){
-    var students=_cachedStudents;
-    if(!students||!students.length){
-      fetch(API+'/students').then(function(r){return r.json()}).then(function(rows){_cachedStudents=rows;updateGenderPicker();}).catch(function(){});
-      // 即使缓存未加载，也能从无名格式推断全班性别
-      if(gstr==='Male ') d.meta.gender='Male ';
-      else if(gstr==='Female ') d.meta.gender='Female ';
-      return;
-    }
+  var students=_cachedStudents;
+  if(students&&students.length){
+    // 只要 student_ext 已加载，就重新核对（本班优先+去后缀），不信旧的 d.meta.gender 名单
     var curClass=d.meta.class||'';
     names.forEach(function(n){
-      // 匹配规则（跟考勤一样精确优先）：
-      // 1. 精确匹配  2. student_ext去掉-数字后缀匹配（楠楠-5→楠楠）
       var match=function(s){
         if(s.student_name===n)return true;
         if(s.student_name.replace(/-\d+$/,'')===n)return true;
         return false;
       };
-      // 优先匹配本班学生
       var se=students.find(function(s){return s.enrolled_class===curClass && match(s);});
       if(!se) se=students.find(match);
       if(se&&se.gender==='男')boys.push(n);
     });
+  }else{
+    // 未加载时，先用 d.meta.gender 快速路径兜底
+    var gstr=d.meta.gender||'';
+    if(gstr.indexOf('Male')===0){
+      boys=gstr.replace('Male','').trim().split(/\s+/).filter(Boolean);
+    }
+    if(!boys.length){
+      fetch(API+'/students').then(function(r){return r.json()}).then(function(rows){_cachedStudents=rows;updateGenderPicker();}).catch(function(){});
+      if(gstr==='Male ') d.meta.gender='Male ';
+      else if(gstr==='Female ') d.meta.gender='Female ';
+      return;
+    }
   }
   // 全班同一性别时不列名字，否则列名字
   if(boys.length===names.length){
