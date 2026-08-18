@@ -661,12 +661,14 @@ function showAttendanceModal(genPromise,d,gs,gw){
     var h='<div style="background:var(--surface);border-radius:12px;padding:20px;max-width:480px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)">';
     h+='<h3 style="margin:0 0 4px">考勤确认 — '+esc(cls)+'</h3><div style="font-size:11px;color:var(--sb);margin-bottom:12px">发言学生已自动勾选，请确认缺席/请假</div>';
     var roster=sug.roster||[];var speakers=sug.speakers||[];
+    var clsOpts=Object.keys(cfgInfo).sort().map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>'}).join('');
     roster.forEach(function(r,i){
       var bg=r.status==='出席'?'var(--green-light)':(r.isNew?'var(--accent-light)':'var(--amber-light)');
       h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;margin:2px 0;border-radius:6px;background:'+bg+'">';
-      h+='<input type="checkbox" id="attChk'+i+'" '+(r.status==='出席'?'checked':'')+' onchange="var s=document.getElementById(\'attSel'+i+'\');s.style.display=this.checked&&\''+esc(r.name)+'\'!==\'\'?\'none\':\'inline\';if(!this.checked)document.getElementById(\'attChk'+i+'\').checked=false" style="width:auto;margin:0">';
+      h+='<input type="checkbox" id="attChk'+i+'" '+(r.status==='出席'?'checked':'')+' onchange="var s=document.getElementById(\'attSel'+i+'\');var f=document.getElementById(\'attFrom'+i+'\');s.style.display=this.checked?\'none\':\'inline\';if(!this.checked)f.style.display=\'none\'" style="width:auto;margin:0">';
       h+='<span style="flex:1;font-size:13px">'+esc(r.name)+(r.isNew?' <span style="font-size:10px;color:var(--sky)" class="mkBadge">新</span>':'')+'</span>';
-      h+='<select id="attSel'+i+'" style="display:'+(r.status==='出席'?'none':'inline')+';width:auto;padding:2px 4px;font-size:11px"><option value="缺席">缺席</option><option value="请假">请假</option></select>';
+      h+='<select id="attSel'+i+'" onchange="var f=document.getElementById(\'attFrom'+i+'\');f.style.display=this.value===\'补课\'?\'inline\':\'none\'" style="display:'+(r.status==='出席'?'none':'inline')+';width:auto;padding:2px 4px;font-size:11px"><option value="缺席">缺席</option><option value="请假">请假</option><option value="补课">补课</option></select>';
+      h+='<select id="attFrom'+i+'" style="display:none;width:auto;padding:2px 4px;font-size:11px;margin-left:-4px"><option value="">补自</option>'+clsOpts+'</select>';
       h+='<input id="attNote'+i+'" placeholder="备注" style="width:80px;padding:2px 4px;font-size:11px;display:'+(r.status==='出席'?'none':'inline')+'">';
       h+='</div>';
     });
@@ -708,13 +710,20 @@ function skipAttendance(){var o=document.getElementById('attOverlay');if(o)o.rem
 
 function submitAttendance(cls,unitCode,lessonNum,title,date){
   var records=[];var att=window._attData;var roster=att.roster;
-  for(var i=0;i<roster.length;i++){
-    var chk=document.getElementById('attChk'+i);var sel=document.getElementById('attSel'+i);var note=document.getElementById('attNote'+i);
-    var status=chk&&chk.checked?'出席':(sel?sel.value:'缺席');
-    var n=note?note.value:'';
-    records.push({name:roster[i].name,status:status,note:n||(sel&&sel.value?sel.value:'')});
-  }
   var makeupStudents=[];
+  for(var i=0;i<roster.length;i++){
+    var chk=document.getElementById('attChk'+i);var sel=document.getElementById('attSel'+i);var note=document.getElementById('attNote'+i);var from=document.getElementById('attFrom'+i);
+    var selVal=sel?sel.value:'缺席';
+    var n=note?note.value:'';
+    if(selVal==='补课'){
+      var fromCls=from&&from.value?from.value:'';
+      records.push({name:roster[i].name,status:'出席',note:fromCls?'补自'+fromCls:'补课'});
+      makeupStudents.push({name:roster[i].name,from_class:fromCls});
+    }else{
+      var status=chk&&chk.checked?'出席':selVal;
+      records.push({name:roster[i].name,status:status,note:n||selVal});
+    }
+  }
   att.newStudents.forEach(function(s){
     var se=_cachedStudents?_cachedStudents.find(function(x){return x.student_name===s.name}):null;
     if(se&&se.enrolled_class&&se.enrolled_class!==cls){
