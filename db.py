@@ -247,7 +247,14 @@ def student_ext_all():
     student_ext_cleanup_trial()  # 先清理超期试听
     rows = _execute(get_db(), "SELECT * FROM student_ext ORDER BY student_name").fetchall()
     cols = ["student_name","student_code","source","status","segment","enrolled_class","purchased_lessons","used_lessons","remaining_lessons","notes","added_by","gender"]
-    return [dict(zip(cols, [r[c] for c in cols])) for r in rows]
+    result = [dict(zip(cols, [r[c] for c in cols])) for r in rows]
+    # 已消课时实时计算（一次聚合查询），不再依赖 student_ext 里的冗余值，避免漂移
+    att_rows = _execute(get_db(), "SELECT student_name, COUNT(*) as cnt FROM attendance WHERE status='出席' GROUP BY student_name").fetchall()
+    used_map = {r["student_name"]: int(r["cnt"]) for r in att_rows}
+    for d in result:
+        d["used_lessons"] = used_map.get(d["student_name"], 0)
+        d["remaining_lessons"] = int(d["purchased_lessons"] or 0) - d["used_lessons"]
+    return result
 
 def student_ext_upsert(name, data):
     db = get_db()
@@ -491,9 +498,10 @@ def attendance_by_lesson(class_name=None, cycle=None, student_name=None, limit=5
                 ref_p = _execute(db, "SELECT COUNT(*) as cnt FROM purchases WHERE student_name=%s AND discount_type=%s", [sn, "转介绍赠"]).fetchone()
                 if int(ref_p["cnt"]) > 0:
                     ref_list.append(sn)
-            # 欠费：学生已欠费(used>pur) AND 本课节是导致欠费的那一节（累计出席首次超过已购）
-            se = _execute(db, "SELECT purchased_lessons, used_lessons FROM student_ext WHERE student_name=%s", [sn]).fetchone()
-            if se and int(se["used_lessons"] or 0) > int(se["purchased_lessons"] or 0):
+            # 欠费：学生已欠费(实时出席>已购) AND 本课节是导致欠费的那一节（累计出席首次超过已购）
+            se = _execute(db, "SELECT purchased_lessons FROM student_ext WHERE student_name=%s", [sn]).fetchone()
+            used_cnt = int(_execute(db, "SELECT COUNT(*) as c FROM attendance WHERE student_name=%s AND status='出席'", [sn]).fetchone()["c"] or 0)
+            if se and used_cnt > int(se["purchased_lessons"] or 0):
                 pur = int(se["purchased_lessons"]) if se else 0
                 # 找到该生所有出席记录，按日期排序，找到首次超出的那一节
                 all_att = _execute(db, "SELECT class_name, lesson_title, lesson_date FROM attendance WHERE student_name=%s AND status='出席' ORDER BY lesson_date, id", [sn]).fetchall()
@@ -795,12 +803,16 @@ def dashboard_weekly():
     weekly = []
     for cn, units in cfg.items():
         roster = roster_get(cn)
-        # 加载学生待消课时（暑假班）
+        # 加载学生待消课时（实时：已购 - 出席次数）
         prefill_map = {}
         if roster:
-            rem_rows = _execute(get_db(), "SELECT student_name, remaining_lessons FROM student_ext WHERE student_name IN ({})".format(','.join(['%s']*len(roster))), roster).fetchall()
+            ph = ','.join(['%s']*len(roster))
+            rem_rows = _execute(get_db(), "SELECT student_name, purchased_lessons FROM student_ext WHERE student_name IN ({})".format(ph), roster).fetchall()
+            att_rows = _execute(get_db(), "SELECT student_name, COUNT(*) as cnt FROM attendance WHERE student_name IN ({}) AND status='出席' GROUP BY student_name".format(ph), roster).fetchall()
+            used_map = {r["student_name"]: int(r["cnt"]) for r in att_rows}
             for r in rem_rows:
-                prefill_map[r["student_name"]] = int(r["remaining_lessons"] or 0)
+                used = used_map.get(r["student_name"], 0)
+                prefill_map[r["student_name"]] = int(r["purchased_lessons"] or 0) - used
         # 无花名册时跳过（暑假班由下面 is_vacation 兜底）
         # 跳过无学生且非临时/非暑假的班级
         is_vacation = bool('临时' in cn or any(uc in units for uc in ['2607','2608']))
