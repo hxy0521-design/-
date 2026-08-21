@@ -1121,6 +1121,11 @@ function renderCostTab(){
     else{
       h+='<div style="overflow-x:auto"><table class="datatable"><thead><tr><th>原因</th><th>类型</th><th>渠道</th><th>周期</th><th>金额</th><th>日期</th><th>备注</th><th></th></tr></thead><tbody>';
       var total=0;
+      // 提取周期下拉选项：历史成本周期 + 当前周期
+      var cycles=[];rows.forEach(function(r){if(r.cycle&&cycles.indexOf(r.cycle)<0)cycles.push(r.cycle)});
+      var curCycle=(window._summary&&window._summary.cycle)||'';
+      if(curCycle&&cycles.indexOf(curCycle)<0)cycles.push(curCycle);
+      window._costCycles=cycles;
       window._costRows=window._costRows||{};
       rows.forEach(function(r){
         total+=parseFloat(r.amount)||0;
@@ -1141,13 +1146,16 @@ function showAddCostModal(prefill){
   var typeSel=function(v){return '<select id="cfType" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0;background:var(--bg);color:var(--tx)"><option value="">类型</option>'+typeOpts.map(function(t){return '<option'+(v===t?' selected':'')+'>'+t+'</option>'}).join('')+'</select>';};
   var chanOpts=['AI','Neukol','小红书','淘宝','其他'];
   var chanSel=function(v){return '<select id="cfChannel" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0;background:var(--bg);color:var(--tx)"><option value="">渠道</option>'+chanOpts.map(function(t){return '<option'+(v===t?' selected':'')+'>'+t+'</option>'}).join('')+'</select>';};
-  ov.innerHTML='<div style="background:var(--surface);border-radius:12px;padding:20px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)"><h3>新增成本</h3><input id="cfReason" placeholder="支出原因" value="'+esc(prefill.reason||'')+'" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:6px">'+typeSel(prefill.cost_type||'')+chanSel(prefill.channel||'')+'</div><input id="cfCycle" placeholder="周期(如2601第四周)" value="'+esc(prefill.cycle||'')+'" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfAmt" type="number" step="0.01" placeholder="金额" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfDate" type="date" value="'+(prefill.cost_date||today)+'" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfNotes" placeholder="备注" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button onclick="closeModal(this)" class="btn bo" style="padding:6px 14px">取消</button><button onclick="saveCost()" class="btn bg" style="padding:6px 14px">保存</button></div></div>';
+  var curCycle=(window._summary&&window._summary.cycle)||'';
+  var cycleOpts=(window._costCycles||[]).concat(curCycle?[curCycle]:[]).filter(function(v,i,a){return v&&a.indexOf(v)===i});
+  var cycleSel='<select id="cfCycle" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0;background:var(--bg);color:var(--tx)"><option value="">周期</option>'+cycleOpts.map(function(c){return '<option'+(c===curCycle?' selected':'')+'>'+esc(c)+'</option>'}).join('')+'</select>';
+  ov.innerHTML='<div style="background:var(--surface);border-radius:12px;padding:20px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)"><h3>新增成本</h3><input id="cfReason" placeholder="支出原因" value="'+esc(prefill.reason||'')+'" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:6px">'+typeSel(prefill.cost_type||'')+chanSel(prefill.channel||'')+'</div>'+cycleSel+'<input id="cfAmt" type="number" step="0.01" placeholder="金额" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfDate" type="date" value="'+today+'" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfNotes" placeholder="备注" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button onclick="closeModal(this)" class="btn bo" style="padding:6px 14px">取消</button><button onclick="saveCost()" class="btn bg" style="padding:6px 14px">保存</button></div></div>';
   document.body.appendChild(ov);
 }
 function duplicateCost(id){
   var r=window._costRows&&window._costRows[id];
   if(!r)return;
-  showAddCostModal({reason:r.reason,cost_type:r.cost_type,channel:r.channel,cycle:r.cycle,cost_date:(r.cost_date||'').slice(0,10)});
+  showAddCostModal({reason:r.reason,cost_type:r.cost_type,channel:r.channel});
 }
 function renderRevenueSplitTab(){
   var el=document.getElementById('editorBody');if(!el)return;
