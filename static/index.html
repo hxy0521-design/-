@@ -1121,9 +1121,11 @@ function renderCostTab(){
     else{
       h+='<div style="overflow-x:auto"><table class="datatable"><thead><tr><th>原因</th><th>类型</th><th>渠道</th><th>周期</th><th>金额</th><th>日期</th><th>备注</th><th></th></tr></thead><tbody>';
       var total=0;
+      window._costRows=window._costRows||{};
       rows.forEach(function(r){
         total+=parseFloat(r.amount)||0;
-        h+='<tr><td><b>'+esc(r.reason)+'</b></td><td>'+esc(r.cost_type||'')+'</td><td>'+esc(r.channel||'')+'</td><td>'+esc(r.cycle||'')+'</td><td style="color:var(--rd);font-weight:600">¥'+(parseFloat(r.amount)||0).toFixed(2)+'</td><td style="font-size:10px">'+(r.cost_date||'').slice(0,10)+'</td><td style="font-size:10px;color:var(--tx3)">'+esc(r.notes||'')+'</td><td><button onclick="deleteCost('+r.id+')" style="border:none;background:none;color:var(--rd);cursor:pointer;font-size:11px">删除</button></td></tr>';
+        window._costRows[r.id]=r;
+        h+='<tr><td><b>'+esc(r.reason)+'</b></td><td>'+esc(r.cost_type||'')+'</td><td>'+esc(r.channel||'')+'</td><td>'+esc(r.cycle||'')+'</td><td style="color:var(--rd);font-weight:600">¥'+(parseFloat(r.amount)||0).toFixed(2)+'</td><td style="font-size:10px">'+(r.cost_date||'').slice(0,10)+'</td><td style="font-size:10px;color:var(--tx3)">'+esc(r.notes||'')+'</td><td><button onclick="duplicateCost('+r.id+')" title="延续一条（继承原因/类型/渠道/周期/日期，金额待填）" style="border:none;background:none;color:var(--accent);cursor:pointer;font-size:14px;font-weight:700">+</button></td><td><button onclick="deleteCost('+r.id+')" style="border:none;background:none;color:var(--rd);cursor:pointer;font-size:11px">删除</button></td></tr>';
       });
       h+='</tbody></table></div>';
       h+='<div style="text-align:right;margin-top:8px;font-weight:700">合计：<span style="color:var(--rd)">¥'+total.toFixed(2)+'</span></div>';
@@ -1131,11 +1133,21 @@ function renderCostTab(){
     h+='</div>';el.innerHTML=h;
   }).catch(function(e){el.innerHTML='<div style="padding:16px;color:var(--rd)">加载失败: '+esc(e.message)+'</div>';});
 }
-function showAddCostModal(){
+function showAddCostModal(prefill){
+  prefill=prefill||{};
   var today=new Date().toISOString().slice(0,10);
   var ov=document.createElement('div');ov.className='zg-modal-overlay';ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
-  ov.innerHTML='<div style="background:var(--surface);border-radius:12px;padding:20px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)"><h3>新增成本</h3><input id="cfReason" placeholder="支出原因" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:6px"><select id="cfType" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0;background:var(--bg);color:var(--tx)"><option value="">类型</option><option>平台服务费</option><option>平台保证金</option><option>薯条推广</option><option>运营成本</option><option>其他</option></select><select id="cfChannel" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0;background:var(--bg);color:var(--tx)"><option value="">渠道</option><option>AI</option><option>Neukol</option><option>小红书</option><option>淘宝</option><option>其他</option></select></div><input id="cfCycle" placeholder="周期(如2601第四周)" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfAmt" type="number" step="0.01" placeholder="金额" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfDate" type="date" value="'+today+'" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfNotes" placeholder="备注" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button onclick="closeModal(this)" class="btn bo" style="padding:6px 14px">取消</button><button onclick="saveCost()" class="btn bg" style="padding:6px 14px">保存</button></div></div>';
+  var typeOpts=['平台服务费','平台保证金','薯条推广','运营成本','其他'];
+  var typeSel=function(v){return '<select id="cfType" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0;background:var(--bg);color:var(--tx)"><option value="">类型</option>'+typeOpts.map(function(t){return '<option'+(v===t?' selected':'')+'>'+t+'</option>'}).join('')+'</select>';};
+  var chanOpts=['AI','Neukol','小红书','淘宝','其他'];
+  var chanSel=function(v){return '<select id="cfChannel" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0;background:var(--bg);color:var(--tx)"><option value="">渠道</option>'+chanOpts.map(function(t){return '<option'+(v===t?' selected':'')+'>'+t+'</option>'}).join('')+'</select>';};
+  ov.innerHTML='<div style="background:var(--surface);border-radius:12px;padding:20px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)"><h3>新增成本</h3><input id="cfReason" placeholder="支出原因" value="'+esc(prefill.reason||'')+'" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:6px">'+typeSel(prefill.cost_type||'')+chanSel(prefill.channel||'')+'</div><input id="cfCycle" placeholder="周期(如2601第四周)" value="'+esc(prefill.cycle||'')+'" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfAmt" type="number" step="0.01" placeholder="金额" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfDate" type="date" value="'+(prefill.cost_date||today)+'" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><input id="cfNotes" placeholder="备注" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin:4px 0"><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button onclick="closeModal(this)" class="btn bo" style="padding:6px 14px">取消</button><button onclick="saveCost()" class="btn bg" style="padding:6px 14px">保存</button></div></div>';
   document.body.appendChild(ov);
+}
+function duplicateCost(id){
+  var r=window._costRows&&window._costRows[id];
+  if(!r)return;
+  showAddCostModal({reason:r.reason,cost_type:r.cost_type,channel:r.channel,cycle:r.cycle,cost_date:(r.cost_date||'').slice(0,10)});
 }
 function renderRevenueSplitTab(){
   var el=document.getElementById('editorBody');if(!el)return;
