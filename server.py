@@ -1733,19 +1733,21 @@ def revenue_splits_generate():
         rev = float(r['revenue'])
         key = (r['cycle'], r['content_label'])
         cl = r['content_label']
-        # 特典课特殊分账：全量给对应老师，不分教研/招生/续费
+        # 特典课特殊分账：全量给对应老师，课费按固定单价（地产大亨69.9/人次，辩论64.95/人次）
         if cl in ('地产大亨特典', '辩论特典'):
             is_biscuit = cl == '辩论特典'
-            xc, sc, bc = (0.0, 0.0, 1.0) if is_biscuit else (1.0, 0.0, 0.0)
-            xs = round(rev * xc, 2)
-            ss = 0.0
-            bs = round(rev * bc, 2)
             total_cnt = int(r['trial_count']) + int(r['formal_count'])
+            unit = 69.9 if cl == '地产大亨特典' else 64.95
+            fee = round(unit * total_cnt, 2)
+            xc, sc, bc = (0.0, 0.0, 1.0) if is_biscuit else (1.0, 0.0, 0.0)
+            xs = round(fee * xc, 2)
+            ss = 0.0
+            bs = round(fee * bc, 2)
             _execute(get_db(), "DELETE FROM revenue_splits WHERE cycle=%s AND content_label=%s", [r['cycle'], cl])
             _execute(get_db(), """INSERT INTO revenue_splits
                 (cycle,content_label,revenue,trial_count,formal_count,referral_supplement,platform_fee,new_enroll,recruitment,recruit_xin_coef,recruit_xin,recruit_bis,conversion,conversion_xin,conversion_bis,retention,retention_xin,retention_bis,lesson_50pct,xinxin_lesson_share,biscuit_lesson_share,teaching_20pct,xinxin_coef,xinxin_share,sitong_coef,sitong_share,biscuit_coef,biscuit_share,source_20pct,neukol_fee,other_cost,notes,net_balance)
                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                [r['cycle'], cl, rev, 0, total_cnt, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, xc, xs, sc, ss, bc, bs, 0, 0, 0, '', 0])
+                [r['cycle'], cl, fee, 0, total_cnt, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, xc, xs, sc, ss, bc, bs, 0, 0, 0, '', 0])
             continue
         rs = ref_sup.get(key, {'total':0,'xin':0,'bis':0})
         ref = rs['total']
