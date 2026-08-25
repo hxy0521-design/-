@@ -156,11 +156,13 @@ def build_student_prompt(title, student_name, speeches, history_text, gender_inf
     return "\n".join(parts)
 
 def call_deepseek(system_prompt, user_prompt, api_key):
-    """调用 DeepSeek API"""
+    """调用 LLM API（默认 DeepSeek，可用 ZG_LLM_* 环境变量切换到其他 OpenAI 兼容服务）"""
     from openai import OpenAI
-    client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+    base_url = os.environ.get("ZG_LLM_BASE_URL", "https://api.deepseek.com")
+    model = os.environ.get("ZG_LLM_MODEL", "deepseek-chat")
+    client = OpenAI(api_key=api_key, base_url=base_url)
     response = client.chat.completions.create(
-        model="deepseek-chat",
+        model=model,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -174,7 +176,7 @@ def call_deepseek(system_prompt, user_prompt, api_key):
 def generate_feedback_ai(meta, topics, cls_name, input_path="", api_key="", styles=None, memo_data=None):
     """AI 生成课后反馈。styles: ['xinxin','biscuit','fusion']"""
     if not api_key:
-        api_key = os.environ.get("DEEPSEEK_API_KEY", "")
+        api_key = os.environ.get("ZG_LLM_API_KEY", "") or os.environ.get("DEEPSEEK_API_KEY", "")
     if not api_key or not styles:
         return False
 
