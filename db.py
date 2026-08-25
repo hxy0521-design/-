@@ -25,7 +25,10 @@ class _SQLiteCursor:
     def execute(self, sql, params=None):
         if params: sql = sql.replace('%s', '?')
         sql = sql.replace('REPLACE INTO', 'INSERT OR REPLACE INTO')
-        return self._cur.execute(sql, params or [])
+        sql = sql.replace('INSERT IGNORE', 'INSERT OR IGNORE')
+        if params:
+            return self._cur.execute(sql, params)
+        return self._cur.execute(sql)
     def __getattr__(self, name): return getattr(self._cur, name)
     @property
     def description(self): return self._cur.description
@@ -72,7 +75,11 @@ def _execute(db, sql, params=None):
     cur = db.cursor()
     if params and not ZG_TEST:
         sql = sql.replace('?', '%s')
-    cur.execute(sql, params or [])
+    # 无参数时不传空列表：pymysql/sqlite3 会对 args 做 % 格式化，字面 %（如 LIKE '%x%'）会被误当占位符
+    if params:
+        cur.execute(sql, params)
+    else:
+        cur.execute(sql)
     try: rows = cur.fetchall()
     except: rows = []
     return Result(cur, rows)
@@ -83,9 +90,9 @@ def init_db():
         db.executescript("""
             CREATE TABLE IF NOT EXISTS config (class_name TEXT, unit_code TEXT, unit_name TEXT, path TEXT, created_by TEXT, class_time TEXT, off_weeks TEXT DEFAULT '');
             CREATE TABLE IF NOT EXISTS lessons (class_name TEXT, unit_code TEXT, lesson_num INTEGER, title TEXT, content TEXT, updated_at TEXT);
-            CREATE TABLE IF NOT EXISTS attendance (id INTEGER PRIMARY KEY AUTOINCREMENT, class_name TEXT, unit_code TEXT, lesson_num INTEGER, lesson_title TEXT, lesson_date TEXT, student_name TEXT, status TEXT, note TEXT, recorded_at TEXT, cycle TEXT);
+            CREATE TABLE IF NOT EXISTS attendance (id INTEGER PRIMARY KEY AUTOINCREMENT, class_name TEXT, unit_code TEXT, lesson_num INTEGER, lesson_title TEXT, lesson_date TEXT, student_name TEXT, status TEXT, note TEXT, recorded_at TEXT, cycle TEXT, content_label TEXT DEFAULT '', consumed_price REAL DEFAULT 0, is_makeup INTEGER DEFAULT 0);
             CREATE TABLE IF NOT EXISTS purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, student_name TEXT, student_code TEXT, charge_code TEXT, segment TEXT, course_type TEXT, method TEXT, discount_type TEXT, lesson_count INTEGER, amount REAL, refund_amount REAL DEFAULT 0, actual_pay_date TEXT, order_id TEXT, xiaohongshu_received REAL DEFAULT 0, notes TEXT);
-            CREATE TABLE IF NOT EXISTS student_ext (student_name TEXT PRIMARY KEY, student_code TEXT, source TEXT, status TEXT, segment TEXT, enrolled_class TEXT, purchased_lessons INTEGER DEFAULT 0, used_lessons INTEGER DEFAULT 0, remaining_lessons INTEGER DEFAULT 0, notes TEXT);
+            CREATE TABLE IF NOT EXISTS student_ext (student_name TEXT PRIMARY KEY, student_code TEXT, source TEXT, status TEXT, segment TEXT, enrolled_class TEXT, purchased_lessons INTEGER DEFAULT 0, used_lessons INTEGER DEFAULT 0, remaining_lessons INTEGER DEFAULT 0, notes TEXT, added_by TEXT DEFAULT '', gender TEXT DEFAULT '');
             CREATE TABLE IF NOT EXISTS class_roster (class_name TEXT, student_name TEXT);
             CREATE TABLE IF NOT EXISTS costs (id INTEGER PRIMARY KEY AUTOINCREMENT, reason TEXT, cycle TEXT, cost_type TEXT, channel TEXT, cost_date TEXT, amount REAL, notes TEXT);
             CREATE TABLE IF NOT EXISTS pricing (segment TEXT, course_type TEXT, discount_type TEXT, unit_price REAL, discount_multiplier REAL);
@@ -93,8 +100,10 @@ def init_db():
             CREATE TABLE IF NOT EXISTS revenue_splits (id INTEGER PRIMARY KEY AUTOINCREMENT, cycle TEXT, content_label TEXT, revenue REAL, trial_count INTEGER DEFAULT 0, formal_count INTEGER DEFAULT 0, referral_supplement REAL DEFAULT 0, platform_fee REAL DEFAULT 0, new_enroll INTEGER DEFAULT 0, recruitment REAL DEFAULT 0, recruit_xin_coef REAL DEFAULT 1.0, recruit_xin REAL DEFAULT 0, recruit_bis REAL DEFAULT 0, conversion REAL DEFAULT 0, conversion_xin REAL DEFAULT 0, conversion_bis REAL DEFAULT 0, retention REAL DEFAULT 0, retention_xin REAL DEFAULT 0, retention_bis REAL DEFAULT 0, lesson_50pct REAL, xinxin_lesson_share REAL DEFAULT 0, biscuit_lesson_share REAL DEFAULT 0, teaching_20pct REAL, xinxin_coef REAL DEFAULT 0.9, xinxin_share REAL, sitong_coef REAL DEFAULT 0.1, sitong_share REAL, biscuit_coef REAL DEFAULT 0, biscuit_share REAL, source_20pct REAL, neukol_fee REAL DEFAULT 0, other_cost REAL DEFAULT 0, notes TEXT, net_balance REAL);
             CREATE TABLE IF NOT EXISTS recycle (id INTEGER PRIMARY KEY AUTOINCREMENT, class_name TEXT, unit_code TEXT, unit_name TEXT, path TEXT, deleted_at TEXT);
             CREATE TABLE IF NOT EXISTS settlements (id INTEGER PRIMARY KEY AUTOINCREMENT, teacher_name TEXT, cycle TEXT, amount REAL DEFAULT 0, lesson_share REAL DEFAULT 0, teaching_share REAL DEFAULT 0, source_share REAL DEFAULT 0, detail TEXT, status TEXT DEFAULT '待结算', settled_date TEXT, notes TEXT, created_at TEXT);
+            CREATE TABLE IF NOT EXISTS student_profiles (class_name TEXT NOT NULL, student_name TEXT NOT NULL, gender TEXT DEFAULT '', data TEXT, updated_at TEXT, PRIMARY KEY (class_name, student_name));
         """)
         init_pricing()
+    student_profiles_table()
 
 def migrate_from_json():
     pass
@@ -119,8 +128,8 @@ def config_update(cfg):
     _execute(db, "DELETE FROM config")
     for cls_name, units in cfg.items():
         for unit_code, info in units.items():
-            _execute(db, "INSERT INTO config VALUES (%s,%s,%s,%s,%s,%s)",
-                [cls_name, unit_code, info.get("name",""), info.get("path",""), info.get("created_by",""), info.get("class_time","")])
+            _execute(db, "INSERT INTO config VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                [cls_name, unit_code, info.get("name",""), info.get("path",""), info.get("created_by",""), info.get("class_time",""), info.get("off_weeks","")])
 
 def config_add_class(cls_name, created_by="", class_time=""):
     db = get_db()
@@ -903,17 +912,116 @@ def settlement_update_status(sid, status, settled_date=''):
 def settlement_delete(sid):
     _execute(get_db(), "DELETE FROM settlements WHERE id=%s", [sid])
 
+# ------- 学生画像（跨课记忆） -------
+_PROFILES_TABLE_SQL = """CREATE TABLE IF NOT EXISTS student_profiles (
+    class_name VARCHAR(100) NOT NULL,
+    student_name VARCHAR(100) NOT NULL,
+    gender VARCHAR(10) DEFAULT '',
+    data TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (class_name, student_name)
+)"""
+
+def student_profiles_table():
+    _execute(get_db(), _PROFILES_TABLE_SQL)
+
+def _profile_row_get(cls_name, name):
+    return _execute(get_db(), "SELECT gender, data FROM student_profiles WHERE class_name=%s AND student_name=%s", [cls_name, name]).fetchone()
+
+def _profile_row_set(cls_name, name, gender, data):
+    from datetime import datetime
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    db = get_db()
+    payload = json.dumps(data, ensure_ascii=False)
+    r = _execute(db, "SELECT student_name FROM student_profiles WHERE class_name=%s AND student_name=%s", [cls_name, name]).fetchone()
+    if r:
+        _execute(db, "UPDATE student_profiles SET gender=%s, data=%s, updated_at=%s WHERE class_name=%s AND student_name=%s",
+                 [gender, payload, now, cls_name, name])
+    else:
+        _execute(db, "INSERT INTO student_profiles (class_name, student_name, gender, data, updated_at) VALUES (%s,%s,%s,%s,%s)",
+                 [cls_name, name, gender, payload, now])
+
 def profiles_load(cls_name=None):
-    return {}
+    try:
+        student_profiles_table()
+        if cls_name:
+            rows = _execute(get_db(), "SELECT class_name, student_name, gender, data FROM student_profiles WHERE class_name=%s", [cls_name]).fetchall()
+        else:
+            rows = _execute(get_db(), "SELECT class_name, student_name, gender, data FROM student_profiles").fetchall()
+    except Exception:
+        return {}
+    out = {}
+    for r in rows:
+        cn, name = r["class_name"], r["student_name"]
+        try:
+            data = json.loads(r["data"] or "{}")
+        except Exception:
+            data = {}
+        if not isinstance(data, dict):
+            data = {}
+        if data.get("gender") in (None, "") and r["gender"]:
+            data["gender"] = r["gender"]
+        out.setdefault(cn, {})[name] = data
+    return out
 
 def profiles_save_lesson(cls_name, name, date, title, speech_count, topic_count, traits, best_quote):
-    pass
+    try:
+        student_profiles_table()
+        r = _profile_row_get(cls_name, name)
+        gender = ""
+        data = {}
+        if r:
+            gender = r["gender"] or ""
+            try:
+                data = json.loads(r["data"] or "{}")
+            except Exception:
+                data = {}
+            if not isinstance(data, dict):
+                data = {}
+            if not gender:
+                gender = data.get("gender", "") or ""
+        lessons = data.get("lessons", [])
+        if not isinstance(lessons, list):
+            lessons = []
+        lesson = {"date": date, "title": title, "speech_count": speech_count,
+                  "topic_count": topic_count, "traits": traits, "best_quote": best_quote}
+        # 同一课（date+title）重复生成时覆盖而非追加
+        replaced = False
+        for i, l in enumerate(lessons):
+            if l.get("date") == date and l.get("title") == title:
+                lessons[i] = lesson
+                replaced = True
+                break
+        if not replaced:
+            lessons.append(lesson)
+        data["lessons"] = lessons
+        if gender:
+            data["gender"] = gender
+        _profile_row_set(cls_name, name, gender, data)
+    except Exception:
+        pass
 
 def profiles_save_gender(cls_name, all_names, gender_map, default_gender):
-    pass
+    try:
+        student_profiles_table()
+        for name in all_names:
+            g = gender_map.get(name, default_gender)
+            r = _profile_row_get(cls_name, name)
+            data = {}
+            if r:
+                try:
+                    data = json.loads(r["data"] or "{}")
+                except Exception:
+                    data = {}
+                if not isinstance(data, dict):
+                    data = {}
+            data["gender"] = g
+            _profile_row_set(cls_name, name, g, data)
+    except Exception:
+        pass
 
 def profiles_delete_class(cls_name):
-    pass
+    _execute(get_db(), "DELETE FROM student_profiles WHERE class_name=%s", [cls_name])
 
 # ------- Recycle -------
 

@@ -200,8 +200,11 @@ def generate_all(input_path, feedback_styles=None, golden_quotes=None, images_di
     # 并行：长图 + 单人卡
     from concurrent.futures import ThreadPoolExecutor as _TPE
     with _TPE(max_workers=2) as _ex:
-        _ex.submit(generate_image, meta, topics, out_long, highlights=hl3, images_dir=images_dir)
-        _ex.submit(_gen_student_cards, meta, topics, input_dir, hl5, base_dir=input_dir)
+        fut_img = _ex.submit(generate_image, meta, topics, out_long, highlights=hl3, images_dir=images_dir)
+        fut_cards = _ex.submit(_gen_student_cards, meta, topics, input_dir, hl5, base_dir=input_dir)
+    # 显式取结果：子线程里的异常要抛出来，不能静默吞掉后还打印成功
+    fut_img.result()
+    fut_cards.result()
     print(f"[1/5] 长图 → {out_long}")
     print(f"[2/5] 单人卡 → 单人总结_*.png")
 
@@ -220,28 +223,6 @@ def generate_all(input_path, feedback_styles=None, golden_quotes=None, images_di
             scored = [(score_sentence(s, name, {}), s, t) for s, t in all_sents]
             scored.sort(key=lambda x: -x[0])
             student_best[name] = (scored[0][1], scored[0][2])
-
-    golden_dir = "."
-    golden_count = 0
-    for name, quote in student_best.items():
-        if name not in extra or "movie" not in extra[name]:
-            continue
-        poster = extra[name].get("poster","")
-        if poster and not os.path.isabs(poster):
-            poster = os.path.join(input_dir, poster)
-        gmeta = {
-            "title": meta.get("title",""),
-            "unit": meta.get("unit",""),
-            "date": meta.get("date",""),
-            "class": meta.get("class",""),
-            "quote": quote,
-            "author": name,
-            "movie": extra[name].get("movie",""),
-            "poster": poster,
-            "rating": extra[name].get("rating",""),
-            "line": extra[name].get("line",""),
-        }
-        golden_count += 1
 
     golden_done = 0
     # 只生成有 poster_quotes 的学生（前端金句日历打勾的）

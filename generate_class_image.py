@@ -377,16 +377,16 @@ def parse_input_txt(filepath):
                 current_speeches.append((name, content))
             prev_blank = False
         else:
-                # 续行：前一行为非空且不是空行分隔
-                if not prev_blank and current_topic is not None and current_speeches:
-                    name, content = current_speeches[-1]
-                    current_speeches[-1] = (name, content + '\n' + stripped)
-                else:
-                    if current_topic is not None:
-                        topics.append((current_topic, current_speeches))
-                    current_topic = stripped
-                    current_speeches = []
-                prev_blank = False
+            # 续行：前一行为非空且不是空行分隔
+            if not prev_blank and current_topic is not None and current_speeches:
+                name, content = current_speeches[-1]
+                current_speeches[-1] = (name, content + '\n' + stripped)
+            else:
+                if current_topic is not None:
+                    topics.append((current_topic, current_speeches))
+                current_topic = stripped
+                current_speeches = []
+            prev_blank = False
 
     if current_topic is not None:
         topics.append((current_topic, current_speeches))
@@ -525,71 +525,6 @@ def auto_select_highlights(topics, per_student=None, title=""):
             if len(top) >= n_hl: break
         result[name] = top
     return result
-
-# ============================================================
-# 话题图标
-# ============================================================
-def draw_success_icon(draw, cx, cy, s):
-    for a in [0, 72, 144, 216, 288]:
-        rad = math.radians(a)
-        x, y = cx + math.cos(rad) * s * 0.7, cy + math.sin(rad) * s * 0.7
-        r = s * 0.18
-        draw.polygon([(x, y-r), (x+r, y), (x, y+r), (x-r, y)], fill=(210, 180, 140))
-
-def draw_standard_icon(draw, cx, cy, s):
-    draw.line([(cx - s, cy), (cx + s, cy)], fill=(160, 160, 170), width=2)
-    for i in range(-2, 3):
-        x = cx + i * s * 0.35
-        h = s * 0.25 if i == 0 else s * 0.15
-        draw.line([(x, cy - h), (x, cy + h)], fill=(160, 160, 170), width=1)
-
-def draw_choice_icon(draw, cx, cy, s):
-    draw.ellipse([cx-s*0.5, cy-s*0.4, cx+s*0.5, cy+s*0.5], outline=(180, 140, 100), width=2)
-    for dx, dy, c in [(-0.2,-0.15,(220,120,120)), (0.2,-0.1,(120,160,220)), (0,0.2,(120,200,140))]:
-        r = s * 0.1
-        draw.ellipse([cx+dx*s-r, cy+dy*s-r, cx+dx*s+r, cy+dy*s+r], fill=c)
-
-def draw_regret_icon(draw, cx, cy, s):
-    draw.ellipse([cx-s*0.5, cy-s*0.5, cx+s*0.5, cy+s*0.5], outline=(170, 150, 140), width=2)
-    for dx in [-0.2, 0, 0.2]:
-        r = s * 0.06
-        draw.ellipse([cx+dx*s-r, cy-r, cx+dx*s+r, cy+r], fill=(170, 150, 140))
-
-def draw_chef_icon(draw, cx, cy, s):
-    draw.rectangle([cx-s*0.4, cy-s*0.3, cx+s*0.4, cy+s*0.3], outline=(160, 140, 120), width=2)
-    draw.line([(cx, cy-s*0.3), (cx, cy+s*0.3)], fill=(160, 140, 120), width=1)
-
-def draw_society_icon(draw, cx, cy, s):
-    for dx, h in [(-0.3, 0.5), (0, 0.7), (0.3, 0.4)]:
-        x = cx + dx * s
-        draw.rectangle([x-s*0.12, cy-h*s, x+s*0.12, cy], outline=(150, 155, 170), width=2)
-
-def draw_advice_icon(draw, cx, cy, s):
-    draw.rounded_rectangle([cx-s*0.5, cy-s*0.4, cx+s*0.5, cy+s*0.3], radius=s*0.12, outline=(150, 160, 180), width=2)
-    draw.polygon([(cx-s*0.1, cy+s*0.3), (cx-s*0.2, cy+s*0.6), (cx+s*0.1, cy+s*0.2)], fill=(150, 160, 180))
-
-def draw_dance_icon(draw, cx, cy, s):
-    pts = []
-    for i in range(20):
-        t = i / 19 * math.pi * 1.5
-        x = cx + math.cos(t) * s * 0.5 * (1 - t/(math.pi*1.5)*0.6)
-        y = cy + math.sin(t*0.8) * s * 0.5
-        pts.append((x, y))
-    for i in range(len(pts)-1):
-        draw.line([pts[i], pts[i+1]], fill=(190, 150, 160), width=2)
-
-def draw_balance_icon(draw, cx, cy, s):
-    draw.line([(cx-s*0.5, cy+s*0.3), (cx+s*0.5, cy+s*0.3)], fill=(150, 150, 160), width=2)
-    draw.line([(cx, cy-s*0.2), (cx, cy+s*0.3)], fill=(150, 150, 160), width=1)
-    for dx in [-0.4, 0.4]:
-        x = cx + dx * s
-        draw.arc([x-s*0.15, cy+s*0.1, x+s*0.15, cy+s*0.4], 0, 180, fill=(150, 150, 160), width=1)
-
-ICON_FUNCS = [
-    draw_success_icon, draw_standard_icon, draw_choice_icon,
-    draw_regret_icon, draw_chef_icon, draw_society_icon,
-    draw_advice_icon, draw_dance_icon, draw_balance_icon,
-]
 
 # ============================================================
 # 渲染引擎
@@ -747,14 +682,6 @@ def generate_image(meta, topics, output_path="output.png", highlights=None, imag
     used_highlights = set()
 
     # --- 计算内容高度 ---
-    content_start_y = TOP_PADDING + 80  # approx header height
-    if meta.get("title"):
-        content_start_y += TITLE_FONT_SIZE + 50
-    if meta.get("unit"):
-        content_start_y += SUB_FONT_SIZE + 30
-    if meta.get("date"):
-        content_start_y += SUB_FONT_SIZE + 30
-
     # More precise header calc
     _header_h = 0
     _y_tmp = TOP_PADDING
@@ -832,21 +759,9 @@ def generate_image(meta, topics, output_path="output.png", highlights=None, imag
     t_icon = theme["icon"]
     t_accent = theme["accent"]
     def _icon_color(base):
-        return tuple(max(0, min(255, c + random.Random(hash(str(theme['seed']))).randint(-20, 20))) for c in base)
+        return tuple(max(0, min(255, c + random.Random(theme['seed']).randint(-20, 20))) for c in base)
 
-    themed_icons = [
-        # 0: success/star
-        lambda d, cx, cy, s: [
-            d.polygon([
-                (cx+math.cos(math.radians(a))*s*0.7, cy+math.sin(math.radians(a))*s*0.7-r2),
-                (cx+math.cos(math.radians(a))*s*0.7+r2, cy+math.sin(math.radians(a))*s*0.7),
-                (cx+math.cos(math.radians(a))*s*0.7, cy+math.sin(math.radians(a))*s*0.7+r2),
-                (cx+math.cos(math.radians(a))*s*0.7-r2, cy+math.sin(math.radians(a))*s*0.7),
-            ], fill=t_icon) for a in [0,72,144,216,288] for r2 in [s*0.18]
-        ][0] if False else None,
-    ]
-
-    # Simpler: generate icon functions inline
+    # 生成图标函数（内联，使用主题色）
     # Scale factors normalized so all icons have roughly the same visual footprint
     def _mk_icon(idx):
         c1 = _icon_color(t_icon)
@@ -961,8 +876,6 @@ def generate_image(meta, topics, output_path="output.png", highlights=None, imag
             clean_content = _re.sub(r'\[img:(\d+)\]', _strip_imgs, content).strip()
             # 清除残留的裸 [N] 或 [[ 或 ]]
             clean_content = _re.sub(r'\[\d*\]', '', clean_content)
-            if img_markers:
-                print(f"  After strip: content=[{clean_content[:100]}], markers={img_markers}")
 
             draw.text((PADDING_X, y), name, fill=theme["name"], font=name_font)
             _, nh = measure(draw, name, name_font)

@@ -129,7 +129,7 @@ def make_opener(title, topics):
     """从话题标题提取高频主题词，生成自然开场白"""
     import random, re
     from collections import Counter
-    r = random.Random(hash(title) + len(topics))
+    r = random.Random(title + str(len(topics)))
     title_short = title[:20] if title else ""
 
     # 从所有话题标题中提取 2-3 字词频
@@ -358,7 +358,7 @@ def generate_feedback(meta, topics, output_path, input_path=""):
     top = [w for w, _ in wc.most_common(3) if len(w) >= 2][:2]
     theme = '、'.join(top) if top else title[:12]
     greets = ["妈妈好～本周我们讨论的是" + title + "，我们一起探讨" + theme + "。"]
-    _gr = _rnd2.Random(hash(title))
+    _gr = _rnd2.Random(title)
 
     student_data = defaultdict(list)
     for topic_title, speeches in topics:

@@ -1300,9 +1300,15 @@ def import_excel():
     tmp.close()
     stats = {"student_ext": 0, "purchases_new": 0, "purchases_updated": 0, "attendance": 0, "costs": 0, "roster": 0}
     try:
-        from db import get_db
+        from db import get_db, _execute
         wb = openpyxl.load_workbook(tmp.name, data_only=True)
         stmts = []  # batch SQL statements for pipeline
+
+        def _flush():
+            db = get_db()
+            for s in stmts:
+                _execute(db, s)
+            stmts.clear()
 
         def esc(v):
             if v is None: return 'NULL'
@@ -1314,10 +1320,10 @@ def import_excel():
             ws = wb["学生基础信息"]
             for row in ws.iter_rows(min_row=2, values_only=True):
                 if not row[0]: continue
-                stmts.append(f"INSERT OR REPLACE INTO student_ext VALUES ({esc(str(row[0]))},{esc(str(row[2] or ''))},{esc(str(row[1] or ''))},{esc(str(row[3] or ''))},{esc(str(row[4] or ''))},{esc(str(row[5] or ''))},{int(row[6] or 0)},{int(row[7] or 0)},{int(row[8] or 0)},{esc(str(row[9] or ''))})")
+                stmts.append(f"REPLACE INTO student_ext VALUES ({esc(str(row[0]))},{esc(str(row[2] or ''))},{esc(str(row[1] or ''))},{esc(str(row[3] or ''))},{esc(str(row[4] or ''))},{esc(str(row[5] or ''))},{int(row[6] or 0)},{int(row[7] or 0)},{int(row[8] or 0)},{esc(str(row[9] or ''))})")
                 stats["student_ext"] += 1
                 if len(stmts) >= 100:
-                    get_db()._req({"requests": [{"type":"execute","stmt":{"sql":s}} for s in stmts] + [{"type":"close"}]})
+                    _flush()
                     stmts = []
         # 收费明细
         if "收费明细" in wb.sheetnames:
@@ -1339,7 +1345,7 @@ def import_excel():
                     stmts.append(f"INSERT INTO purchases (student_name,student_code,charge_code,segment,course_type,method,discount_type,lesson_count,amount,refund_amount,actual_pay_date,order_id,xiaohongshu_received,notes) SELECT {vals} FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM purchases WHERE student_name={esc(str(row[0]))} AND actual_pay_date={esc(str(row[11] or '')[:10])} AND lesson_count={int(row[8] or 0)} AND amount={float(amt) if amt else 0})")
                     stats["purchases_new"] += 1
                 if len(stmts) >= 80:
-                    get_db()._req({"requests": [{"type":"execute","stmt":{"sql":s}} for s in stmts] + [{"type":"close"}]})
+                    _flush()
                     stmts = []
         # 销课情况
         if "销课情况" in wb.sheetnames:
@@ -1352,10 +1358,10 @@ def import_excel():
                 for name in rec.replace("，",",").split(","):
                     n = name.strip()
                     if not n: continue
-                    stmts.append(f"INSERT OR IGNORE INTO attendance (class_name,unit_code,lesson_num,lesson_title,lesson_date,student_name,status,note,recorded_at) VALUES ({esc(cls_name)},'2605',0,{esc(str(row[4] or ''))},{esc(date_val)},{esc(n)},'出席','',{esc(date_val)})")
+                    stmts.append(f"INSERT IGNORE INTO attendance (class_name,unit_code,lesson_num,lesson_title,lesson_date,student_name,status,note,recorded_at) VALUES ({esc(cls_name)},'2605',0,{esc(str(row[4] or ''))},{esc(date_val)},{esc(n)},'出席','',{esc(date_val)})")
                     stats["attendance"] += 1
                     if len(stmts) >= 100:
-                        get_db()._req({"requests": [{"type":"execute","stmt":{"sql":s}} for s in stmts] + [{"type":"close"}]})
+                        _flush()
                         stmts = []
         # 成本
         if "成本" in wb.sheetnames:
@@ -1366,7 +1372,7 @@ def import_excel():
                 stmts.append(f"INSERT INTO costs (reason,cycle,cost_type,channel,cost_date,amount,notes) VALUES ({esc(str(row[0] or ''))},{esc(str(row[1] or ''))},{esc(str(row[2] or ''))},{esc(str(row[3] or ''))},{esc(str(row[4] or '')[:10])},{float(amt) if amt else 0},{esc(str(row[7] or ''))})")
                 stats["costs"] += 1
                 if len(stmts) >= 100:
-                    get_db()._req({"requests": [{"type":"execute","stmt":{"sql":s}} for s in stmts] + [{"type":"close"}]})
+                    _flush()
                     stmts = []
         # 排课表 → roster (batch at end)
         class_names_set = {}
@@ -1383,14 +1389,14 @@ def import_excel():
                 existing = db.roster_get(cls_name)
                 merged = list(set(existing + list(names)))
                 for n in merged:
-                    stmts.append(f"INSERT OR IGNORE INTO class_roster VALUES ({esc(cls_name)},{esc(n)})")
+                    stmts.append(f"INSERT IGNORE INTO class_roster VALUES ({esc(cls_name)},{esc(n)})")
                 stats["roster"] += len(merged)
                 if len(stmts) >= 100:
-                    get_db()._req({"requests": [{"type":"execute","stmt":{"sql":s}} for s in stmts] + [{"type":"close"}]})
+                    _flush()
                     stmts = []
         # Flush remaining
         if stmts:
-            get_db()._req({"requests": [{"type":"execute","stmt":{"sql":s}} for s in stmts] + [{"type":"close"}]})
+            _flush()
         os.unlink(tmp.name)
         return jsonify({"status": "ok", "stats": stats})
     except Exception as e:
@@ -1848,7 +1854,7 @@ def revenue_splits_generate():
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
             [r['cycle'], r['content_label'], rev, trial, int(r['formal_count']), ref, pf, trial, recruitment, 1.0, recruit_xin, recruit_bis, conversion, conversion_xin, conversion_bis, retention, retention_xin, retention_bis,
              l50, xin_lesson, bis_lesson, t20,
-             xc, xs, sc, ss, bc, bs, retention, neukol_val, other_val, notes_val, nb])
+             xc, xs, sc, ss, bc, bs, s20, neukol_val, other_val, notes_val, nb])
     return jsonify({"status":"ok"})
 
 @app.route("/api/revenue-splits/lock", methods=["POST"])
@@ -1869,7 +1875,7 @@ def revenue_splits_list():
 def rebuild_net_balance(rid):
     """重算单行结余: 收入 - 课时50% - 教研(三师) - 生源20% - Neu - 其他"""
     from db import get_db, _execute
-    r = _execute(get_db(), "SELECT revenue, lesson_50pct, xinxin_share, sitong_share, biscuit_share, source_20pct, neukol_fee, other_cost, platform_fee FROM revenue_splits WHERE id=%s", [rid]).fetchone()
+    r = _execute(get_db(), "SELECT revenue, lesson_50pct, xinxin_share, sitong_share, biscuit_share, source_20pct, neukol_fee, other_cost, platform_fee, recruitment, conversion, retention FROM revenue_splits WHERE id=%s", [rid]).fetchone()
     if not r: return
     nb = round(float(r['revenue']) - float(r['lesson_50pct']) - float(r['xinxin_share']) - float(r['sitong_share']) - float(r['biscuit_share']) - float(r['recruitment'] or 0) - float(r['conversion'] or 0) - float(r['retention'] or 0) - float(r['neukol_fee'] or 0) - float(r['other_cost'] or 0) - float(r['platform_fee'] or 0), 2)
     _execute(get_db(), "UPDATE revenue_splits SET net_balance=%s WHERE id=%s", [nb, rid])
@@ -1882,6 +1888,8 @@ def revenue_splits_save():
     if data.get("coef_update"):
         teacher = data.get("teacher")
         val = float(data.get("value", 0))
+        if teacher not in ("xinxin", "sitong", "biscuit", "recruit_xin"):
+            return jsonify({"status": "error", "message": "无效的教师参数"}), 400
         if teacher == 'recruit_xin':
             # 招生欣比例: recruit_xin_coef
             _execute(get_db(), "UPDATE revenue_splits SET recruit_xin_coef=%s WHERE id=%s", [val, rid])
@@ -1905,6 +1913,8 @@ def revenue_splits_save():
             rebuild_net_balance(rid)
     elif data.get("num_update"):
         field = data.get("field")
+        if field not in ("notes", "neukol", "other"):
+            return jsonify({"status": "error", "message": "无效的字段参数"}), 400
         if field == "notes":
             val = data.get("value", "")
             _execute(get_db(), f"UPDATE revenue_splits SET notes=%s WHERE id=%s", [val, rid])
@@ -2027,7 +2037,9 @@ def class_breakdown():
 def img_proxy():
     import subprocess
     url = request.args.get("url","")
-    if not url: return "", 404
+    # 只允许 http/https，避免 curl 被用来访问 file:// 等本地协议
+    if not url or not url.lower().startswith(("http://", "https://")):
+        return "", 404
     try:
         r = subprocess.run(["curl", "-s", "-L", url, "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36", "-H", "Referer: https://movie.douban.com", "-H", "Accept: image/*"], capture_output=True, timeout=10)
         ct = "image/jpeg"

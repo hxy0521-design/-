@@ -196,6 +196,14 @@ def generate_feedback_ai(meta, topics, cls_name, input_path="", api_key="", styl
     default_gender, genders = parse_gender(input_path, profiles, cls_name) if input_path else ("女", {})
     save_gender_to_profiles(profiles, cls_name, genders, default_gender, all_names)
 
+    # 记录本节课到画像（供下节课历史上下文）。AI 路径也要写，否则跨课记忆只在关键词路径累积
+    try:
+        from generate_feedback import record_lesson
+        for name, speeches in student_data.items():
+            record_lesson(profiles, cls_name, name, date, title, len(speeches), len(set(t for t, _ in speeches)), [], "")
+    except Exception:
+        pass
+
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     # 从 MeetMemo 转录构建课堂流程描述
@@ -240,31 +248,39 @@ def generate_feedback_ai(meta, topics, cls_name, input_path="", api_key="", styl
                         history_text = f"上节课《{prev.get('title','')}》（{prev.get('date','')}），发言{prev.get('speech_count',0)}次，特点：{'、'.join(t.get('trait','') for t in prev.get('traits',[]))}"
                 gender_info = "男" if genders.get(name, default_gender) == "男" else "女"
                 prompt = build_student_prompt(title, name, speeches, history_text, gender_info)
-                tasks[executor.submit(call_deepseek, system_prompt, prompt, api_key)] = name
+                tasks[executor.submit(call_deepseek, system_prompt, prompt, api_key)] = (name, prompt)
 
             results = {}
             for future in as_completed(tasks):
-                name = tasks[future]
+                name, prompt = tasks[future]
                 try:
                     result = future.result()
-                    if result:
-                        # 强制代词替换：不管模型写成什么，按性别统一替换
-                        is_male = genders.get(name, default_gender) == "男"
-                        wrong, correct = ("她", "他") if is_male else ("他", "她")
-                        result = result.replace(wrong, correct)
-                        # 去掉"延伸："等标签
-                        import re as _re
-                        result = _re.sub(r'^\s*(延伸|延伸建议|延伸话题)[：:]\s*', '', result, flags=_re.MULTILINE)
-                        # 后处理：挺/蛮 → 很（兜底，AI 漏了也能拦住）
-                        result = result.replace('挺', '很').replace('蛮', '很')
-                        results[name] = result.strip()
-                        print(f"  [{style}] AI 生成 {name} 的反馈")
-                    else:
+                    if not result:
                         raise Exception("empty response")
                 except Exception as e:
-                    print(f"  [{style}] API 调用失败 ({name}): {e}")
-                    executor.shutdown(wait=False, cancel_futures=True)
-                    return False
+                    # 单个学生失败先重试一次，避免临时抖动拖垮全班
+                    try:
+                        result = call_deepseek(system_prompt, prompt, api_key)
+                        if not result:
+                            raise Exception("empty response")
+                    except Exception as e2:
+                        print(f"  [{style}] API 调用失败 ({name}): {e2}")
+                        continue
+                # 强制代词替换：不管模型写成什么，按性别统一替换
+                is_male = genders.get(name, default_gender) == "男"
+                wrong, correct = ("她", "他") if is_male else ("他", "她")
+                result = result.replace(wrong, correct)
+                # 去掉"延伸："等标签
+                import re as _re
+                result = _re.sub(r'^\s*(延伸|延伸建议|延伸话题)[：:]\s*', '', result, flags=_re.MULTILINE)
+                # 后处理：挺/蛮 → 很（兜底，AI 漏了也能拦住）
+                result = result.replace('挺', '很').replace('蛮', '很')
+                results[name] = result.strip()
+                print(f"  [{style}] AI 生成 {name} 的反馈")
+
+            if not results:
+                print(f"  [{style}] 所有学生反馈均生成失败，跳过")
+                continue
 
         # 写到文件
         style_suffix = {"xinxin": "", "biscuit": "_饼干版", "fusion": "_融合版"}
