@@ -5,7 +5,7 @@
 import sys
 sys.dont_write_bytecode = True
 from PIL import Image, ImageDraw, ImageFont
-import os, datetime, random
+import os, datetime, random, urllib.request, urllib.parse
 
 W, P = 420, 24
 NOTCH_R = 16; NOTCH_STEP = 34; DIV_R = 20
