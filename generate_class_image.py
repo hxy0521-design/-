@@ -475,7 +475,7 @@ def auto_select_highlights(topics, per_student=None, title=""):
                     prompt += f"{i}. {t}\n"
                 prompt += f"\n请返回选中的句子序号，每行一个数字，共 {n_hl} 个。"
                 resp = client.chat.completions.create(
-                    model="DeepSeek-V4-Flash-Vision-Exp",
+                    model="deepseek-v4-flash-vision-exp",
                     messages=[{"role":"user","content": prompt}],
                     temperature=0.3, max_tokens=100, stream=False)
                 text = resp.choices[0].message.content

@@ -159,7 +159,7 @@ def call_deepseek(system_prompt, user_prompt, api_key):
     """调用 LLM API（默认 DeepSeek，可用 ZG_LLM_* 环境变量切换到其他 OpenAI 兼容服务）"""
     from openai import OpenAI
     base_url = os.environ.get("ZG_LLM_BASE_URL", "https://api.deepseek.com")
-    model = os.environ.get("ZG_LLM_MODEL", "DeepSeek-V4-Flash-Vision-Exp")
+    model = os.environ.get("ZG_LLM_MODEL", "deepseek-v4-flash-vision-exp")
     client = OpenAI(api_key=api_key, base_url=base_url)
     response = client.chat.completions.create(
         model=model,
