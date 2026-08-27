@@ -507,9 +507,9 @@ def score_sentences():
                     prompt += f"{i}. {t}\n"
                 prompt += f"\n请按格式返回每句的分数：\n序号:分数"
                 resp = client.chat.completions.create(
-                    model="deepseek-chat",
+                    model="deepseek-v4-flash",
                     messages=[{"role":"user","content": prompt}],
-                    temperature=0.3, max_tokens=300, stream=False)
+                    temperature=0.3, max_tokens=2000, stream=False)
                 text = (resp.choices[0].message.content or "").strip()
                 if not text:
                     raise Exception("API returned empty response")
@@ -990,9 +990,9 @@ def douban_recommendation():
         from openai import OpenAI
         client = OpenAI(api_key=os.environ.get("DEEPSEEK_API_KEY",""), base_url="https://api.deepseek.com")
         resp = client.chat.completions.create(
-            model="deepseek-chat",
+            model="deepseek-v4-flash",
             messages=[{"role":"user","content":f"请为{kind}《{title}》写一段推荐语，50字以内，适合推荐给中小学生。只输出推荐语，不要其他内容。"}],
-            max_tokens=100, temperature=0.7)
+            max_tokens=1000, temperature=0.7)
         rec = resp.choices[0].message.content.strip()
         return jsonify({"recommendation": rec})
     except Exception as e:
