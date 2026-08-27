@@ -159,7 +159,7 @@ def call_deepseek(system_prompt, user_prompt, api_key):
     """调用 LLM API（默认 DeepSeek，可用 ZG_LLM_* 环境变量切换到其他 OpenAI 兼容服务）"""
     from openai import OpenAI
     base_url = os.environ.get("ZG_LLM_BASE_URL", "https://api.deepseek.com")
-    model = os.environ.get("ZG_LLM_MODEL", "deepseek-v4-flash-vision-exp")
+    model = os.environ.get("ZG_LLM_MODEL", "deepseek-chat")
     client = OpenAI(api_key=api_key, base_url=base_url)
     response = client.chat.completions.create(
         model=model,
@@ -242,7 +242,7 @@ def generate_feedback_ai(meta, topics, cls_name, input_path="", api_key="", styl
 
         # Phase 2: 并行生成每个学生的个人段落
         tasks = {}
-        with ThreadPoolExecutor(max_workers=len(sorted_names)) as executor:
+        with ThreadPoolExecutor(max_workers=2) as executor:
             for name in sorted_names:
                 speeches = student_data[name]
                 history_text = ""
