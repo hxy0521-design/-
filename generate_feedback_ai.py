@@ -2,7 +2,7 @@
 AI 课后反馈生成器（DeepSeek API）
 支持三种风格：欣欣版、饼干版、融合版
 """
-import sys, os, json, re
+import sys, os, json, re, time
 sys.dont_write_bytecode = True
 from collections import defaultdict
 
@@ -258,19 +258,23 @@ def generate_feedback_ai(meta, topics, cls_name, input_path="", api_key="", styl
             results = {}
             for future in as_completed(tasks):
                 name, prompt = tasks[future]
-                try:
-                    result = future.result()
-                    if not result:
-                        raise Exception("empty response")
-                except Exception as e:
-                    # 单个学生失败先重试一次，避免临时抖动拖垮全班
+                result = None
+                # 最多重试 3 次（含首次），处理 Flash 模型偶发空响应
+                for attempt in range(3):
                     try:
-                        result = call_deepseek(system_prompt, prompt, api_key)
-                        if not result:
-                            raise Exception("empty response")
-                    except Exception as e2:
-                        print(f"  [{style}] API 调用失败 ({name}): {e2}")
-                        continue
+                        if attempt == 0:
+                            result = future.result()
+                        else:
+                            time.sleep(0.8)
+                            result = call_deepseek(system_prompt, prompt, api_key)
+                        if result:
+                            break
+                    except Exception as e:
+                        if attempt == 2:
+                            print(f"  [{style}] API 调用失败 ({name}): {e}")
+                if not result:
+                    print(f"  [{style}] API 调用失败 ({name}): 3次均空响应")
+                    continue
                 # 强制代词替换：不管模型写成什么，按性别统一替换
                 is_male = genders.get(name, default_gender) == "男"
                 wrong, correct = ("她", "他") if is_male else ("他", "她")
