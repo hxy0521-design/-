@@ -299,180 +299,30 @@ def generate_all(input_path, feedback_styles=None, golden_quotes=None, images_di
                 f.write(name + ": " + content + "\n")
     print(f"[5/5] 课堂实录 → {txt_out}")
 
-def _load_logo(bd, h=30):
-    lp = os.path.join(bd, "logo.png")
-    if not os.path.exists(lp):
-        lp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.png")
-    if not os.path.exists(lp):
-        lp = os.path.expanduser("~/Library/Mobile Documents/com~apple~CloudDocs/追光π课后素材生成系统/logo.png")
-    if os.path.exists(lp):
-        try:
-            logo = Image.open(lp).convert("RGBA")
-            r = h / logo.height
-            return logo.resize((int(logo.width*r), h), Image.LANCZOS)
-        except: pass
-    return None
-
-def _load_slogan(bd):
-    sp = os.path.join(bd, "slogan单人.png")
-    if not os.path.exists(sp):
-        sp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "slogan单人.png")
-    if os.path.exists(sp):
-        try:
-            s = Image.open(sp).convert("RGBA")
-            if s.width > 700:
-                s = s.resize((700, int(s.height*700/s.width)), Image.LANCZOS)
-            return s
-        except: pass
-    return None
-
-# ---- 复用单人卡片生成（从 generate_class_image 提取） ----
+# ---- 单人卡片：复用 generate_class_image 的渲染（评分/评语/排版唯一实现） ----
 def _gen_student_cards(meta, topics, output_dir, highlights, base_dir=None):
-    bd = base_dir or os.path.dirname(os.path.abspath(output_dir)) if output_dir else "."
-    from PIL import Image, ImageDraw, ImageFont
-    FONT_PATH = os.path.expanduser("~/Library/Fonts/荆南麦圆体.ttf")
-    if not os.path.exists(FONT_PATH):
-        FONT_PATH = "/System/Library/Fonts/Hiragino Sans GB.ttc"
+    """委派给 generate_class_image.generate_student_cards，额外补上右上 logo 与
+    底部 slogan单人.png 页脚（generate_all 的素材风格）。
 
-    student_data = defaultdict(list)
-    for topic_title, speeches in topics:
-        for name, content in speeches:
-            student_data[name].append((topic_title, content))
+    历史坑：这里曾是一份过时副本，评分精度/评语/排版都没跟上，导致分数被评语压住。
+    版式只保留 generate_class_image 一份实现，本函数只负责找品牌素材。
+    """
+    bd = base_dir or (os.path.dirname(os.path.abspath(output_dir)) if output_dir else ".")
+    from generate_class_image import generate_student_cards
 
-    all_sents = defaultdict(list)
-    from generate_class_image import score_sentence, split_sentences as sp2
-    for name, speeches in student_data.items():
-        for topic, content in speeches:
-            for sent_text, _, _ in sp2(content):
-                all_sents[name].append(score_sentence(sent_text, name, {}))
+    dirs = [bd, os.path.dirname(os.path.abspath(__file__)),
+            os.path.expanduser("~/Library/Mobile Documents/com~apple~CloudDocs/追光π课后素材生成系统")]
 
-    _dummy_img = Image.new("RGB", (100,100))
-    _dummy = ImageDraw.Draw(_dummy_img)
+    def _find(name):
+        for d in dirs:
+            p = os.path.join(d, name)
+            if os.path.exists(p):
+                return p
+        return None
 
-    for student_name, speeches in student_data.items():
-        total_speeches = len(speeches)
-        topic_variety = len(set(t for t,_ in speeches))
-        hl_list = highlights.get(student_name, [])
-        sent_scores = all_sents.get(student_name, [0])
-        avg_quality = sum(sent_scores)/len(sent_scores) if sent_scores else 0
-
-        score = 3.0
-        if total_speeches >= 8: score += 0.8
-        elif total_speeches >= 5: score += 0.5
-        elif total_speeches >= 3: score += 0.3
-        if avg_quality > 4: score += 0.7
-        elif avg_quality > 2: score += 0.4
-        elif avg_quality > 1: score += 0.2
-        if topic_variety >= 7: score += 0.5
-        elif topic_variety >= 4: score += 0.3
-        score = min(5.0, round(score*2)/2)
-
-        # Comment
-        parts = []
-        if total_speeches >= 8: parts.append("发言积极")
-        elif total_speeches >= 5: parts.append("参与度高")
-        else: parts.append("可以再多说说哦")
-        if avg_quality >= 4: parts.append("金句频出")
-        elif avg_quality >= 3: parts.append("表达有亮点")
-        elif avg_quality >= 2: parts.append("有自己的思考")
-        else: parts.append("试试多举自己的例子")
-        if topic_variety >= 7: parts.append("每个话题都在线")
-        elif topic_variety >= 4: parts.append("话题参与面广")
-        else: parts.append("下次可以多聊几个话题")
-
-        raw_sents = []
-        for topic, content in speeches:
-            raw_sents.extend(t for t,_,_ in sp2(content))
-        has_rebuttal = any(s >= 6 for s in sent_scores)
-        has_personal = any("如果是我" in s or "我妈" in s or "我之前" in s or "我成为" in s for s in raw_sents)
-        extras = []
-        if has_rebuttal: extras.append("敢质疑")
-        if has_personal: extras.append("会联系生活")
-        if extras: comment = "、".join(parts[:2]) + "，" + "、".join(extras) + "，超棒！"
-        else: comment = "、".join(parts) + "，继续保持~"
-        if score >= 5: comment += " 🌟"
-
-        # 按原始话题顺序展示，上限5
-        show_items = speeches[:5]
-
-        name_font = ImageFont.truetype(FONT_PATH, 36)
-        topic_font = ImageFont.truetype(FONT_PATH, 20)
-        text_font = ImageFont.truetype(FONT_PATH, 22)
-        score_font = ImageFont.truetype(FONT_PATH, 64)
-        comment_font = ImageFont.truetype(FONT_PATH, 24)
-        note_font = ImageFont.truetype(FONT_PATH, 16)
-
-        card_w = 800
-        logo = _load_logo(bd, h=56)
-        slogan = _load_slogan(bd)
-        # 先估算高度，多给一些余量，最后裁剪
-        max_w = card_w - 100
-        est_h = 300
-        for _, content in show_items:
-            est_h += 26 + len(_wrap2(_dummy, content, text_font, max_w))*28 + 16
-        est_h += 200
-        if slogan: est_h += slogan.height + 10
-
-        img = Image.new("RGB", (card_w, est_h), (253,251,247))
-        draw = ImageDraw.Draw(img)
-
-        y = 30
-        draw.text((40, y), student_name, fill=(180,70,30), font=name_font)
-        y += 50
-
-        for topic, content in show_items:
-            short_topic = topic[:32]+"…" if len(topic) > 32 else topic
-            draw.text((50, y), short_topic, fill=(120,120,130), font=topic_font)
-            y += 26
-            for line_text, _, _ in _wrap2(draw, content, text_font, max_w):
-                draw.text((60, y), line_text, fill=(40,40,40), font=text_font)
-                y += 28
-            y += 16
-
-        y += 10
-        draw.line([(40, y), (card_w-40, y)], fill=(210,205,200), width=1)
-        y += 20
-
-        stxt = f"{score:.1f}" if score != int(score) else f"{int(score)}"
-        draw.text((card_w-120, y-10), stxt, fill=(200,80,30), font=score_font)
-        stars = "★"*int(score) + ("☆" if score != int(score) else "")
-        draw.text((card_w-120, y+55), stars, fill=(240,165,40), font=comment_font)
-        draw.text((40, y+10), comment, fill=(80,80,85), font=comment_font)
-        stats = f"本节课共 {len(topics)} 个小话题 · 参与 {total_speeches} 次发言"
-        draw.text((40, y+48), stats, fill=(160,160,165), font=note_font)
-        nh = note_font.size + 4
-        draw.text((40, y+74), "部分导入/追问话题未单独计入", fill=(180,180,185), font=note_font)
-
-        # y 推进到备注下方
-        y = y + 74 + nh + 12
-
-        # Logo 右上 + Slogan 底部居中
-        if logo:
-            img.paste(logo, (card_w - 24 - logo.width, 8), logo)
-        if slogan:
-            img.paste(slogan, ((card_w - slogan.width)//2, y), slogan)
-            y += slogan.height + 8
-
-        # 裁剪
-        img = img.crop((0, 0, card_w, y + 4))
-
-        out = os.path.join(output_dir, f"单人总结_{student_name}.png")
-        img.save(out, "PNG", optimize=True)
-
-def _wrap2(draw, text, font, max_w):
-    lines, cur = [], ""
-    for ch in text:
-        t = cur+ch
-        w, _ = draw.textbbox((0,0), t, font=font)[2:4]
-        if w > max_w and cur:
-            if ch in "，。、；：？！》」』）】" and cur:
-                lines.append((cur[:-1],0,0)); cur = cur[-1]+ch
-            else:
-                lines.append((cur,0,0)); cur = ch
-        else: cur = t
-    if cur: lines.append((cur,0,0))
-    return lines
-
+    generate_student_cards(meta, topics, output_dir, highlights,
+                           logo_path=_find("logo.png"),
+                           slogan_path=_find("slogan单人.png"))
 
 def scan_input_files():
     """扫描可用 txt，返回 [(path, class, title, mtime), ...]"""

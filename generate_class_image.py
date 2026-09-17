@@ -975,8 +975,122 @@ def generate_image(meta, topics, output_path="output.png", highlights=None, imag
 # ============================================================
 # 单人卡片生成
 # ============================================================
-def generate_student_cards(meta, topics, output_dir, highlights=None):
-    """为每个学生生成独立卡片 PNG"""
+def build_student_comment(name, total_speeches, topic_variety, avg_quality, raw_sents, sent_scores):
+    """分型综合评语：按学生的真实表现组合，避免硬套/千卡一面。
+
+    依据数量(参与度)、avg_quality(思考质量)、topic_variety(广度)、
+    实际句子信号(质疑/联系生活/提问/总结/逻辑链)组装成一句自然评语；
+    具体建议只针对「缺失的点」，已做到的不再硬鼓励(如已举例子就别劝他举例子)。
+    用 md5(name) 做稳定变体因子，使同档位措辞不完全一样(可复现)。
+    """
+    import hashlib
+    rnd = int(hashlib.md5(name.encode()).hexdigest()[:8], 16)
+    pick = lambda arr: arr[rnd % len(arr)]
+
+    # —— 参与度（数量）——
+    if total_speeches >= 8:
+        lead = pick(["本节课发言非常踊跃，几乎每个问题都能接住", "课堂参与度很高，整节课都投入其中", "回应及时，发言密度高"])
+    elif total_speeches >= 5:
+        lead = pick(["发言很积极，多个问题都主动接过", "参与度高，思路跟得比较紧", "回应频繁，融入得很好"])
+    elif total_speeches >= 3:
+        lead = pick(["发言不多，但都切中要点", "发言不多，但每次都在关键处"])
+    else:
+        lead = pick(["本节课发言偏少，略显安静", "发言不多"])
+
+    # —— 闪光特质（基于真实句子信号，先算出来供评分语参考）——
+    has_personal = any(("如果是我" in s or "如果我是" in s or "我自己" in s or "我之前" in s
+                        or "我妈" in s or "我爸" in s or "我小时候" in s) for s in raw_sents)
+    has_rebuttal = any(s >= 6 for s in sent_scores)
+    has_ask = any(("？" in s and ("谁" in s or "怎么" in s or "为什么" in s)) for s in raw_sents)
+    has_summary = any(("其实" in s or "就是" in s or "总之" in s or "核心" in s
+                       or "关键" in s or "最重要" in s or "本质" in s) for s in raw_sents)
+    logic_count = sum(1 for s in raw_sents for k in ["因为", "所以", "如果", "但是"] if k in s)
+
+    traits = []
+    if has_rebuttal:
+        traits.append(pick(["敢于提出不同看法", "会质疑、会反驳", "有独立的判断"]))
+    if has_personal:
+        traits.append(pick(["能联系自己的生活举例", "会把话题拉回现实", "善用身边的例子"]))
+    if has_ask:
+        traits.append(pick(["会主动追问与质疑", "遇到问题会抛出反问"]))
+    if has_summary:
+        traits.append(pick(["善于总结归纳", "能提炼出核心"]))
+    if logic_count >= 2:
+        traits.append(pick(["逻辑链清晰", "推理层层递进"]))
+
+    # —— 思考质量（根据是否有可见思考信号，避免「明明有想法却说没想」）——
+    if avg_quality >= 4:
+        qual = pick(["思考有深度，见解独到", "想法成熟，有自己独立的判断", "言之有物，逻辑清晰"])
+    elif avg_quality >= 3:
+        qual = pick(["有自己的思考，理解到位", "观点自有角度"])
+    elif avg_quality >= 2:
+        qual = pick(["有不少自己的想法，能顺着话题深入"])
+    else:
+        if traits:
+            qual = pick(["回应里透着自己的想法", "观点自有琢磨之处"])
+        else:
+            qual = pick(["思考还可再深入一些", "较多顺着他人发言"])
+
+    # —— 广度 ——
+    if topic_variety >= 7:
+        broad = pick(["每个话题都有参与", "话题涉猎很广"])
+    elif topic_variety >= 4:
+        broad = pick(["参与的话题不少", "多个话题都有谈"])
+    else:
+        broad = pick(["主要集中在一两个话题", "话题面比较集中"])
+
+    # —— 组装主句 ——
+    body = f"{lead}，{qual}"
+    if total_speeches >= 3:
+        body += f"，{broad}"
+    if traits:
+        body += f"。{traits[0]}"
+        if len(traits) >= 2:
+            body += f"，{traits[1]}"
+
+    # —— 具体化建议（只针对真正缺失的点）——
+    tips = []
+    if total_speeches < 5 and topic_variety < 4:
+        tips.append("下次可以尝试多多举手，更多的参与话题")
+    elif total_speeches < 5:
+        tips.append("下次可以多说几句")
+    if not has_personal and avg_quality < 2 and not traits:
+        tips.append("可以试着多结合自己的例子")
+    if not has_rebuttal:
+        tips.append("也可以尝试挑战一下他人的观点")
+    if not has_ask:
+        tips.append("有疑问时可以主动提出")
+
+    if tips:
+        body += f"。{tips[0]}"
+    return body
+
+
+def _load_card_asset(path, target_h=None, max_w=None):
+    """读一张 PNG（可带透明通道）。target_h 等比缩到指定高，max_w 限制最大宽。失败返回 None"""
+    if not path or not os.path.exists(path):
+        return None
+    try:
+        im = Image.open(path).convert("RGBA")
+        if target_h:
+            r = target_h / im.height
+            im = im.resize((max(1, int(im.width * r)), target_h), Image.LANCZOS)
+        elif max_w and im.width > max_w:
+            r = max_w / im.width
+            im = im.resize((max_w, max(1, int(im.height * r))), Image.LANCZOS)
+        return im
+    except Exception as e:
+        print(f"  ⚠️ 素材加载失败 {path}: {e}")
+        return None
+
+
+def generate_student_cards(meta, topics, output_dir, highlights=None,
+                           logo_path=None, slogan_path=None):
+    """为每个学生生成独立卡片 PNG
+
+    logo_path: 右上角 logo（可选，不传则无）
+    slogan_path: 底部页脚 slogan（可选，不传则无）
+    """
     from collections import defaultdict
 
     student_data = defaultdict(list)
@@ -1033,55 +1147,15 @@ def generate_student_cards(meta, topics, output_dir, highlights=None):
         elif topic_variety >= 4:
             score += 0.3
         score = min(5.0, score)
-        score = round(score * 2) / 2
+        score = round(score, 1)  # 精度0.5→0.1，让分数更有区分度
 
-        # 简评（根据实际情况组合）
-        parts = []
-        if total_speeches >= 8:
-            parts.append("发言积极")
-        elif total_speeches >= 5:
-            parts.append("参与度高")
-        else:
-            parts.append("可以再多说说哦")
-
-        if avg_quality >= 4:
-            parts.append("金句频出")
-        elif avg_quality >= 3:
-            parts.append("表达有亮点")
-        elif avg_quality >= 2:
-            parts.append("有自己的思考")
-        else:
-            parts.append("试试多举自己的例子")
-
-        if topic_variety >= 7:
-            parts.append("每个话题都在线")
-        elif topic_variety >= 4:
-            parts.append("话题参与面广")
-        else:
-            parts.append("下次可以多聊几个话题")
-
-        # 检查是否有反驳/修辞问句/个人例子
+        # 简评：分型综合评语（按真实表现组合，不硬套）
         raw_sents = []
         for topic, content in speeches:
             raw_sents.extend(t for t, _, _ in split_sentences(content))
 
-        has_rebuttal = any(s >= 6 for s in sent_scores)
-        has_personal = any("如果是我" in s or "我妈" in s or "我之前" in s or "我成为" in s for s in raw_sents)
-        has_rhetorical = any("？" in s and ("谁" in s or "怎么" in s or "为什么" in s) for s in raw_sents)
-
-        extras = []
-        if has_rebuttal:
-            extras.append("敢质疑")
-        if has_personal:
-            extras.append("会联系生活")
-        if has_rhetorical:
-            extras.append("会提问")
-
-        if extras:
-            comment = "、".join(parts[:2]) + "，" + "、".join(extras) + "，超棒！"
-        else:
-            comment = "、".join(parts) + "，继续保持~"
-
+        comment = build_student_comment(student_name, total_speeches, topic_variety,
+                                        avg_quality, raw_sents, sent_scores)
         if score >= 5:
             comment += " 🌟"
 
@@ -1091,21 +1165,30 @@ def generate_student_cards(meta, topics, output_dir, highlights=None):
 
         # 预计算卡片高度
         card_w = 800
+        # 可选品牌素材：右上 logo + 底部 slogan 页脚
+        logo_img = _load_card_asset(logo_path, target_h=56)
+        slogan_img = _load_card_asset(slogan_path, max_w=card_w - 80)
+        slogan_pad = slogan_img.height + 10 if slogan_img else 0
         y = 30 + 50  # name
         for topic, content in show_items:
             y += 26
             max_w = card_w - 100
             lines = wrap_lines(_dummy, content, text_font, max_w)
             y += len(lines) * 28 + 16
-        # 预计算评价行高
-        comment_max_w = card_w - 180
-        c_lines = wrap_lines(_dummy, comment, comment_font, comment_max_w)
-        comment_h = max(26, len(c_lines) * 26)
-        y += 10 + 1 + 20 + comment_h + 26 + 22  # separator + score + comment + stats + note
-        card_h = y + 40
+        # 页脚：简评(左) + 分数(右) + 标题行 + 统计 + 备注
+        comment_max_w = card_w - 235          # 右侧预留分数区
+        comment_f = ImageFont.truetype(font_path, 20)
+        c_lines = wrap_lines(_dummy, comment, comment_f, comment_max_w)
+        comment_h = max(24, len(c_lines) * 24)
+        footer_h = 2 + comment_h + 16 + 30 + 28 + 44 + slogan_pad   # 简评 + 标题 + 统计 + 备注 + 页脚 + 下边距
+        y += 10 + 1 + 20                       # 分隔线
+        card_h = y + footer_h
 
         img = Image.new("RGB", (card_w, card_h), (253, 251, 247))
         draw = ImageDraw.Draw(img)
+
+        if logo_img:
+            img.paste(logo_img, (card_w - 24 - logo_img.width, 8), logo_img)
 
         y = 30
         draw.text((40, y), student_name, fill=(180, 70, 30), font=name_font)
@@ -1126,27 +1209,37 @@ def generate_student_cards(meta, topics, output_dir, highlights=None):
         draw.line([(40, y), (card_w - 40, y)], fill=(210, 205, 200), width=1)
         y += 20
 
-        # 分数 + 星星（右对齐）
+        # 分数 + 星星（右上，右对齐；与左侧简评分列，互不重叠）
         score_text = f"{score:.1f}" if score != int(score) else f"{int(score)}"
-        draw.text((card_w - 120, y - 10), score_text, fill=(200, 80, 30), font=score_font)
+        draw.text((card_w - 45, y + 2), score_text, fill=(200, 80, 30), font=score_font, anchor="ra")
         stars = "★" * int(score) + ("☆" if score != int(score) else "")
-        draw.text((card_w - 120, y + 55), stars, fill=(240, 165, 40), font=comment_font)
+        draw.text((card_w - 45, y + 62), stars, fill=(240, 165, 40), font=comment_font, anchor="ra")
 
-        # 简评（左侧，限制宽度避免和分数重叠，预计算已留空间）
-        comment_max_w = card_w - 180
-        comment_lines = wrap_lines(_dummy, comment, comment_font, comment_max_w)
-        comment_f = comment_font if len(comment_lines) <= 1 else ImageFont.truetype(font_path, 20)
-        if len(comment_lines) > 1:
-            comment_lines = wrap_lines(_dummy, comment, comment_f, comment_max_w)
+        # 简评（左侧，宽度避开右侧分数区）
+        comment_f = ImageFont.truetype(font_path, 20)
+        comment_lines = wrap_lines(_dummy, comment, comment_f, comment_max_w)
         ch = 0
-        for cl in comment_lines:
-            draw.text((40, y + 10 + ch), cl, fill=(80, 80, 85), font=comment_f)
+        for cl, _, _ in comment_lines:
+            draw.text((40, y + 2 + ch), cl, fill=(80, 80, 85), font=comment_f)
             ch += 24
+
+        # 单元/课节/日期行（加在「发言统计」上方）
+        meta_parts = [p for p in (meta.get("title", ""), meta.get("unit", ""), meta.get("date", "")) if p]
+        header = "【" + " ".join(meta_parts) + "】" if meta_parts else ""
+        header_y = y + 2 + comment_h + 16
+        if header:
+            draw.text((40, header_y), header, fill=(90, 90, 95), font=topic_font)
+
+        # 统计 + 备注
         stats = f"本节课共 {len(topics)} 个话题 · 参与 {total_speeches} 次发言"
         note = "部分导入/追问话题未单独填入"
-        draw.text((40, y + 48), stats, fill=(160, 160, 165), font=topic_font)
+        draw.text((40, header_y + 30), stats, fill=(160, 160, 165), font=topic_font)
         note_font = ImageFont.truetype(font_path, 16)
-        draw.text((40, y + 74), note, fill=(180, 180, 185), font=note_font)
+        draw.text((40, header_y + 58), note, fill=(180, 180, 185), font=note_font)
+
+        # 底部 slogan 页脚（居中；slogan_pad 已计入卡高）
+        if slogan_img:
+            img.paste(slogan_img, ((card_w - slogan_img.width) // 2, header_y + 80), slogan_img)
 
         out_path = os.path.join(output_dir, f"单人总结_{student_name}.png")
         img.save(out_path, "PNG", optimize=True)
