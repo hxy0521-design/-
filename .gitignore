@@ -4,3 +4,6 @@ __pycache__/
 data.db*
 test_data.db*
 .env
+.claude/feishu_bridge.py
+.claude/feishu_bridge.sh
+.claude/feishu_poll.py

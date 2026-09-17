@@ -6,7 +6,20 @@
       "Write",
       "Edit",
       "WebSearch",
-      "WebFetch"
+      "WebFetch",
+      "Bash(python3 *)",
+      "Bash(curl *)",
+      "Bash(kill *)",
+      "Bash(lsof *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(sed *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(ls *)",
+      "Bash(cd *)",
+      "Bash(echo *)",
+      "Bash(cp *)"
     ],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [
