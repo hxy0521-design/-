@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.zhuguangpi.worktime</string>
+
+    <!-- 本地网页服务，给回看页和桌面摆件用。只监听 127.0.0.1 -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Library/Frameworks/Python.framework/Versions/3.14/bin/python3</string>
+        <string>/Users/meowmeow/Claude code-课后素材/worktime/worktime_server.py</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/meowmeow/Claude code-课后素材/worktime</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <!-- 挂了自动拉起；ThrottleInterval 防止疯狂重启 -->
+    <key>KeepAlive</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/worktime-server.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/worktime-server.err</string>
+</dict>
+</plist>

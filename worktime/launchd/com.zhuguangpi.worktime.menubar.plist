@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.zhuguangpi.worktime.menubar</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/meowmeow/Claude code-课后素材/worktime/menubar/WorkTime.app/Contents/MacOS/WorkTime</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <!-- 刻意不设 KeepAlive：你从菜单里点「退出」就该真退出，不该被拉起来 -->
+    <key>KeepAlive</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/worktime-menubar.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/worktime-menubar.err</string>
+</dict>
+</plist>

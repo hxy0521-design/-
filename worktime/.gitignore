@@ -1,0 +1,8 @@
+# 工时数据——是你的私人流水，不要进版本库
+data/
+
+# 编译产物
+__pycache__/
+*.pyc
+menubar/.build/
+menubar/WorkTime.app/
