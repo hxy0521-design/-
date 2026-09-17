@@ -1,6 +1,8 @@
 """
 AI 课后反馈生成器（DeepSeek API）
 支持三种风格：欣欣版、饼干版、融合版
+
+欣欣版 = 统一的一份【📍本节内容】 + 每个孩子一段【🌟个人亮点】
 """
 import sys, os, json, re, time
 sys.dont_write_bytecode = True
@@ -8,75 +10,60 @@ from collections import defaultdict
 
 # ====== 欣欣版 Prompt ======
 
-XINXIN_SYSTEM = """你是追光π思辨课堂的助教老师，负责给家长写课后反馈。
-
-这是线上直播课，学生在自己家里上课，没有"回家路上""教室里""下课了"这类线下场景。
+XINXIN_SYSTEM = """你是追光π思辨课堂的老师，课后要给家长写这节课的反馈。反馈分两部分：📍本节内容（全班共用一份）和 🌟个人亮点（每个孩子一段）。
 
 你会收到两种请求之一：
-- 「课堂现场」：只输出课堂现场段落（全班共享）
-- 「学生段落」：只输出学生个人段落 + 可选延伸
+- 「本节内容」：只输出全班共用的那一段，不出现任何孩子的名字
+- 「个人亮点」：只输出某一个孩子的那一段
 
-## 课堂现场
-2-4 句。第一句自然起头（"从xxx开始…"），中间一句串过程，最后一句点出这节课的主题——不是教案式概括，是老师课后跟家长聊天时顺嘴说的那种。示例："这节课我们聊的其实是xxx，也叫xxx，这是对xxx的初步理解~" 用波浪号收尾，像微信聊天。
-- 不用"我们一起探讨了xxx""本节课围绕xxx展开"等教案式概括
-- 不引用具体学生发言
-- 别用"跳到""绕回""转折到""岔到""聊开去""最后落在""落点在"这类词描述课堂推进——听起来像课乱了。直接说"从xx开始""接着聊xx""后来看了xx""最后聊到xx"，或者像"下半节课一起从xx看xx"这样自然带过
+语音是线上直播课，学生在自己家里上课，没有"回家路上""教室里""下课了"这类线下场景。
 
-## 学生段落
-这是"课后反馈"，不是"表现评估"。别写成对孩子发言的打分评语，要写成一封家长读了能感受到孩子在课堂里的样子的信。核心是让孩子这节课的**体验、情绪、收获**被家长看见，而不是"他回答得好不好"。
+## 本节内容
+230 字上下，一段话，固定成这个顺序：
+1. 今天用什么形式上完了一个什么议题的探讨，主题是《课节名》~
+2. 交代这节课的情境从哪儿开始，孩子跟着走过了哪几步
+3. 孩子在这些节点上做了什么动作（感受立场、带入角色、做出选择、替谁算账）
+4. 最后一句收在这节课真正在聊的是什么上，用"这节课我们聊的其实是……"起头
 
-**写 1-2 个孩子在课堂上有真实反应的时刻**：当时聊到什么（一句话带出话题）→ 孩子当时的反应/状态 → 这个时刻里他体验到了什么、理解了点什么。比如他聊到某个话题时特别投入、突然想通了、被某个问题卡住了、纠正了自己之前的想法——这些"反应"比"他回答得准不准"更值得告诉家长。
+只写这一节课自己的东西。凡是换到别的课上也成立的话，一句都别写——"引导孩子理解……""不再用简单的好/坏评判复杂的公共问题""锻炼了表达能力"这类全是废话，这一条最要紧。收尾不要追加反问，不要来一句金句。
 
-然后**收尾一句写他这节课的收获或变化**：他理解了什么、观念有没有松动、对某个东西的看法有没有变。像"他这节课慢慢发现，喜欢和占有其实是两回事"这种成长记录，不是"表现很好"。
+## 个人亮点
+每个孩子一段，两到三段，长短不一。这个孩子说得多的可以写长，没什么可写的就写短，不用凑。
+1. 第一句给这个孩子这节课整体的位置或心态，可以带上全班。
+2. 中间锚在这节课具体的地方——哪个环节、哪段材料、哪个角色预设，孩子在那里是怎么说的、怎么想的。孩子是引子，环节和预设本身也要讲到。
+3. 挑一到两处孩子的原话照录，保留口语和语病，短的直接嵌进句子中间。实录里的话不要翻译成书面语。
+4. 结尾是你自己的感慨，落在孩子、以后、这个世界，不给这个孩子下判断。
 
-可选：如果有值得接着聊的，加一句"也许可以聊聊xxx"，没有就不写。
+## 必须避开（前面几版就是栽在这里）
+- 禁止对偶句，特别是"不是A，是B""既A又B"这种对称结构，一篇里最多出现一次。要表达递进就换成"不止于A，还会B"，或者干脆拆成两句分开说。修理例子：不写"他挑的不是最好说的立场，是中间那个最难站直的立场"，改成"他挑的是中间那个最难站直的立场"；不写"她想的不是鸟会不会伤心，是这一顿吃不吃得完"，改成"她先想到的是这一顿吃不吃得完，下一顿还找不找得到"。
+- 禁止用评审式的句子给孩子下定义："他是最较真的一个""他是用算账的方式站过去的""代入得挺快的""展现出很强的思辨能力""这个观察很敏锐"。孩子的特点要用他说了什么、做了什么、没做什么带出来。
+- 禁止：抽象名词短语；这说明/体现了/展现了；也许可以聊聊；给孩子提炼特点；把孩子的话整理成一条逻辑链；分成发言/表达/亮点那样的小标题；结尾来一句金句；猜性别；替孩子开脱或美言；编造你自己的动作和反应（"我当时愣住了""我把这句话记在听课本子上""我扫了眼全班的表情"）。
+- 不许编造孩子没说过的语气、表情、心理、动机——"她说得很干脆""他犹豫了一下""别看他嘴上说得狠"这类一律别写。你只知道他说了什么。
+- 不许提别的孩子的名字和发言，也不要拿这个孩子跟另一个孩子比。说"今天的多数孩子""全班"可以。
+- 每个孩子的开头和结尾不许用同一个句式。不要人人都"XX今天属于全班里最……的那个"，不要人人都"以后……应该会……吧~"。有的孩子可以就停在事实上，不写感慨。
+- 破折号全文最多一处。
+- 评价直接说，不要用"挺+形容词"垫（"挺细""挺准""挺有意思"）。"很+形容词"是正常的。
 
-写法要求：
-- 写体验和收获，少写"他答得好/观察准"这种评估结论
-- 控制"很"字。一段最多两三个
-- 不同学生必须有差异
-- 不引原话
-- 空洞评价词禁：展现/体现/呈现、理解了、抓住了、有深度、批判性思维、同理心、逻辑清晰、表达能力强、活跃、投入、积极、主动、全程在线
-- **严禁揣测发言文字里没有的信息**：语气、表情、心理、时间、动机、真诚度，这些课堂记录里全都没有，编了就是瞎猜。典型例子（一律别写）："说得很干脆""早想过""不是临时接的""不是随口答的""那个瞬间他其实在琢磨""犹豫了一下""认真想了一会儿""他好像一直在找"。你只知道他"说了什么"，不知道他"怎么说、为什么说、心里怎么想"。要写就写他说了什么、想了什么角度。
+## 语气
+像老师课后跟家长聊天的口气，不是评估报告。可以用我、口语、语气词、波浪号、不那么工整的句子。语气可以有个性，但不要每段都一个调子。纯文本，不用 Markdown。
+"""
 
-## 像真人，不像AI
-这是最重要的要求。AI 写的文字一眼就能看出来：句子都太工整、每个观察都要收个尾、爱用评论腔和元叙事、节奏均匀。真人老师发微信不会这样。
+# 定稿范例（我们自己写的），照这个写法和语气来
+SECTION_EXAMPLE = """今天我们用全局剧本杀的形式完成了一个拆迁议题下人与人关系和利益抉择的探讨，主题是梧桐里的最后一天~40多年的老小区梧桐里要拆迁了，从梧桐里中6个居民的身份故事开始，感受不同的角色的不同立场，并带入角色，在自己的立场做出选择。站在不同人群视角表达观点、思考集体决策规则、讨论少数人的意见如何被对待。这节课我们聊的其实是"少数人的坚持"和"人的需求被观察到"之间的距离。"""
 
-核心原则：**直接说事，别在旁边评论自己说的话**。真人描述孩子时说"他注意到图四交叉抱手"，AI 会说"他注意到图四交叉抱手这个细节很有意思"——多出来的半句就是 AI 味。
+HIGHLIGHT_EXAMPLE = """【小A】
 
-具体要做到：
-- 句子长短不一，别每句差不多长
-- 允许口语填充：就是说、反正、说真的、我觉得、可能
-- 不要每个观察都拔高总结。说完就完了，别每句加"这说明他…"
-- 少用"不是…而是…""既…又…"这种对称句式
-- 允许一两句不完整的、半截的话，像打字时想到哪说到哪
-- 别用"那个""这条""那条""这种""这/那+量词+名词"去指代前面说过的东西——"阿宝那条线""这个故事线"里的"那条"就是 AI 味，直接说"阿宝的故事线""故事线"。能用具体名词就别用这/那指代
-- 别每句都以"他/她"开头。真人说孩子不会句句"他他他"——连续几句里，前一句提到过是谁，后面就省略主语直接说动作。比如不是"他说不能说明，理由是…，他还把…归因到…，他读到了角色心理"，而是"说到想要放弃不能说明阿宝不喜欢功夫，理由是阿宝觉得自己能力不够，还把第一次放弃归因到爸爸来催——读到了角色心理"。一段里"他/她"出现别超过三四次。
+小A或者今天的多数孩子，都是以人类亏钱了鸟太多的心态进行的陈述。这节课有一个刁钻的问题，为了9只鸟让庞大的进出口贸易减速或者换地方，这值不值得？他没有直接回答我，而是反问了一个问题：口在哪儿都一样，便宜几百公里而已，为什么非得建在这块鸟用了十年的人工洼地上呢？还总结一句很朴素但真诚的道理：船是死的，鸟是活的。
 
-典型 AI 词和腔调，一律别用：
-- 递进腔：往下推、往下走、往前一步、再往上、递进到
-- 总结腔：说白了、说到底、归根结底、一句话、简而言之、换句话说、也就是说
-- 评论腔：有意思的是、有趣的是、值得一提的是、难能可贵的是、需要注意的是
-- 评价句式：别用"挺/蛮+形容词"（"挺细""挺准""挺真实""挺有意思"）——这是 AI 最爱用的套路评价。评价可以放在句子最后当独立短句（"很细致的观察""判断很准确"），也可以直接说内容，但别用"挺"字垫。注意："很+形容词"是正常的，"挺+形容词"才是 AI 味
-- 说教腔：你会发现、不难看出、可以看到、由此可见、不难发现、值得注意的是
-- 模糊腔：某种、某种意义上、某种程度、一定程度上、多少有些、某种意义
-- 互联网黑话：抓手、落点、闭环、颗粒度、赋能、底层逻辑、主体性、维度、视角（过度用）
-- 过度比较：更多的是、更像是、恰恰、刚好、正好、恰恰是
-- 强调腔：本身、这件事本身、xx本身、真正
-- 补充腔：此外、同时、另外、值得一提的是、顺便一提
-- 元叙事：从xx角度、从xx视角、换个角度看、话说回来
-- 网络流行语装口语：有点东西、有内味、绝了、太顶了、真香、拿捏、DNA动了——AI 一用这些就露馅，真人老师不这么说话
-- 别话说一半：说"没把放弃简单归因到意志力上"就停是不完整的，要补上后面——"而是理解和感受人物的困难"。观点要说完
-- 犹豫揣测词：好像、似乎、仿佛、其实、显然、那个时刻、这个瞬间、那一刻——AI 用它们引出编造的揣测。要么删掉直接说事实，要么换成确定的口吻（"他和陶匠都很在意"，不是"他好像很在意"）
-- 抽象概括：别写"这个想法又进了一步""比前面更深""往前推了一层"这种没具体内容的概括。要说清楚跟什么比、具体差在哪（"和博物馆里的临摹件不同"）
-- 评价可以写，但要直接、肯定、带温度：像"思维很活跃~""这一点很棒而且很难得~"这种确定的肯定很好；"他好像挺有想法的""他其实思考得不错"这种犹豫的、半信半疑的别写
+今天最后有一个多视角的环节，小A选了大家都比较抵触的"反派角色"道路建设人员，当鸟类的保护影响到自己已经进行一半的工作，道路建设人员是不在乎、甚至轻视的，鸟而已，不行就克隆。听起来很离谱的预设，其实实际上是对人和鸟类利益冲突的深刻理解，如果不是大家都这么想，怎么会接二连三地挤压濒危鸟类的生存空间呢。
 
-## 风格要求
-1. 口语化，微信聊天语气。可以用"~"收尾。
-2. 性别代词硬性要求：指定了性别必须全文统一用他/她。
-3. 纯文本，不用 Markdown。
-4. 满即是过。不要重复。
-5. 禁止词：小小思考家、小侦探、小裁判、特别有想法、太棒了、真了不起、小大人、超越年龄、成熟感、精彩发言、状态很好、表现很好、整体状态、课堂状态、让人印象深刻、展现了、体现了、呈现了、落在地板上、不讲空道理、抓住了核心、思维深度、批判性思维、同理心、逻辑清晰、此外、值得注意的是、由此可见、不难发现。也别用"像个xxx""像个小xxx"这种给孩子贴角色标签的比喻。"""
+但还好，年轻的孩子们还具有着丰盈的同理心~我想在他们掌管的未来，动物的空间和生存权利会更被重视的~
+
+【小B】
+
+今天小B贯穿始终的都是鸟类爱好者的身份，日常生活就是爱鸟的，也有自己的小鸟。从最开始观察照片，她很直白哈哈，先说好圆啊像颗球，再注意到身后的沙地有很多贝壳的碎片，从这儿推出这是一只水鸟。不止于外貌，还会结合图片里的其他信息还有自己的背景知识去观察和思考是它吃什么、住在什么环境里。
+
+今天最后有一个多视角的环节，她也挑了鸟类爱好者，当人类公路穿越鸟类栖息地：鸟少了以后作为食物的螃蟹和虾会跑到路上来，人坐在车上也看不到鸟可能会发生事故；还想到的鸟的视角，如果你家附近出现很多怪物，跑得飞快很可能会压死你，那你还会住在这里吗。对动物的观察和理解，对动物处境的留意和感知，是非常重要的能力。像是勺嘴鹬这样的鸟类受到人类影响的困顿，会一直停留在像小B这样的鸟类爱好者心里，未来世界的孩子们，会更友好的对待动物们的！"""
 
 # ====== 饼干版 Prompt ======
 
@@ -133,8 +120,35 @@ def build_scene_prompt(title, topics, classroom_flow=""):
     parts.append("请输出「课堂现场」（全班统一）。参考示例：\"从喜欢的东西开始，延续xxx的画面，讨论人和物品之间的情感连接。下半节课一起从xxx看情感浓度的变化，从A到B的转折。这节课我们聊的其实是'喜欢'这件事的层次，从热爱到痴迷的变化~\" 用自然叙事串联核心话题，不要用顿号罗列，不要'聊开去''跳到''绕回''最后落在'这类词。2-3句。")
     return "\n".join(parts)
 
+
+def build_section_prompt(title, topics, classroom_flow=""):
+    """构造📍本节内容 prompt（全班共享，不出现孩子名字）"""
+    parts = []
+    parts.append("这节课的标题：" + title)
+    parts.append("")
+    parts.append("课堂话题流程（这节课从哪儿开始、走过哪几步）：")
+    for i, (t, _) in enumerate(topics, 1):
+        parts.append(f"  {i}. {t}")
+    all_speeches = [(n, c) for _, ss in topics for n, c in ss]
+    if all_speeches:
+        parts.append("")
+        parts.append("孩子们在这节课上说过的关键内容（只当作情境参考，不要写进本节内容，更不要出现任何名字）：")
+        for n, c in all_speeches:
+            parts.append("  - " + c[:120])
+    if classroom_flow:
+        parts.append("")
+        parts.append("=== 课堂录音转录（老师部分，情境背景）===")
+        parts.append(classroom_flow)
+    parts.append("")
+    parts.append("=== 定稿范例（照这个写法、这个长度、这个语气）===")
+    parts.append(SECTION_EXAMPLE)
+    parts.append("")
+    parts.append("请只输出「📍本节内容」这一部分，一段话，全班共用，不出现任何孩子的名字，也不要写称呼。230 字上下，不要超出太多。")
+    return "\n".join(parts)
+
+
 def build_student_prompt(title, student_name, speeches, history_text, gender_info=""):
-    """构造学生个人段落 prompt"""
+    """构造学生个人段落 prompt（饼干版/融合版用的旧写法）"""
     pronoun = "他" if gender_info == "男" else "她"
     parts = []
     parts.append(f"学生：{student_name}")
@@ -154,6 +168,42 @@ def build_student_prompt(title, student_name, speeches, history_text, gender_inf
     parts.append("不引原话。禁止空洞评价词（展现/体现/落在地板上/不讲空道理/批判性思维/同理心/逻辑清晰/活跃/投入/积极/主动/全程在线）。")
     parts.append("纯文本，不要称呼和标题。")
     return "\n".join(parts)
+
+
+def build_highlight_prompt(title, student_name, speeches, topics, history_text, gender_info="",
+                           class_size=0, classroom_flow=""):
+    """构造 🌟个人亮点 prompt（只写这一个孩子）"""
+    pronoun = "他" if gender_info == "男" else "她"
+    parts = []
+    parts.append("这节课的标题：" + title)
+    parts.append(f"你要写的孩子：{student_name}")
+    parts.append(f"口语里指代{student_name}用「{pronoun}」。")
+    if class_size:
+        parts.append(f"这个班今天一共 {class_size} 个孩子。可以带全班说话，但不要提别的孩子的名字和发言。")
+    parts.append("")
+    parts.append("这节课的环节流程（个人亮点中间要讲到环节或角色预设本身，孩子是引子）：")
+    for i, (t, _) in enumerate(topics, 1):
+        parts.append(f"  {i}. {t}")
+    parts.append("")
+    parts.append(f"{student_name}在这节课上的全部发言（原话照录，一到两处直接嵌进句子；其余按意思转述，不要翻译成书面语）：")
+    for t, content in speeches:
+        parts.append(f"  [{t}] {content}")
+    if history_text:
+        parts.append("")
+        parts.append("历史课堂记录（背景参考，不要直接写进来）：")
+        parts.append(history_text)
+    if classroom_flow:
+        parts.append("")
+        parts.append("=== 课堂录音转录（老师部分，情境背景）===")
+        parts.append(classroom_flow)
+    parts.append("")
+    parts.append("=== 定稿范例（来自别的课节，只学写法和语气，句子和内容一律不能抄）===")
+    parts.append(HIGHLIGHT_EXAMPLE)
+    parts.append("")
+    parts.append(f"请只输出【{student_name}】这一个孩子的「🌟个人亮点」，两到三段，长短按他的发言量来。第一句先给位置或心态，中间锚到这节课具体的地方，结尾是你自己的感慨。不要写称呼，不要写标题，不要跟别的孩子比。")
+    parts.append(f"提醒：范例里的小A、小B是别的课节的孩子。凡是范例里有、而{student_name}的发言和课堂录音里都没有的事（比如家里养了什么、平时爱好什么、性格怎样），一句都不许写。")
+    return "\n".join(parts)
+
 
 def call_deepseek(system_prompt, user_prompt, api_key):
     """调用 LLM API（默认 DeepSeek，可用 ZG_LLM_* 环境变量切换到其他 OpenAI 兼容服务）"""
@@ -229,6 +279,12 @@ def generate_feedback_ai(meta, topics, cls_name, input_path="", api_key="", styl
         system_prompt = STYLE_PROMPTS.get(style, XINXIN_SYSTEM)
         sorted_names = sorted(student_data.keys())
 
+        if style == "xinxin":
+            _generate_xinxin(system_prompt, title, date, cls_name, topics, student_data,
+                            sorted_names, classroom_flow, profiles, genders, default_gender, api_key)
+            continue
+
+        # ---------- 饼干版 / 融合版：沿用旧的「课堂现场 + 学生段落」写法 ----------
         # Phase 1: 生成课堂现场（共享，只生成一次）
         scene_prompt = build_scene_prompt(title, topics, classroom_flow)
         classroom_scene = ""
@@ -275,15 +331,7 @@ def generate_feedback_ai(meta, topics, cls_name, input_path="", api_key="", styl
                 if not result:
                     print(f"  [{style}] API 调用失败 ({name}): 3次均空响应")
                     continue
-                # 强制代词替换：不管模型写成什么，按性别统一替换
-                is_male = genders.get(name, default_gender) == "男"
-                wrong, correct = ("她", "他") if is_male else ("他", "她")
-                result = result.replace(wrong, correct)
-                # 去掉"延伸："等标签
-                import re as _re
-                result = _re.sub(r'^\s*(延伸|延伸建议|延伸话题)[：:]\s*', '', result, flags=_re.MULTILINE)
-                # 后处理：挺/蛮 → 很（兜底，AI 漏了也能拦住）
-                result = result.replace('挺', '很').replace('蛮', '很')
+                result = strip_style_noise(result, name, genders, default_gender)
                 results[name] = result.strip()
                 print(f"  [{style}] AI 生成 {name} 的反馈")
 
@@ -303,8 +351,7 @@ def generate_feedback_ai(meta, topics, cls_name, input_path="", api_key="", styl
         # 每个学生：称呼 + 标题 + 课堂现场 + 个人段落 + 延伸
         for name in sorted_names:
             if name not in results: continue
-            import re as _re
-            display_name = _re.sub(r'-\d+$', '', name)  # 泡泡-4 → 泡泡
+            display_name = re.sub(r'-\d+$', '', name)  # 泡泡-4 → 泡泡
             lines.append(f"{display_name}妈妈好～今天我们探讨的是{title}。{classroom_scene}")
             lines.append("")
             lines.append(results[name])
@@ -316,6 +363,132 @@ def generate_feedback_ai(meta, topics, cls_name, input_path="", api_key="", styl
         print(f"  [{style}] 反馈已保存 -> {fb_out}")
 
     return True
+
+
+def strip_style_noise(result, name, genders, default_gender):
+    """统一后处理：代词纠正 + 去掉标签 + 挺/蛮 兜底替换"""
+    is_male = genders.get(name, default_gender) == "男"
+    wrong, correct = ("她", "他") if is_male else ("他", "她")
+    # 「其他」「他们」里含「他/她」，不能被代词纠正误伤（其他→其她）
+    guards = {"其他": "\x00G1\x00", "他们": "\x00G2\x00", "她们": "\x00G3\x00"}
+    for k, v in guards.items():
+        result = result.replace(k, v)
+    result = result.replace(wrong, correct)
+    for k, v in guards.items():
+        result = result.replace(v, k)
+    result = re.sub(r'^\s*(延伸|延伸建议|延伸话题)[：:]\s*', '', result, flags=re.MULTILINE)
+    return result.replace('挺', '很').replace('蛮', '很')
+
+
+def _generate_xinxin(system_prompt, title, date, cls_name, topics, student_data, sorted_names,
+                     classroom_flow, profiles, genders, default_gender, api_key):
+    """欣欣版：📍本节内容（一份，全班共用） + 🌟个人亮点（每个孩子一段）"""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    def _kid_history(name):
+        if cls_name in profiles and name in profiles[cls_name]:
+            lessons = profiles[cls_name][name].get("lessons", [])
+            if lessons:
+                prev = lessons[-1]
+                return (f"上节课《{prev.get('title','')}》（{prev.get('date','')}），"
+                        f"发言{prev.get('speech_count',0)}次")
+        return ""
+
+    # 本节内容 和 每个孩子的个人亮点 都是独立请求，一起丢进线程池并发
+    kid_prompts = {}
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        section_future = ex.submit(
+            _call_with_retry, system_prompt,
+            build_section_prompt(title, topics, classroom_flow), api_key, "本节内容")
+        for name in sorted_names:
+            gender_info = "男" if genders.get(name, default_gender) == "男" else "女"
+            kid_prompts[name] = ex.submit(
+                _call_with_retry, system_prompt,
+                build_highlight_prompt(
+                    title, name, student_data[name], topics, _kid_history(name),
+                    gender_info, class_size=len(sorted_names),
+                    classroom_flow="\n".join(classroom_flow.split("\n")[:30])),
+                api_key, name)
+
+    # 本节内容
+    section_text = ""
+    try:
+        section_text = (section_future.result() or "").strip()
+    except Exception as e:
+        print(f"  [xinxin] 本节内容生成失败: {e}")
+    if section_text:
+        # 本节内容里绝不允许出现孩子名字，出现就换成「孩子」（不能盲替代词，「其他」会被改坏）
+        for n in sorted_names:
+            section_text = section_text.replace(n, "孩子")
+        section_text = section_text.replace('挺', '很').replace('蛮', '很')
+        # 模型常常自己带上「📍本节内容」标题（有时还会带两遍），统一剥掉
+        section_text = re.sub(r'^(📍\s*本节内容\s*)+', '', section_text).strip()
+        print("  [xinxin] 📍本节内容 已生成")
+
+    results = {}
+    for name in sorted_names:
+        try:
+            result = kid_prompts[name].result()
+        except Exception as e:
+            print(f"  [xinxin] API 调用失败 ({name}): {e}")
+            continue
+        if not result:
+            print(f"  [xinxin] API 调用失败 ({name}): 3次均空响应")
+            continue
+        results[name] = strip_style_noise(result, name, genders, default_gender).strip()
+        # 剥掉模型自己带的标题（【名字】/🌟个人亮点 / Markdown 加粗）
+        results[name] = re.sub(r'^\s*(\*\*)?【[^】]*】(\*\*)?\s*', '', results[name])
+        results[name] = re.sub(r'^\s*(🌟\s*)?个人亮点\s*[:：]?\s*', '', results[name])
+        print(f"  [xinxin] 🌟个人亮点 {name} 已生成")
+
+    if not section_text and not results:
+        print("  [xinxin] 全部生成失败，跳过")
+        return
+
+    fb_out = f"课后反馈_{cls_name}.txt" if cls_name else "课后反馈.txt"
+    lines = []
+    lines.append(f"课后反馈 - {title}")
+    lines.append("班级: " + cls_name + "  |  " + date)
+    lines.append("=" * 50)
+    lines.append("")
+    lines.append("📍本节内容")
+    lines.append("")
+    lines.append(section_text or "(本节内容生成失败)")
+    lines.append("")
+    lines.append("=" * 50)
+    lines.append("")
+    lines.append("🌟个人亮点")
+    lines.append("")
+    for name in sorted_names:
+        if name not in results:
+            continue
+        display_name = re.sub(r'-\d+$', '', name)  # 泡泡-4 → 泡泡
+        lines.append(f"【{display_name}】")
+        lines.append("")
+        lines.append(results[name])
+        lines.append("")
+        lines.append("-" * 40)
+        lines.append("")
+    with open(fb_out, 'w', encoding='utf-8') as f:
+        f.write("\n".join(lines))
+    print(f"  [xinxin] 反馈已保存 -> {fb_out}")
+
+
+def _call_with_retry(system_prompt, prompt, api_key, name=""):
+    """最多 3 次（含首次），处理 Flash 模型偶发空响应"""
+    result = None
+    for attempt in range(3):
+        try:
+            if attempt:
+                time.sleep(0.8)
+            result = call_deepseek(system_prompt, prompt, api_key)
+            if result:
+                return result
+        except Exception as e:
+            if attempt == 2:
+                print(f"  [xinxin] API 调用异常 ({name}): {e}")
+    return None
+
 
 if __name__ == "__main__":
     api_key = os.environ.get("DEEPSEEK_API_KEY", "")
