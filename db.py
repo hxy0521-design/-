@@ -229,36 +229,159 @@ def attendance_student_counts():
     rows = _execute(get_db(), "SELECT student_name, COUNT(*) as cnt FROM attendance WHERE status='出席' GROUP BY student_name").fetchall()
     return {r["student_name"]: int(r["cnt"]) for r in rows}
 
+def student_ext_auto_promote_trial():
+    """仅试听但累计出席>1课时 → 自动转在读中"""
+    db = get_db()
+    rows = _execute(db, """
+        SELECT s.student_name FROM student_ext s
+        WHERE s.status='仅试听'
+          AND (SELECT COUNT(*) FROM attendance a WHERE a.student_name=s.student_name AND a.status='出席') > 1
+    """).fetchall()
+    for r in rows:
+        _execute(db, "UPDATE student_ext SET status=%s WHERE student_name=%s", ["在读中", r["student_name"]])
+
+def student_ext_auto_promote_trial_paid():
+    """仅试听但已有正式课缴费记录（排除试听折扣/亲友试听/赠课/补课等免费或试听性质）→ 自动转在读中"""
+    db = get_db()
+    rows = _execute(db, """
+        SELECT DISTINCT s.student_name FROM student_ext s
+        JOIN purchases p ON s.student_name=p.student_name
+        WHERE s.status='仅试听'
+          AND p.course_type='正式课'
+          AND p.discount_type NOT IN ('试听折扣','亲友试听','亲友免试听','转介绍赠','补课课时')
+          AND p.amount > 0
+    """).fetchall()
+    for r in rows:
+        _execute(db, "UPDATE student_ext SET status=%s WHERE student_name=%s AND status='仅试听'", ["在读中", r["student_name"]])
+
 def student_ext_cleanup_trial():
-    """仅试听学生超过10天无缴费 → 移出班级（enrolled_class 清空）"""
+    """仅试听学生超过10天无缴费且无近期考勤 → 移出班级（enrolled_class 清空，归未分班）
+
+    用户 2026-09-14 定：试听生只看当前 10 天，「有历史出席」不再豁免——
+    老试听生一直占着班级名单，课表跟学生tab就对不上（课表名单口径同此）。
+    """
     db = get_db()
     from datetime import datetime, timedelta
     cutoff = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
-    # 找到所有仅试听且有班级的学生
-    rows = _execute(db, "SELECT student_name, enrolled_class FROM student_ext WHERE status=%s AND enrolled_class IS NOT NULL AND enrolled_class != ''", ["仅试听"]).fetchall()
+    # 一次性聚合取缴费数/最近缴费/最近考勤，避免逐个查库的 N+1
+    rows = _execute(db, """
+        SELECT s.student_name,
+            (SELECT COUNT(*) FROM purchases p WHERE p.student_name=s.student_name) as pay_cnt,
+            (SELECT MAX(p.actual_pay_date) FROM purchases p WHERE p.student_name=s.student_name) as last_pay,
+            (SELECT MAX(a.lesson_date) FROM attendance a WHERE a.student_name=s.student_name) as last_date
+        FROM student_ext s
+        WHERE s.status='仅试听' AND s.enrolled_class IS NOT NULL AND s.enrolled_class != ''
+    """).fetchall()
     for r in rows:
         name = r["student_name"]
-        # 除了初始试听外，是否有新增缴费（≥2条 = 已转化，不处理）
-        pay_cnt = _execute(db, "SELECT COUNT(*) as cnt FROM purchases WHERE student_name=%s", [name]).fetchone()
-        if pay_cnt and int(pay_cnt["cnt"] or 0) > 1:
+        if int(r["pay_cnt"] or 0) > 1:
             continue  # 有新增缴费，已转化
-        # 检查最近考勤：无任何考勤记录的新生不处理，有记录但超过10天的才移出
-        recent_att = _execute(db, "SELECT MAX(lesson_date) as last_date FROM attendance WHERE student_name=%s", [name]).fetchone()
-        last_date = recent_att["last_date"] if recent_att else None
-        if not last_date:
-            continue  # 完全没考勤记录的新生，不处理
-        if str(last_date) >= cutoff:
-            continue  # 最近10天内有考勤，不处理
-        # 有考勤记录但超过10天无新考勤且无新增缴费 → 移出班级
+        if r["last_pay"] and str(r["last_pay"]) >= cutoff:
+            continue  # 10天内有缴费
+        last_date = r["last_date"]
+        if not last_date or str(last_date) >= cutoff:
+            continue  # 无考勤记录 / 10天内有考勤，不处理
         _execute(db, "UPDATE student_ext SET enrolled_class=%s WHERE student_name=%s", ["", name])
 
+def student_ext_sync_from_attendance(db):
+    """兜底 1：凡在 attendance 里出现过的学生，若 student_ext 缺失，则补一条占位记录。
+    兜底 2：无真实春秋班的学生（在读中/仅试听 + 班级为空/待分班/未分班）按优先级归班：
+      1. 当前春秋周期有考勤，且该班在 config 里存在  → 归入该班（新生自动归班）
+      2. 2607/2608 有课消                           → 待分班
+      3. 否则                                        → 未分班（enrolled_class 置空）
+    有真实春秋班的学生不受影响。
+
+    只认 config 里存在且非寒暑假的班级：挂到已关闭/已从 config 移除的班（如周三探索、
+    周五领航）会被前端 _ss 判定筛掉，等于彻底不显示，比留在未分班更糟，故一律不挂。
+
+    自动归班会把人从「未分班」捞回班里，而人工挪出班级的人（把 enrolled_class 填成
+    「未分班」，跟学生tab 那一栏同名）必须留得住，所以这类不参与自动归班。
+
+    自动归班只作用于 source='考勤新增' 的人（考勤流程发现的新面孔）。试听预排、手工录入、
+    导入的学生自带人工归属：enrolled_class 留空 = 未分班、填「待分班」= 等人排课，
+    两者都是人工意图，同步一律不覆盖。
+    """
+    SUMMER = ('2607暑假班', '2608暑假班')
+    # 一次性预取 2607/2608 出席学生，避免逐个查库的 N+1
+    summer_set = {r['student_name'] for r in _execute(
+        db, "SELECT DISTINCT student_name FROM attendance WHERE status='出席' AND cycle IN ('2607暑假班','2608暑假班')").fetchall()}
+    def has_summer_att(name):
+        return name in summer_set
+
+    # 当前春秋周期 = 周期里最新的「春季班/秋季班」（形如 2609 的前缀可直接字典序比较）
+    cycles = [r['cycle'] for r in _execute(db, "SELECT DISTINCT cycle FROM attendance WHERE cycle!=''").fetchall()]
+    spring_fall = sorted((c for c in cycles if c.endswith(('春季班', '秋季班'))), reverse=True)
+    cur_cycle = spring_fall[0] if spring_fall else ''
+
+    # 可挂班白名单：对齐前端 _ss（config 里存在、且非寒暑假班的）
+    vac_words = ('暑假', '寒假', '临时')
+    known_classes = {r['class_name'] for r in _execute(db, "SELECT DISTINCT class_name FROM config").fetchall()}
+    known_classes = {c for c in known_classes if not any(w in c for w in vac_words)}
+
+    # 当前春秋周期里各学生的归属班（同一人多个班时取考勤条数最多的）
+    cur_cnt = {}
+    if cur_cycle:
+        for r in _execute(db, """SELECT student_name, class_name, COUNT(*) c FROM attendance
+                                 WHERE cycle=%s AND class_name!='' GROUP BY student_name, class_name""", [cur_cycle]).fetchall():
+            n, k, c = r['student_name'], r['class_name'], int(r['c'] or 0)
+            if n not in cur_cnt or c > cur_cnt[n][1]:
+                cur_cnt[n] = (k, c)
+    def auto_class(name):
+        """能自动归班返回班名；否则 None，交回 待分班/未分班 逻辑"""
+        hit = cur_cnt.get(name)
+        return hit[0] if hit and hit[0] in known_classes else None
+
+    # 1) 有消课记录但 student_ext 完全缺失 → 补占位记录
+    gone = _execute(db, """
+        SELECT DISTINCT a.student_name FROM attendance a
+        LEFT JOIN student_ext s ON a.student_name=s.student_name
+        WHERE s.student_name IS NULL
+    """).fetchall()
+    for r in gone:
+        name = r["student_name"]
+        seg, cls = "", ""
+        lat = _execute(db, "SELECT class_name FROM attendance WHERE student_name=%s ORDER BY lesson_date DESC LIMIT 1", [name]).fetchone()
+        if lat: cls = lat["class_name"]
+        for kw in ["探索", "启航", "先锋", "领航"]:
+            if kw in (cls or ""):
+                seg = f"{kw}段"
+                break
+        tgt = auto_class(name)
+        if tgt is None:
+            tgt = '待分班' if has_summer_att(name) else ''
+        _execute(db, "INSERT INTO student_ext (student_name,student_code,source,status,segment,enrolled_class,purchased_lessons,used_lessons,remaining_lessons,notes,added_by,gender) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                 [name, '', '考勤新增', '仅试听', seg, tgt, 0, 1, -1, '', '', ''])
+    # 2) 无真实春秋班的在读类学生 → 新生按当前春秋考勤归班，否则 待分班/未分班
+    #    enrolled_class='未分班' 是人工意图（见函数头），不进这里，否则刚挪出去就被捞回来
+    anchor = _execute(db, """
+        SELECT s.student_name, s.enrolled_class, s.source FROM student_ext s
+        WHERE s.status IN ('在读中','仅试听')
+          AND (s.enrolled_class IS NULL OR s.enrolled_class='' OR s.enrolled_class='待分班')
+    """).fetchall()
+    for r in anchor:
+        name = r["student_name"]
+        # 自动归班只适用于 source='考勤新增' 的新生（考勤流程发现的新面孔）。
+        # 试听预排/手工录入/导入的学生自带人工归属：设为空就是「未分班」、设为
+        # 「待分班」就是「等人排课」，两个都是明确意图，同步不能覆盖。
+        if r["source"] != '考勤新增':
+            continue
+        tgt = auto_class(name)
+        if tgt is None:
+            tgt = '待分班' if has_summer_att(name) else ''
+        if (r["enrolled_class"] or '') != tgt:
+            _execute(db, "UPDATE student_ext SET enrolled_class=%s WHERE student_name=%s", [tgt, name])
+
 def student_ext_all():
-    student_ext_cleanup_trial()  # 先清理超期试听
-    rows = _execute(get_db(), "SELECT * FROM student_ext ORDER BY student_name").fetchall()
+    student_ext_auto_promote_trial()  # 仅试听超课时自动转在读中
+    student_ext_auto_promote_trial_paid()  # 仅试听已有正式课缴费(非试听折扣) → 转在读中
+    student_ext_cleanup_trial()  # 再清理超期试听
+    db = get_db()
+    student_ext_sync_from_attendance(db)  # 兜底：有消课记录的学生必须在学生tab出现
+    rows = _execute(db, "SELECT * FROM student_ext ORDER BY student_name").fetchall()
     cols = ["student_name","student_code","source","status","segment","enrolled_class","purchased_lessons","used_lessons","remaining_lessons","notes","added_by","gender"]
     result = [dict(zip(cols, [r[c] for c in cols])) for r in rows]
     # 已消课时实时计算（一次聚合查询），不再依赖 student_ext 里的冗余值，避免漂移
-    att_rows = _execute(get_db(), "SELECT student_name, COUNT(*) as cnt FROM attendance WHERE status='出席' GROUP BY student_name").fetchall()
+    att_rows = _execute(db, "SELECT student_name, COUNT(*) as cnt FROM attendance WHERE status='出席' GROUP BY student_name").fetchall()
     used_map = {r["student_name"]: int(r["cnt"]) for r in att_rows}
     for d in result:
         d["used_lessons"] = used_map.get(d["student_name"], 0)
@@ -267,26 +390,47 @@ def student_ext_all():
 
 def student_ext_upsert(name, data):
     db = get_db()
-    r = _execute(db, "SELECT student_name FROM student_ext WHERE student_name=%s", [name]).fetchone()
+    r = _execute(db, "SELECT purchased_lessons FROM student_ext WHERE student_name=%s", [name]).fetchone()
     added_by = data.get("added_by","")
-    vals = [data.get("student_code",""), data.get("source",""), data.get("status",""), data.get("segment",""), data.get("enrolled_class",""), int(data.get("purchased_lessons",0)), int(data.get("used_lessons",0)), int(data.get("remaining_lessons",0)), data.get("notes",""), added_by, data.get("gender","")]
+    head = [data.get("student_code",""), data.get("source",""), data.get("status",""), data.get("segment",""), data.get("enrolled_class","")]
+    tail = [data.get("notes",""), added_by, data.get("gender","")]
     if r:
-        _execute(db, "UPDATE student_ext SET student_code=%s,source=%s,status=%s,segment=%s,enrolled_class=%s,purchased_lessons=%s,used_lessons=%s,remaining_lessons=%s,notes=%s,added_by=%s,gender=%s WHERE student_name=%s", vals + [name])
+        # 已购课时由缴费/考勤驱动，编辑学生时前端不传就保留库里的值：
+        # 弹窗里的数字是打开那一刻的，直接写回会把之后新增的账单覆盖掉
+        if data.get("purchased_lessons") is None:
+            pur = int(r["purchased_lessons"] or 0)
+        else:
+            pur = int(data["purchased_lessons"] or 0)
+        used = int(_execute(db, "SELECT COUNT(*) as cnt FROM attendance WHERE student_name=%s AND status='出席'", [name]).fetchone()["cnt"] or 0)
+        _execute(db, "UPDATE student_ext SET student_code=%s,source=%s,status=%s,segment=%s,enrolled_class=%s,purchased_lessons=%s,used_lessons=%s,remaining_lessons=%s,notes=%s,added_by=%s,gender=%s WHERE student_name=%s",
+                 head + [pur, used, pur - used] + tail + [name])
     else:
-        _execute(db, "INSERT INTO student_ext VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", [name] + vals)
+        pur = int(data.get("purchased_lessons") or 0)
+        used = int(data.get("used_lessons") or 0)
+        _execute(db, "INSERT INTO student_ext VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                 [name] + head + [pur, used, pur - used] + tail)
 
 # ------- Attendance -------
 
-def cycle_from_unit(unit_code):
-    """从单元编号推导周期标签，如 2605 → '2605春季班'"""
+def cycle_from_unit(unit_code, class_name=""):
+    """从单元编号推导周期标签，如 2605 → '2605春季班'，2609 → '2609秋季班'。
+    季节按「春秋/寒暑 tab」判定：春秋班 → 春季班/秋季班，寒暑班(含临时/单元2607|2608) → 暑假班/寒假班。"""
     if not unit_code: return ""
-    # 尝试从已有考勤记录中找到匹配的周期
-    row = _execute(get_db(), "SELECT cycle FROM attendance WHERE unit_code=%s AND cycle!='' ORDER BY lesson_date DESC LIMIT 1", [unit_code]).fetchone()
+    # 尝试从已有考勤记录中找到匹配的周期（历史标签优先，不受新规则影响，如 2509试听期/2602寒假班）
+    # 按班级过滤：某班的脏标签不能传染给同单元的其他班（如 2609 曾被误标成 暑假班，导致其他班新课也跟着错）
+    if class_name:
+        row = _execute(get_db(), "SELECT cycle FROM attendance WHERE unit_code=%s AND cycle!='' AND class_name=%s ORDER BY lesson_date DESC LIMIT 1", [unit_code, class_name]).fetchone()
+    else:
+        row = _execute(get_db(), "SELECT cycle FROM attendance WHERE unit_code=%s AND cycle!='' ORDER BY lesson_date DESC LIMIT 1", [unit_code]).fetchone()
     if row and row["cycle"]: return row["cycle"]
-    # 回退：根据月份推算课型
+    # 回退：根据 tab + 月份推算课型
     try:
         m = int(unit_code[2:4]) if len(unit_code) >= 4 else 0
-        sem = "试听期" if m == 9 else ("寒假班" if m in (1,2) else ("春季班" if 3<=m<=6 else ("暑假班" if m in (7,8) else "正式课")))
+        is_vac = ('临时' in (class_name or '')) or any(uc in unit_code for uc in ['2607','2608'])
+        if is_vac:
+            sem = "暑假班" if m in (7,8) else ("寒假班" if m in (1,2,12) else "正式课")
+        else:
+            sem = "春季班" if 3<=m<=6 else ("秋季班" if 9<=m<=11 else "正式课")
         return f"{unit_code}{sem}"
     except: return unit_code
 
@@ -305,14 +449,27 @@ def consume_lesson_for_student(student_name):
     ref_used = _execute(db, "SELECT COUNT(*) as cnt FROM attendance WHERE student_name=%s AND status='出席' AND consumed_price=0", [student_name]).fetchone()
     if int(ref_pur["cnt"]) > 0 and int(ref_used["cnt"]) == 0:
         return 0  # 使用转介绍赠课
+    # 首课且买过试听 → 按试听价算（套餐从第二节起）。
+    # 试听生常常是「先上课、后报名」，两笔订单一起补录时下面按最大金额取会拿到套餐价，
+    # 把首课记成 144/162，分账里就少算一个试听。
+    if used_cnt == 0:
+        trial_row = _execute(db, """
+            SELECT amount, lesson_count FROM purchases
+            WHERE student_name=%s AND discount_type='试听折扣' AND lesson_count > 0
+            ORDER BY amount DESC LIMIT 1
+        """, [student_name]).fetchone()
+        if trial_row:
+            tp = float(trial_row['amount']) / int(trial_row['lesson_count'])
+            if tp > 0: return round(tp, 2)
     # 取正式课单价（排除试听折扣/转介绍赠）
     price_row = _execute(db, """
         SELECT amount, lesson_count FROM purchases
         WHERE student_name=%s AND discount_type NOT IN ('试听折扣','转介绍赠')
         ORDER BY amount DESC LIMIT 1
     """, [student_name]).fetchone()
-    if not price_row:
-        price_row = _execute(db, "SELECT amount, lesson_count FROM purchases WHERE student_name=%s ORDER BY amount DESC LIMIT 1", [student_name]).fetchone()
+    # 不退回「随便哪笔购买」：那样只会拿到试听折扣/转介绍赠这种一次性赠课，
+    # 把第二节课也按 69.9 记（朵朵 9/7 就是这样），分账里就多算一个试听。
+    # 试听只覆盖首课，之后没买正式套餐 = 欠费。
     if not price_row: return -1
     price = float(price_row['amount']) / int(price_row['lesson_count']) if int(price_row['lesson_count']) > 0 else 0
     return round(price, 2)
@@ -328,14 +485,16 @@ def attendance_batch(records):
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     db = get_db()
     for r in records:
-        cycle = r.get("cycle","") or cycle_from_unit(r.get("unit_code",""))
+        cycle = r.get("cycle","") or cycle_from_unit(r.get("unit_code",""), r.get("class_name",""))
         content_label = r.get("content_label","")
+        # 先删旧行再定价：否则重存同一节课时，旧行会被算成「已上过的课」，
+        # 首课判成非首课（试听价/欠费判断都会跟着错）。
+        _execute(db, "DELETE FROM attendance WHERE class_name=%s AND lesson_date=%s AND student_name=%s", [r["class_name"], r.get("lesson_date",""), r["student_name"]])
         consumed_price = 0
         if r.get("status","出席") == "出席":
             consumed_price = consume_lesson_for_student(r["student_name"])
             if consumed_price < 0: consumed_price = -1  # 欠费标记
         is_makeup = int(r.get("is_makeup", 0) or 0)
-        _execute(db, "DELETE FROM attendance WHERE class_name=%s AND lesson_date=%s AND student_name=%s", [r["class_name"], r.get("lesson_date",""), r["student_name"]])
         _execute(db, "INSERT INTO attendance (class_name,unit_code,lesson_num,lesson_title,lesson_date,student_name,status,note,recorded_at,cycle,content_label,consumed_price,is_makeup) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", [r["class_name"], r.get("unit_code",""), r["lesson_num"], r.get("lesson_title",""), r.get("lesson_date",""), r["student_name"], r.get("status","出席"), r.get("note",""), now, cycle, content_label, consumed_price, is_makeup])
     # 同步所有涉及的学生的消课计数（不只是最后一个）
     synced = set()
@@ -573,10 +732,14 @@ def attendance_by_lesson(class_name=None, cycle=None, student_name=None, limit=5
         # 有正式课购买的学生不算试听
         formal_pur = _execute(db, f"SELECT DISTINCT student_name FROM purchases WHERE student_name IN ({phs}) AND discount_type NOT IN ('试听折扣','转介绍赠')", nl).fetchall()
         formal_set = set(fp['student_name'] for fp in formal_pur)
+    # 试听判定：只看消课价。消课价是试听价(69.9/99.9)即算试听。
+    # 说明：试听=按试听金额(69.9/99.9)记账。程程/骨头等消课价已改成试听价；浩然消课仍为正价，故不计试听。
     for r in result:
         key = (r["class_name"], r["_raw_title"], r["lesson_date"])
         att_students = student_map.get(key, [])
-        trial = [s["student_name"] for s in att_students if float(s["consumed_price"] or 0) in (69.9, 99.9) and s["student_name"] in r["students"] and s["student_name"] not in formal_set]
+        trial = [s["student_name"] for s in att_students
+                 if s["student_name"] in r["students"]
+                 and float(s["consumed_price"] or 0) in (69.9, 99.9)]
         r["trial_students"] = trial
         r["students"] = [sn for sn in r["students"] if sn not in trial]
     for r in result:
@@ -606,26 +769,41 @@ def roster_set(class_name, students):
 
 # ------- Purchases -------
 
+def _student_purchased_delta(db, name, delta):
+    """按增量维护 student_ext 的已购课时。
+    不做全量重算：娴娴/糖豆这类手工调过的学生，已购课时并不等于订单合计，
+    按订单合计覆盖会把手工量抹掉。delta = 本次变动的课次
+    （新建 +N、删除 -N、改课次 新-旧、换学生 -旧/+新）。"""
+    delta = int(delta or 0)
+    if not name or delta == 0: return
+    r = _execute(db, "SELECT purchased_lessons FROM student_ext WHERE student_name=%s", [name]).fetchone()
+    if r is None: return
+    pur = max(0, int(r["purchased_lessons"] or 0) + delta)
+    used = int(_execute(db, "SELECT COUNT(*) as cnt FROM attendance WHERE student_name=%s AND status='出席'", [name]).fetchone()["cnt"] or 0)
+    _execute(db, "UPDATE student_ext SET purchased_lessons=%s, used_lessons=%s, remaining_lessons=%s WHERE student_name=%s", [pur, used, pur - used, name])
+
 def purchase_delete(rid):
     db = get_db()
-    # 删之前查一下记录，用于更新 student_ext
+    # 删之前查一下记录，用于回退 student_ext 的已购课时
     rec = _execute(db, "SELECT student_name, lesson_count FROM purchases WHERE id=%s", [int(rid)]).fetchone()
     _execute(db, "DELETE FROM purchases WHERE id=%s", [int(rid)])
     if rec:
-        name = rec["student_name"]; cnt = int(rec["lesson_count"] or 0)
-        if name and cnt > 0:
-            r2 = _execute(db, "SELECT purchased_lessons FROM student_ext WHERE student_name=%s", [name]).fetchone()
-            if r2 is not None:
-                cur = int(r2["purchased_lessons"] or 0)
-                new_pur = max(0, cur - cnt)
-                new_rem = new_pur - (int(_execute(db, "SELECT COUNT(*) as cnt FROM attendance WHERE student_name=%s AND status='出席'", [name]).fetchone()["cnt"] or 0))
-                _execute(db, "UPDATE student_ext SET purchased_lessons=%s, remaining_lessons=%s WHERE student_name=%s", [new_pur, new_rem, name])
+        _student_purchased_delta(db, rec["student_name"], -int(rec["lesson_count"] or 0))
+
+def _purchase_apply_delta(db, old_name, old_cnt, new_name, new_cnt):
+    """订单课次变动后同步 student_ext 的已购课时（含改挂到别的学生名下）。"""
+    if old_name and old_name == new_name:
+        _student_purchased_delta(db, old_name, int(new_cnt) - int(old_cnt))
+    else:
+        _student_purchased_delta(db, old_name, -int(old_cnt or 0))
+        _student_purchased_delta(db, new_name, int(new_cnt or 0))
 
 def purchase_add(data):
     db = get_db()
     # 按 ID 更新（用于订单号编辑等场景）
     rid = data.get("id", 0)
     if rid:
+        old = _execute(db, "SELECT student_name, lesson_count FROM purchases WHERE id=%s", [int(rid)]).fetchone()
         sets = []
         vals = []
         for k in ["order_id","xiaohongshu_received","notes","student_name","student_code","charge_code","segment","course_type","method","discount_type","lesson_count","amount","refund_amount","actual_pay_date"]:
@@ -634,12 +812,20 @@ def purchase_add(data):
                 vals.append(data[k])
         if sets:
             _execute(db, f"UPDATE purchases SET {', '.join(sets)} WHERE id=%s", vals + [rid])
+            if old:
+                old_name = old["student_name"]; old_cnt = int(old["lesson_count"] or 0)
+                _purchase_apply_delta(db, old_name, old_cnt,
+                                      data.get("student_name", old_name),
+                                      int(data.get("lesson_count", old_cnt) or 0))
             return "updated"
     oid = data.get("order_id","")
     if oid:
-        r = _execute(db, "SELECT id FROM purchases WHERE order_id=%s", [oid]).fetchone()
+        r = _execute(db, "SELECT id, student_name, lesson_count FROM purchases WHERE order_id=%s", [oid]).fetchone()
         if r:
             _execute(db, "UPDATE purchases SET student_name=%s,student_code=%s,charge_code=%s,segment=%s,course_type=%s,method=%s,discount_type=%s,lesson_count=%s,amount=%s,refund_amount=%s,actual_pay_date=%s,xiaohongshu_received=%s,notes=%s WHERE order_id=%s", [data.get(k,"") if k not in ("lesson_count","amount","refund_amount","xiaohongshu_received") else float(data.get(k,0)) for k in ["student_name","student_code","charge_code","segment","course_type","method","discount_type","lesson_count","amount","refund_amount","actual_pay_date","xiaohongshu_received","notes"]] + [oid])
+            _purchase_apply_delta(db, r["student_name"], int(r["lesson_count"] or 0),
+                                  data.get("student_name", r["student_name"]),
+                                  int(float(data.get("lesson_count", r["lesson_count"]) or 0)))
             return "updated"
     # 检查是否已存在完全相同的记录（防重复导入）
     name = data.get("student_name","")
@@ -650,28 +836,26 @@ def purchase_add(data):
     ct = data.get("course_type","")
     method = data.get("method","")
     dt = data.get("discount_type","")
-    # 同步更新 student_ext 的已购课时（先于重复检查，确保不丢）
-    if name and cnt != 0:
-        r2 = _execute(db, "SELECT purchased_lessons, used_lessons FROM student_ext WHERE student_name=%s", [name]).fetchone()
-        if r2 is not None:
-            cur_pur = float(r2["purchased_lessons"] or 0)
-            cur_used = float(r2["used_lessons"] or 0)
-            new_pur = max(0, cur_pur + cnt)
-            new_rem = new_pur - cur_used
-            _execute(db, "UPDATE student_ext SET purchased_lessons=%s, remaining_lessons=%s WHERE student_name=%s", [new_pur, new_rem, name])
     exist = _execute(db, "SELECT id FROM purchases WHERE student_name=%s AND actual_pay_date=%s AND lesson_count=%s AND amount=%s AND COALESCE(segment,'')=%s AND COALESCE(course_type,'')=%s AND COALESCE(method,'')=%s AND COALESCE(discount_type,'')=%s", [name, date, cnt, amt, seg, ct, method, dt]).fetchone()
     if exist:
         return "duplicate"
     _execute(db, "INSERT INTO purchases (student_name,student_code,charge_code,segment,course_type,method,discount_type,lesson_count,amount,refund_amount,actual_pay_date,order_id,xiaohongshu_received,notes) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", [name, data.get("student_code",""), data.get("charge_code",""), seg, ct, method, dt, cnt, amt, float(data.get("refund_amount",0)), date, oid, float(data.get("xiaohongshu_received",0)), data.get("notes","")])
+    # 同步 student_ext 的已购课时：放在查重之后，重复保存不再重复计课时
+    _student_purchased_delta(db, name, cnt)
     # 自动清除该学生的欠费标记：每新增一课次，清除一条 consumed_price=-1 的记录
     if name and cnt > 0:
         debt_rows = _execute(db, "SELECT id, class_name FROM attendance WHERE student_name=%s AND consumed_price=-1 AND status='出席' ORDER BY lesson_date ASC", [name]).fetchall()
         clear_count = min(int(cnt), len(debt_rows))
+        # 价格用「刚录这笔」的单价（试听 69.9 / 套餐均价），不能用该班上一个正价——
+        # 那会把先上课后录报名的试听生记成 144/162，分账里就少算一个试听。
+        unit_price = round(amt / cnt, 2) if cnt > 0 else 0
         for dr in debt_rows[:clear_count]:
-            # 取该班级的正价（排除欠费 -1 记录）
-            pr = _execute(db, "SELECT consumed_price FROM attendance WHERE class_name=%s AND status='出席' AND consumed_price > 0 ORDER BY id DESC LIMIT 1", [dr['class_name']]).fetchone()
-            price = float(pr['consumed_price']) if pr and float(pr['consumed_price']) > 0 else 144.0
-            _execute(db, "UPDATE attendance SET consumed_price=%s, note='' WHERE id=%s", [price, dr['id']])
+            if unit_price > 0:
+                price = unit_price
+            else:
+                pr = _execute(db, "SELECT consumed_price FROM attendance WHERE class_name=%s AND status='出席' AND consumed_price > 0 ORDER BY id DESC LIMIT 1", [dr['class_name']]).fetchone()
+                price = float(pr['consumed_price']) if pr and float(pr['consumed_price']) > 0 else 144.0
+            _execute(db, "UPDATE attendance SET consumed_price=%s WHERE id=%s", [price, dr['id']])
     return "new"
 
 def purchase_list(student_name=None, date_from=None, date_to=None, limit=200):
@@ -762,7 +946,8 @@ def dashboard_summary():
     current_cycle = cycle_row["cycle"] if cycle_row else f"{now.strftime('%y%m')}春季班"
     # 按周期统计（不是日历月）
     month_att = _execute(db, f"SELECT COUNT(DISTINCT CONCAT(class_name,'-',lesson_title,'-',lesson_date)) as lessons, COUNT(*) as students, SUM(CASE WHEN status='出席' THEN 1 ELSE 0 END) as present FROM attendance WHERE cycle=%s", [current_cycle]).fetchone()
-    active = _execute(db, "SELECT COUNT(*) as cnt FROM student_ext WHERE status=%s", ["在读中"]).fetchone()
+    active = _execute(db, "SELECT COUNT(*) as cnt FROM student_ext WHERE status=%s AND enrolled_class IS NOT NULL AND enrolled_class NOT IN ('','待分班','未分班')", ["在读中"]).fetchone()
+    trial = _execute(db, "SELECT COUNT(*) as cnt FROM student_ext WHERE status=%s AND enrolled_class IS NOT NULL AND enrolled_class NOT IN ('','待分班','未分班')", ["仅试听"]).fetchone()
     month_rev = _execute(db, "SELECT COALESCE(SUM(amount),0) as t FROM purchases WHERE actual_pay_date LIKE %s", [month_str + "%"]).fetchone()
     # 待销：已购 - 实际出勤（实时计算）
     att_counts = attendance_student_counts()
@@ -797,6 +982,7 @@ def dashboard_summary():
     schedule_remaining = (weeks_left - off_count) * weekly_count
     return {
         "active_students": int(active["cnt"]) if active else 0,
+        "trial_count": int(trial["cnt"]) if trial else 0,
         "month_lessons": int(month_att["lessons"]) if month_att else 0,
         "month_present": int(month_att["present"]) if month_att else 0,
         "cycle": current_cycle,
@@ -808,10 +994,39 @@ def dashboard_summary():
 
 def dashboard_weekly():
     cfg = config_all()
+    # 名单与学生tab完全对齐：先跑同一套自愈（试听转正/超期试听清理/考勤兜底归班），
+    # 再看 enrolled_class。不按历史出席补人——课表只反映当前在读名单。
+    student_ext_auto_promote_trial()
+    student_ext_auto_promote_trial_paid()
+    student_ext_cleanup_trial()
+    db = get_db()
+    student_ext_sync_from_attendance(db)
+    # 在读中（正式课）+ 仅试听（10天内有缴费或考勤）。超期的试听生不再占班级名单。
+    from datetime import datetime as _dt, timedelta as _td
+    _cutoff = (_dt.now() - _td(days=10)).strftime("%Y-%m-%d")
+    by_class = {}
+    for r in _execute(db, """
+            SELECT s.student_name, s.enrolled_class, s.status,
+                (SELECT MAX(p.actual_pay_date) FROM purchases p WHERE p.student_name=s.student_name) last_pay,
+                (SELECT MAX(a.lesson_date) FROM attendance a WHERE a.student_name=s.student_name) last_att
+            FROM student_ext s
+            WHERE s.status IN ('在读中','仅试听')
+              AND s.enrolled_class IS NOT NULL AND s.enrolled_class NOT IN ('','待分班','未分班')
+        """).fetchall():
+        if r["status"] == '仅试听':
+            fresh = ((r["last_pay"] and str(r["last_pay"]) >= _cutoff)
+                     or (r["last_att"] and str(r["last_att"]) >= _cutoff))
+            if not fresh: continue
+        by_class.setdefault(r["enrolled_class"], []).append(r["student_name"])
     _DAY_MAP = {"一":"周一","二":"周二","三":"周三","四":"周四","五":"周五","六":"周六","日":"周日"}
     weekly = []
     for cn, units in cfg.items():
-        roster = roster_get(cn)
+        # 寒暑/临时班不带学生名单（V课表只显示班级壳）；春秋班名单从学生tab的enrolled_class取
+        is_vac = bool('临时' in cn or any(uc in units for uc in ['2607','2608','2607&08']))
+        if is_vac:
+            roster = []
+        else:
+            roster = sorted(by_class.get(cn, []))
         # 加载学生待消课时（实时：已购 - 出席次数）
         prefill_map = {}
         if roster:
@@ -822,10 +1037,8 @@ def dashboard_weekly():
             for r in rem_rows:
                 used = used_map.get(r["student_name"], 0)
                 prefill_map[r["student_name"]] = int(r["purchased_lessons"] or 0) - used
-        # 无花名册时跳过（暑假班由下面 is_vacation 兜底）
-        # 跳过无学生且非临时/非暑假的班级
-        is_vacation = bool('临时' in cn or any(uc in units for uc in ['2607','2608']))
-        if not roster and not is_vacation: continue
+        # 跳过无学生且非临时/非暑假的班级（春秋班无人则隐藏）
+        if not roster and not is_vac: continue
         ct = ""; cb = ""
         for u in units.values():
             if u.get("class_time",""): ct = u["class_time"]
@@ -1070,8 +1283,10 @@ def config_and_lessons():
         if actual_uc not in lessons[cn]: lessons[cn][actual_uc] = []
         lessons[cn][actual_uc].append({"folder": f"{cn}-{uc}-{r['lesson_num']}", "lesson": str(r["lesson_num"]), "title": r["title"], "date": (r["updated_at"] or "")[:10], "unit_name": unit_name})
 
-    cur.execute("SELECT COUNT(*) as cnt FROM student_ext WHERE status=%s", ["在读中"])
+    cur.execute("SELECT COUNT(*) as cnt FROM student_ext WHERE status=%s AND enrolled_class IS NOT NULL AND enrolled_class NOT IN ('','待分班','未分班')", ["在读中"])
     active = Row([d[0] for d in cur.description], list(cur.fetchone()))
+    cur.execute("SELECT COUNT(*) as cnt FROM student_ext WHERE status=%s AND enrolled_class IS NOT NULL AND enrolled_class NOT IN ('','待分班','未分班')", ["仅试听"])
+    trial = Row([d[0] for d in cur.description], list(cur.fetchone()))
 
     # 按当前周期统计（取最近一次考勤的 cycle）
     cur.execute("SELECT cycle FROM attendance WHERE cycle!='' ORDER BY lesson_date DESC LIMIT 1")
@@ -1115,6 +1330,7 @@ def config_and_lessons():
 
     summary = {
         "active_students": int(active["cnt"] or 0),
+        "trial_count": int(trial["cnt"] or 0),
         "month_lessons": int(month_att["lessons"] or 0),
         "month_present": int(month_att["present"] or 0),
         "cycle": current_cycle,

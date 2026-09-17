@@ -810,8 +810,8 @@ def generate_all():
                     shutil.copy2(src, dest)
                     break
         except: pass
-        # Also check combined cycle
-        if unit_code and "&" not in unit_code:
+        # Also check combined cycle —— 只对寒暑单元(2607/2608)生效；春秋(2609等)绝不拉旧暑假长图
+        if unit_code in ("2607", "2608"):
             try:
                 for combined_cycle in ["2607&08", "2608&07"]:
                     mats2 = db.material_list(cycle=combined_cycle, material_type="长图")
@@ -1056,8 +1056,13 @@ def attendance_suggest():
             for s in t.get("speeches", []):
                 n = s.get("name", "").strip()
                 if n and n != "图": speakers.add(n)
-        # 取班级花名册
-        roster = db.roster_get(cls_name)
+        # 取班级花名册：春秋班以学生tab的 enrolled_class 为准（与周期课表一致），
+        # 寒暑/临时班或 enrolled_class 空的班退回 class_roster，避免考勤确认显示旧课表/空名单
+        roster = [r["student_name"] for r in db._execute(db.get_db(),
+            "SELECT student_name FROM student_ext WHERE enrolled_class=%s AND status IN ('在读中','仅试听') ORDER BY student_name",
+            [cls_name]).fetchall()]
+        if not roster:
+            roster = db.roster_get(cls_name)
         # 取学生扩展信息
         from db import student_ext_all as _se
         # 构建建议
@@ -1588,6 +1593,38 @@ def purchases_paginated():
 
 # ====== 分账 ======
 
+# ── 分账的讲师归属 ──────────────────────────────────────────
+# config.created_by 存的是班级「现在」的讲师，直接拿来回算所有历史周期，
+# 会把老师还没来的时候上的课也算给他。两条修正：
+#   1) 饼干 2026-05-17（2605 第一周）才来，之前的课都算欣欣的；
+#   2) 这批老班/特典课在 config 里没有行，学生全部由欣欣录入，一律算欣欣。
+# 只影响分账计算，不往 config 写行 —— 所以不会出现在编辑 tab、素材库的班级/周期里。
+BISCUIT_FIRST_LESSON = "2026-05-17"
+LEGACY_CLASS_TEACHER = {
+    "周日启航1": "欣欣", "周三启航": "欣欣", "周三探索": "欣欣", "周五领航": "欣欣",
+    "周六先锋": "欣欣", "寒假启航1班": "欣欣", "寒假启航2班": "欣欣", "寒假探索": "欣欣",
+    "寒假先锋": "欣欣", "先锋临时班": "欣欣", "特典": "欣欣", "混龄特典": "欣欣", "纯试听": "欣欣",
+}
+
+
+def _teacher_resolver():
+    """返回 (class_name, lesson_date) -> 讲师 的解析函数"""
+    from db import get_db, _execute
+    cmap = {}
+    for r in _execute(get_db(), "SELECT class_name, MAX(created_by) as t FROM config GROUP BY class_name").fetchall():
+        cmap[r["class_name"]] = (r["t"] or "").strip()
+
+    def resolve(class_name, lesson_date):
+        t = cmap.get(class_name, "")
+        d = str(lesson_date or "")
+        if t == "饼干" and d and d < BISCUIT_FIRST_LESSON:
+            return "欣欣"          # 饼干还没来，这班当时是欣欣带的
+        if not t:
+            return LEGACY_CLASS_TEACHER.get(class_name, "")
+        return t
+    return resolve
+
+
 @app.route("/api/revenue-splits/generate", methods=["POST"])
 def revenue_splits_generate():
     """从 attendance 自动生成分账行"""
@@ -1603,6 +1640,7 @@ def revenue_splits_generate():
             _execute(get_db(), """REPLACE INTO neukol_fees (cycle, content_label, fee) VALUES (%s,%s,%s)""",
                      [old['cycle'], old['content_label'], float(old['neukol_fee'] or 0)])
     _execute(get_db(), "DELETE FROM revenue_splits")
+    resolve_teacher = _teacher_resolver()
     # Step 1: 每班正价 = 众数非零价（已是9折后）
     price_rows = _execute(get_db(), """
         SELECT class_name, consumed_price, COUNT(*) as cnt
@@ -1619,12 +1657,11 @@ def revenue_splits_generate():
     ref_sup = {}  # (cycle, content_label) -> {'total': 0, 'xin': 0, 'bis': 0}
     # Step 2a: 转介绍赠 → consumed_price=0 的消耗记录
     ref_rows = _execute(get_db(), """
-        SELECT a.cycle, a.content_label, ANY_VALUE(ct.teacher) as teacher, a.class_name, COUNT(DISTINCT a.id) as free_cnt
+        SELECT a.cycle, a.content_label, a.class_name, a.lesson_date, COUNT(DISTINCT a.id) as free_cnt
         FROM attendance a
-        LEFT JOIN (SELECT class_name, ANY_VALUE(created_by) as teacher FROM config GROUP BY class_name) ct ON a.class_name=ct.class_name
         WHERE a.status='出席' AND a.consumed_price=0 AND a.cycle!='' AND a.content_label!=''
           AND a.student_name IN (SELECT DISTINCT student_name FROM purchases WHERE discount_type='转介绍赠')
-        GROUP BY a.cycle, a.content_label, a.class_name
+        GROUP BY a.cycle, a.content_label, a.class_name, a.lesson_date
     """).fetchall()
     for rr in ref_rows:
         key = (rr['cycle'], rr['content_label'])
@@ -1632,16 +1669,16 @@ def revenue_splits_generate():
         up = cls_price.get(rr['class_name'], 180.0)
         amt = round(up * int(rr['free_cnt']), 2)
         ref_sup[key]['total'] += amt
-        t = (rr['teacher'] or '').strip()
+        t = resolve_teacher(rr['class_name'], rr['lesson_date'])
         if t == '欣欣': ref_sup[key]['xin'] += amt
         elif t == '饼干': ref_sup[key]['bis'] += amt
     # Step 2b: 已退款 → 已消耗的课节，按消耗记录所在周期
     refund_rows = _execute(get_db(), """
-        SELECT a.cycle, a.content_label, a.class_name, COUNT(DISTINCT a.id) as cnt
+        SELECT a.cycle, a.content_label, a.class_name, a.lesson_date, COUNT(DISTINCT a.id) as cnt
         FROM attendance a
         WHERE a.status='出席' AND a.cycle!='' AND a.content_label!=''
           AND a.student_name IN (SELECT DISTINCT student_name FROM purchases WHERE discount_type='已退款')
-        GROUP BY a.cycle, a.content_label, a.class_name
+        GROUP BY a.cycle, a.content_label, a.class_name, a.lesson_date
     """).fetchall()
     for rr in refund_rows:
         key = (rr['cycle'], rr['content_label'])
@@ -1649,8 +1686,7 @@ def revenue_splits_generate():
         up = cls_price.get(rr['class_name'], 180.0)
         amt = round(up * int(rr['cnt']), 2)
         ref_sup[key]['total'] += amt
-        tchr_row = _execute(get_db(), "SELECT ANY_VALUE(created_by) as t FROM config WHERE class_name=%s GROUP BY class_name", [rr['class_name']]).fetchone()
-        t = (tchr_row['t'].strip() if tchr_row and tchr_row['t'] else '') if tchr_row else ''
+        t = resolve_teacher(rr['class_name'], rr['lesson_date'])
         if t == '欣欣': ref_sup[key]['xin'] += amt
         elif t == '饼干': ref_sup[key]['bis'] += amt
     # Step 2c: 平台服务费 → 按缴费日期归入 (cycle, content_label) 的日期范围
@@ -1699,18 +1735,31 @@ def revenue_splits_generate():
         key = (fa['cycle'], fa['content_label'])
         first_att[key] = first_att.get(key, 0) + 1
     # Step 4: 主汇总查询
-    rows = _execute(get_db(), """
-        SELECT a.cycle, a.content_label,
-            COALESCE(SUM(CASE WHEN a.status='出席' THEN a.consumed_price ELSE 0 END),0) as revenue,
-            COUNT(CASE WHEN a.status='出席' AND a.consumed_price IN (69.9, 99.9) THEN 1 END) as trial_count,
-            COUNT(CASE WHEN a.status='出席' AND a.consumed_price NOT IN (69.9, 99.9) THEN 1 END) as formal_count,
-            COALESCE(SUM(CASE WHEN a.status='出席' AND ct.teacher='欣欣' THEN a.consumed_price ELSE 0 END)*0.5,0) as xin_base,
-            COALESCE(SUM(CASE WHEN a.status='出席' AND ct.teacher='饼干' THEN a.consumed_price ELSE 0 END)*0.5,0) as bis_base
+    # 试听 = 消课价是试听价(69.9/99.9)。与 attendance_by_lesson 口径一致，只看价格。
+    # 试听生营收按试听金额计（消课价已按试听价记账），正式则按正价。
+    # 讲师按「班级 + 上课日期」逐条判（见 _teacher_resolver），在 Python 里汇总，
+    # 否则同一个班里换过老师的那些周期没法按时间切开。
+    agg = {}
+    for ar in _execute(get_db(), """
+        SELECT a.cycle, a.content_label, a.class_name, a.lesson_date, a.consumed_price
         FROM attendance a
-        LEFT JOIN (SELECT class_name, ANY_VALUE(created_by) as teacher FROM config GROUP BY class_name) ct ON a.class_name=ct.class_name
         WHERE a.status='出席' AND a.cycle!='' AND a.content_label!=''
-        GROUP BY a.cycle, a.content_label ORDER BY a.cycle, a.content_label
-    """).fetchall()
+    """).fetchall():
+        key = (ar['cycle'], ar['content_label'])
+        a2 = agg.get(key)
+        if a2 is None:
+            a2 = agg[key] = {'revenue':0.0,'trial_count':0,'formal_count':0,'xin_base':0.0,'bis_base':0.0}
+        cp = float(ar['consumed_price'] or 0)
+        a2['revenue'] += cp
+        if cp in (69.9, 99.9): a2['trial_count'] += 1
+        else: a2['formal_count'] += 1
+        t = resolve_teacher(ar['class_name'], ar['lesson_date'])
+        if t == '欣欣': a2['xin_base'] += cp * 0.5
+        elif t == '饼干': a2['bis_base'] += cp * 0.5
+    rows = [{'cycle': k[0], 'content_label': k[1],
+             'revenue': round(v['revenue'],2), 'trial_count': v['trial_count'], 'formal_count': v['formal_count'],
+             'xin_base': round(v['xin_base'],2), 'bis_base': round(v['bis_base'],2)}
+            for k, v in sorted(agg.items())]
     # 预加载所有持久表数据（避免每行 3 次查询）
     coef_map = {}
     for cr in _execute(get_db(), "SELECT * FROM split_coefficients").fetchall():
@@ -1725,6 +1774,13 @@ def revenue_splits_generate():
     se_all = {}
     for se in _execute(get_db(), "SELECT student_name, added_by FROM student_ext").fetchall():
         se_all[se['student_name']] = (se['added_by'] or '').strip()
+    # 预加载 每个学生的首课出勤班老师（试听生归属：按首课班级，不依赖易断的added_by）
+    first_tchr = {}
+    for ft in _execute(get_db(), """
+        SELECT a.student_name, a.class_name, a.lesson_date FROM attendance a
+        WHERE a.status='出席' AND a.lesson_date=(SELECT MIN(lesson_date) FROM attendance a2 WHERE a2.student_name=a.student_name AND a2.status='出席')
+    """).fetchall():
+        first_tchr[ft['student_name']] = resolve_teacher(ft['class_name'], ft['lesson_date'])
 
     # 新生计数：试听生首发专题即为新生归属
     trial_first = {}
@@ -1763,14 +1819,11 @@ def revenue_splits_generate():
         l50 = round(base*0.5,2)
         t20 = round(base*0.2,2)
         s20 = round(base*0.2,2)
-        # 从预加载 dict 读系数
+        # 从预加载 dict 读系数；新的 (cycle, content_label) 一律默认 100/0/0，
+        # 不做「继承同周期其它行」——新课默认全归欣欣，剩下的手工在页面上调
         ck = (r['cycle'], r['content_label'])
         if ck in coef_map: xc, sc, bc = coef_map[ck]
-        else:
-            inherit = None
-            for (c_cyc, c_cl), cv in coef_map.items():
-                if c_cyc == r['cycle']: inherit = cv
-            xc, sc, bc = inherit if inherit else (1.0, 0.0, 0.0)
+        else: xc, sc, bc = 1.0, 0.0, 0.0
         coe_sum = xc + sc + bc
         if coe_sum > 0 and abs(coe_sum - 1.0) > 0.001:
             xc = round(xc / coe_sum, 2); sc = round(sc / coe_sum, 2); bc = round(1.0 - xc - sc, 2)
@@ -1798,25 +1851,22 @@ def revenue_splits_generate():
         trial_xin = trial_bis = 0
         if trial > 0:
             t_rows = _execute(get_db(), """
-                SELECT ANY_VALUE(ct.teacher) as t FROM attendance a
-                LEFT JOIN (SELECT class_name, ANY_VALUE(created_by) as teacher FROM config GROUP BY class_name) ct ON a.class_name=ct.class_name
+                SELECT a.student_name, a.class_name, a.lesson_date FROM attendance a
                 WHERE a.cycle=%s AND a.content_label=%s AND a.status='出席'
                 AND a.student_name IN (SELECT DISTINCT student_name FROM purchases WHERE discount_type IN ('试听折扣','亲友试听'))
                 AND a.lesson_date = (SELECT MIN(lesson_date) FROM attendance WHERE student_name=a.student_name AND status='出席')
-                GROUP BY a.student_name
             """, [r['cycle'], r['content_label']]).fetchall()
+            t_seen = {}
             for tr in t_rows:
-                t = (tr['t'] or '').strip()
+                t_seen.setdefault(tr['student_name'], resolve_teacher(tr['class_name'], tr['lesson_date']))
+            for t in t_seen.values():
                 if t == '饼干': trial_bis += 1
                 elif t == '欣欣': trial_xin += 1
         actual_trial = trial_xin + trial_bis
-        # 招生 = 试听 × 40, 按谁添加这个学生分配
+        # 招生 = 试听 × 40, 全归招募欣（招生是欣欣的主动新增，无饼干招生成份，不按首课班老师分）
         recruit_xin = recruit_bis = 0
         if trial_names:
-            for tn in trial_names:
-                adder = se_all.get(tn, '')
-                if adder == '饼干': recruit_bis += 40
-                else: recruit_xin += 40
+            recruit_xin = len(trial_names) * 40
         recruitment = recruit_xin + recruit_bis
         # 转化: 每师保底¥20 + 成功¥40（成功按试听老师分配）
         # Use trial_xin/trial_bis counts already computed; for bonus, assume same ratio
@@ -1831,15 +1881,14 @@ def revenue_splits_generate():
         # 续费 = 正式人次 × 20, 按老师实际正式学生数拆分
         formal_xin = formal_bis = 0
         f_rows = _execute(get_db(), """
-            SELECT ANY_VALUE(ct.teacher) as t, COUNT(DISTINCT a.student_name) as cnt FROM attendance a
-            LEFT JOIN (SELECT class_name, ANY_VALUE(created_by) as teacher FROM config GROUP BY class_name) ct ON a.class_name=ct.class_name
+            SELECT a.student_name, a.class_name, a.lesson_date FROM attendance a
             WHERE a.cycle=%s AND a.content_label=%s AND a.status='出席' AND a.consumed_price NOT IN (69.9, 99.9, 0)
-            GROUP BY ct.teacher
         """, [r['cycle'], r['content_label']]).fetchall()
+        f_seen = {}
         for fr in f_rows:
-            tchr = (fr['t'] or '').strip(); cnt = int(fr['cnt'])
-            if tchr == '欣欣': formal_xin = cnt
-            elif tchr == '饼干': formal_bis = cnt
+            f_seen.setdefault(fr['student_name'], resolve_teacher(fr['class_name'], fr['lesson_date']))
+        formal_xin = sum(1 for t in f_seen.values() if t == '欣欣')
+        formal_bis = sum(1 for t in f_seen.values() if t == '饼干')
         retention_xin = formal_xin * 20
         retention_bis = formal_bis * 20
         retention = retention_xin + retention_bis
@@ -1852,7 +1901,7 @@ def revenue_splits_generate():
              lesson_50pct,xinxin_lesson_share,biscuit_lesson_share,teaching_20pct,
              xinxin_coef,xinxin_share,sitong_coef,sitong_share,biscuit_coef,biscuit_share,source_20pct,neukol_fee,other_cost,notes,net_balance)
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-            [r['cycle'], r['content_label'], rev, trial, int(r['formal_count']), ref, pf, trial, recruitment, 1.0, recruit_xin, recruit_bis, conversion, conversion_xin, conversion_bis, retention, retention_xin, retention_bis,
+            [r['cycle'], r['content_label'], rev, int(r['trial_count']), int(r['formal_count']), ref, pf, trial, recruitment, 1.0, recruit_xin, recruit_bis, conversion, conversion_xin, conversion_bis, retention, retention_xin, retention_bis,
              l50, xin_lesson, bis_lesson, t20,
              xc, xs, sc, ss, bc, bs, s20, neukol_val, other_val, notes_val, nb])
     return jsonify({"status":"ok"})
@@ -2201,6 +2250,30 @@ def cycle_materials():
                 entry["golden_quotes"].append({"name": m.get("student_name", m["file_path"].rsplit("/",1)[-1]), "path": _mat_url(m["file_path"]), "score": m.get("score",""), "line": m.get("recommendation",""), "segment": m.get("segment","")})
             materials.append(entry)
     return jsonify(materials)
+
+# ====== 素材库周期下拉 ======
+@app.route("/api/material-cycles")
+def material_cycles():
+    """素材库周期下拉：聚合 config 全部单元，新单元自动带出。
+    2607&08 置顶，合并周期(含&)展开成单独周期（如 2607&08 -> 2607, 2608），
+    其余按数字排序。新增单元后无需改这里即自动出现。"""
+    from db import config_all
+    union = set()
+    for units in config_all().values():
+        for uc in (units or {}).keys():
+            union.add(uc)
+    expanded = set()
+    for uc in union:
+        expanded.add(uc)
+        if "&" in uc:
+            parts = [p for p in uc.split("&") if p]
+            # 合并周期形如 2607&08 = 2607 + 08，展开时给完整部分补齐年份前缀 -> 2608
+            prefix = parts[0][:-2] if parts and len(parts[0]) >= 4 else ""
+            for part in parts:
+                expanded.add(prefix + part if len(part) < 4 and prefix else part)
+    top = ["2607&08"] if "2607&08" in expanded else []
+    rest = sorted([x for x in expanded if x != "2607&08"])
+    return jsonify(top + rest)
 
 # ====== 课后素材图片 ======
 
