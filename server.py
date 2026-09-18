@@ -1079,7 +1079,38 @@ def attendance_suggest():
             "SELECT student_name FROM student_ext WHERE enrolled_class=%s AND status IN ('在读中','仅试听') ORDER BY student_name",
             [cls_name]).fetchall()]
         if not roster:
-            roster = db.roster_get(cls_name)
+            # 兜底名单（class_roster）是历次考勤攒出来的，会过时：转到别的春秋班的人、
+            # 被人工挪出班级的人（enrolled_class 写着「未分班」）都还挂在旧班名单里。
+            # 一旦这个班的学生tab名单为空退回兜底，就会给不在这个班的人标缺席
+            # （浩铖已转周五探索，09-13 却在周日启航3 被记了一条缺席）。
+            # 所以春秋班的兜底名单要把「已经明确去了别处」的人剔掉；
+            # 寒暑假/临时班不过滤——那种班的名单本来就靠兜底，暑假还常有跨班来上课的人。
+            # enrolled_class 为空或「待分班」的留着：他们没去别处，就是还没排班。
+            fallback = db.roster_get(cls_name)
+            _db = db.get_db()
+            # 春秋/寒暑按**单元**判，不按班名：暑假班叫「启航4班/探索4班」这种名字里
+            # 没有「暑假」，按名字判会把它们当春秋班过滤掉，把暑假课表清空。
+            # 口径同 db.cycle_from_unit：单元含 2607/2608，或班名带「临时」= 寒暑假班。
+            units = {r["unit_code"] or "" for r in db._execute(_db,
+                "SELECT unit_code FROM config WHERE class_name=%s", [cls_name]).fetchall()}
+            is_vac = ("临时" in cls_name) or any("2607" in u or "2608" in u for u in units)
+            if fallback and units and not is_vac:
+                known = {r["class_name"] for r in db._execute(_db,
+                    "SELECT DISTINCT class_name FROM config").fetchall()}
+                rows = db._execute(_db, """SELECT student_name, enrolled_class FROM student_ext
+                                        WHERE enrolled_class IS NOT NULL AND enrolled_class!='' AND enrolled_class!=%s""",
+                                [cls_name]).fetchall()
+                moved = {r["student_name"] for r in rows
+                         if r["enrolled_class"] in known or r["enrolled_class"] == "未分班"}
+                fallback = [n for n in fallback if n not in moved]
+            roster = fallback
+        # 把学生状态一起带出去：前端对「仅试听」的人不默认记缺席
+        # （试听生只是来试，没来不等于缺席；在读中的才是真缺课）
+        st_map = {}
+        if roster:
+            ph = ",".join(["%s"] * len(roster))
+            st_map = {r["student_name"]: (r["status"] or "") for r in db._execute(db.get_db(),
+                f"SELECT student_name, status FROM student_ext WHERE student_name IN ({ph})", roster).fetchall()}
         # 取学生扩展信息
         from db import student_ext_all as _se
         # 构建建议
@@ -1096,7 +1127,7 @@ def attendance_suggest():
             seen.add(name)
             status = "出席" if name in speakers or name in fuzzy.values() else ""
             # If matched via fuzzy, use the roster name
-            result.append({"name": name, "status": status, "note": "", "inRoster": True})
+            result.append({"name": name, "status": status, "note": "", "inRoster": True, "st_status": st_map.get(name, "")})
         # 在发言中但不在花名册的（新生）
         for name in speakers:
             if name not in seen and name not in fuzzy:

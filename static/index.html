@@ -663,15 +663,22 @@ function showAttendanceModal(genPromise,d,gs,gw){
   .then(function(r){if(!r.ok)throw new Error('服务器错误 '+r.status);return r.json()}).then(function(sug){
     var overlay=document.createElement('div');overlay.id='attOverlay';overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
     var h='<div style="background:var(--surface);border-radius:12px;padding:20px;max-width:480px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)">';
-    h+='<h3 style="margin:0 0 4px">考勤确认 — '+esc(cls)+'</h3><div style="font-size:11px;color:var(--sb);margin-bottom:12px">发言学生已自动勾选，请确认缺席/请假</div>';
+    h+='<h3 style="margin:0 0 4px">考勤确认 — '+esc(cls)+'</h3><div style="font-size:11px;color:var(--sb);margin-bottom:12px">发言学生已自动勾选，请确认缺席/请假；名字后标了状态的不是「在读中」，默认不记考勤</div>';
     var roster=sug.roster||[];var speakers=sug.speakers||[];
     var clsOpts=Object.keys(cfgInfo).sort().map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>'}).join('');
     roster.forEach(function(r,i){
+      // 只有「在读中」的人没来才叫缺席。仅试听（只是来试）/暂时停课/终止课程的人
+      // 留在名单里没来，不该每周攒一条假缺席（多多、屯屯就这么攒出来的）。
+      // 状态查不到的（class_roster 里还没进学生tab的名字）不动，照旧默认缺席，
+      // 免得把真缺课的新学生漏掉。
+      var notReading=r.st_status&&r.st_status!=='在读中';
       var bg=r.status==='出席'?'var(--green-light)':(r.isNew?'var(--accent-light)':'var(--amber-light)');
       h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;margin:2px 0;border-radius:6px;background:'+bg+'">';
       h+='<input type="checkbox" id="attChk'+i+'" '+(r.status==='出席'?'checked':'')+' onchange="var s=document.getElementById(\'attSel'+i+'\');var f=document.getElementById(\'attFrom'+i+'\');s.style.display=this.checked?\'none\':\'inline\';if(!this.checked)f.style.display=\'none\'" style="width:auto;margin:0">';
-      h+='<span style="flex:1;font-size:13px">'+esc(r.name)+(r.isNew?' <span style="font-size:10px;color:var(--sky)" class="mkBadge">新</span>':'')+'</span>';
-      h+='<select id="attSel'+i+'" onchange="var f=document.getElementById(\'attFrom'+i+'\');f.style.display=this.value===\'补课\'?\'inline\':\'none\'" style="display:'+(r.status==='出席'?'none':'inline')+';width:auto;padding:2px 4px;font-size:11px"><option value="缺席">缺席</option><option value="请假">请假</option><option value="补课">补课</option></select>';
+      h+='<span style="flex:1;font-size:13px">'+esc(r.name)+(r.isNew?' <span style="font-size:10px;color:var(--sky)" class="mkBadge">新</span>':'')+(notReading?' <span style="font-size:10px;color:var(--sky)" class="mkBadge">'+esc(r.st_status)+'</span>':'')+'</span>';
+      var sopts=notReading?'<option value="" selected>未到（不记）</option>':'';
+      sopts+='<option value="缺席">缺席</option><option value="请假">请假</option><option value="补课">补课</option>';
+      h+='<select id="attSel'+i+'" onchange="var f=document.getElementById(\'attFrom'+i+'\');f.style.display=this.value===\'补课\'?\'inline\':\'none\'" style="display:'+(r.status==='出席'?'none':'inline')+';width:auto;padding:2px 4px;font-size:11px">'+sopts+'</select>';
       h+='<select id="attFrom'+i+'" style="display:none;width:auto;padding:2px 4px;font-size:11px;margin-left:-4px"><option value="">补自</option>'+clsOpts+'</select>';
       h+='<input id="attNote'+i+'" placeholder="备注" style="width:80px;padding:2px 4px;font-size:11px;display:'+(r.status==='出席'?'none':'inline')+'">';
       h+='</div>';
@@ -719,6 +726,8 @@ function submitAttendance(cls,unitCode,lessonNum,title,date){
     var chk=document.getElementById('attChk'+i);var sel=document.getElementById('attSel'+i);var note=document.getElementById('attNote'+i);var from=document.getElementById('attFrom'+i);
     var selVal=sel?sel.value:'缺席';
     var n=note?note.value:'';
+    // 仅试听「未到（不记）」：没来就不写考勤。注意勾了出席的不能漏，那条要正常存
+    if(!(chk&&chk.checked)&&!selVal)continue;
     if(selVal==='补课'){
       var fromCls=from&&from.value?from.value:'';
       records.push({name:roster[i].name,status:'出席',note:fromCls?'补自'+fromCls:'补课'});
@@ -856,7 +865,9 @@ function renderOverviewTab(){
     var byClass={};
     students.forEach(function(s){
       var pur=parseInt(s.purchased_lessons)||0; var used=parseInt(s.used_lessons)||0; var rem=pur-used;
-      if(rem<0&&(s.status==='在读中'||s.status==='一课一消')){
+      // 余 0 也要挂：0 节的在读中下节课就没课时可消了，跟欠课一样得提前续费
+      // （rem<0 是已经上超了，显示上仍按颜色区分：欠课红、正好 0 橙）
+      if(rem<=0&&(s.status==='在读中'||s.status==='一课一消')){
         var c=s.enrolled_class||'未分班';
         if(!byClass[c])byClass[c]=[]; byClass[c].push({name:s.student_name,rem:rem,pur:pur,used:used});
       }
