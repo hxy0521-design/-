@@ -255,10 +255,15 @@ def student_ext_auto_promote_trial_paid():
         _execute(db, "UPDATE student_ext SET status=%s WHERE student_name=%s AND status='仅试听'", ["在读中", r["student_name"]])
 
 def student_ext_cleanup_trial():
-    """仅试听学生超过10天无缴费且无近期考勤 → 移出班级（enrolled_class 清空，归未分班）
+    """仅试听学生超过10天无缴费且无近期考勤 → 移出班级（写「未分班」，见下）
 
     用户 2026-09-14 定：试听生只看当前 10 天，「有历史出席」不再豁免——
     老试听生一直占着班级名单，课表跟学生tab就对不上（课表名单口径同此）。
+
+    写的是「未分班」这个字面量而不是空串：本函数在 student_ext_all() 里排在
+    student_ext_sync_from_attendance() **前面**，空串恰好是自动归班的入口条件，
+    对 source='考勤新增' 的试听生等于前脚清空、后脚就被捞回原班，10 天规则整个空转。
+    「未分班」是 sync 认的「人工挪出」标记，不会被覆盖，清理才真正生效。
     """
     db = get_db()
     from datetime import datetime, timedelta
@@ -270,7 +275,8 @@ def student_ext_cleanup_trial():
             (SELECT MAX(p.actual_pay_date) FROM purchases p WHERE p.student_name=s.student_name) as last_pay,
             (SELECT MAX(a.lesson_date) FROM attendance a WHERE a.student_name=s.student_name) as last_date
         FROM student_ext s
-        WHERE s.status='仅试听' AND s.enrolled_class IS NOT NULL AND s.enrolled_class != ''
+        WHERE s.status='仅试听' AND s.enrolled_class IS NOT NULL
+          AND s.enrolled_class != '' AND s.enrolled_class != '未分班'
     """).fetchall()
     for r in rows:
         name = r["student_name"]
@@ -281,7 +287,7 @@ def student_ext_cleanup_trial():
         last_date = r["last_date"]
         if not last_date or str(last_date) >= cutoff:
             continue  # 无考勤记录 / 10天内有考勤，不处理
-        _execute(db, "UPDATE student_ext SET enrolled_class=%s WHERE student_name=%s", ["", name])
+        _execute(db, "UPDATE student_ext SET enrolled_class=%s WHERE student_name=%s", ["未分班", name])
 
 def student_ext_sync_from_attendance(db):
     """兜底 1：凡在 attendance 里出现过的学生，若 student_ext 缺失，则补一条占位记录。
@@ -418,6 +424,9 @@ def cycle_from_unit(unit_code, class_name=""):
     if not unit_code: return ""
     # 尝试从已有考勤记录中找到匹配的周期（历史标签优先，不受新规则影响，如 2509试听期/2602寒假班）
     # 按班级过滤：某班的脏标签不能传染给同单元的其他班（如 2609 曾被误标成 暑假班，导致其他班新课也跟着错）
+    # 取「最近一条」而不是众数：2605 这类老单元同一班会横跨好几个周期
+    # （2601正式课/2603春季班/2605春季班都挂在同一个班名下），按条数取众数会选到不相干的周期。
+    # 所以这里只做班级隔离，脏标签靠下面的人工修正 + 最终由前端显式传 cycle 兜住。
     if class_name:
         row = _execute(get_db(), "SELECT cycle FROM attendance WHERE unit_code=%s AND cycle!='' AND class_name=%s ORDER BY lesson_date DESC LIMIT 1", [unit_code, class_name]).fetchone()
     else:
