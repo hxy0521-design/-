@@ -768,6 +768,28 @@ function saveAll(){localStorage.setItem('tabsData',JSON.stringify(tabs))}
 setInterval(saveAll,300000);
 window.addEventListener('beforeunload',saveAll);
 
+// 代码版本变了就自己重载，省得留着一个旧页面继续按旧规则写数据
+// （2026-09-17 周期季节改 tab 感知后，一个没刷新的标签页把 6 条考勤存成了错的 cycle）
+var _codeVer='';
+function _showStaleHint(){
+  if(document.getElementById('staleHint'))return;
+  var el=document.createElement('div');el.id='staleHint';
+  el.style.cssText='position:fixed;right:16px;bottom:16px;z-index:9998;background:#1e293b;color:#fff;padding:10px 14px;border-radius:8px;font-size:12px;box-shadow:0 6px 20px rgba(0,0,0,.25);display:flex;align-items:center;gap:10px';
+  el.innerHTML='<span>服务器代码已更新，保存后刷新一下</span><button onclick="location.reload()" style="border:none;border-radius:5px;padding:4px 10px;background:#3b82f6;color:#fff;font-size:12px;cursor:pointer">刷新</button>';
+  document.body.appendChild(el);
+}
+function _checkVer(){
+  fetch(API+'/version').then(function(r){return r.json()}).then(function(d){
+    if(!d||!d.v)return;
+    if(!_codeVer){_codeVer=d.v;return}          // 首次只记基线，不重载
+    if(d.v===_codeVer)return;
+    // 有没保存的东西就只提示，不硬刷；编辑页之外 hasUnsaved() 恒为 false
+    if(hasUnsaved()||document.querySelector('.zg-modal-overlay')){_showStaleHint();return}
+    location.reload();
+  }).catch(function(){});
+}
+setInterval(_checkVer,60000);
+
 // ====== 财务面板 ======
 // ====== Tab 1: 总览 ======
 function renderOverviewTab(){

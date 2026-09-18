@@ -156,6 +156,22 @@ def load_meetmemo_data(cls_name, lesson_title, lesson_date):
 def index():
     return send_from_directory(os.path.join(BASE_DIR, "static"), "index.html")
 
+@app.route("/api/version")
+def api_version():
+    """前端拿它比对代码版本，改了代码后页面能自己重载。
+
+    起因：2026-09-17 周期季节改成 tab 感知后，一个没刷新的旧标签页仍按旧规则
+    算 cycle，把周四启航 09-17 的 6 条考勤存成了 2609暑假班，成为 cycle_from_unit
+    「取最近一条」的命中目标，会带错该班后续新课的周期标签。
+    """
+    parts = []
+    for f in ("static/index.html", "db.py", "server.py"):
+        try:
+            parts.append(str(int(os.path.getmtime(os.path.join(BASE_DIR, f)))))
+        except OSError:
+            parts.append("0")
+    return jsonify({"v": "-".join(parts)})
+
 @app.route("/test")
 def test_page():
     return send_from_directory(os.path.join(BASE_DIR, "static"), "test.html")
