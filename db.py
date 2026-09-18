@@ -264,16 +264,23 @@ def student_ext_cleanup_trial():
     student_ext_sync_from_attendance() **前面**，空串恰好是自动归班的入口条件，
     对 source='考勤新增' 的试听生等于前脚清空、后脚就被捞回原班，10 天规则整个空转。
     「未分班」是 sync 认的「人工挪出」标记，不会被覆盖，清理才真正生效。
+
+    「考勤」只算**出席**，缺席/请假不算：试听生一旦留在名单里，每周考勤都会被
+    自动标一条缺席（多多 06-28 试听完就没再来，却因为每周被标缺席，最近考勤永远
+    是新的，规则永远不触发）。
+    但「一条记录都没有」仍然跳过——预排了两周后才开课、试听费早就付了的试听生
+    会在这里被误清，所以没记录时宁可不动。
     """
     db = get_db()
     from datetime import datetime, timedelta
     cutoff = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
-    # 一次性聚合取缴费数/最近缴费/最近考勤，避免逐个查库的 N+1
+    # 一次性聚合取缴费数/最近缴费/最近出席，避免逐个查库的 N+1
     rows = _execute(db, """
         SELECT s.student_name,
             (SELECT COUNT(*) FROM purchases p WHERE p.student_name=s.student_name) as pay_cnt,
             (SELECT MAX(p.actual_pay_date) FROM purchases p WHERE p.student_name=s.student_name) as last_pay,
-            (SELECT MAX(a.lesson_date) FROM attendance a WHERE a.student_name=s.student_name) as last_date
+            (SELECT MAX(a.lesson_date) FROM attendance a
+              WHERE a.student_name=s.student_name AND a.status='出席') as last_att
         FROM student_ext s
         WHERE s.status='仅试听' AND s.enrolled_class IS NOT NULL
           AND s.enrolled_class != '' AND s.enrolled_class != '未分班'
@@ -284,9 +291,9 @@ def student_ext_cleanup_trial():
             continue  # 有新增缴费，已转化
         if r["last_pay"] and str(r["last_pay"]) >= cutoff:
             continue  # 10天内有缴费
-        last_date = r["last_date"]
-        if not last_date or str(last_date) >= cutoff:
-            continue  # 无考勤记录 / 10天内有考勤，不处理
+        last_att = r["last_att"]
+        if not last_att or str(last_att) >= cutoff:
+            continue  # 从没出席过 / 10天内有出席，不处理
         _execute(db, "UPDATE student_ext SET enrolled_class=%s WHERE student_name=%s", ["未分班", name])
 
 def student_ext_sync_from_attendance(db):

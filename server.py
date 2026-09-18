@@ -158,19 +158,20 @@ def index():
 
 @app.route("/api/version")
 def api_version():
-    """前端拿它比对代码版本，改了代码后页面能自己重载。
+    """前端拿它比对页面代码版本，变了就自己重载。
 
     起因：2026-09-17 周期季节改成 tab 感知后，一个没刷新的旧标签页仍按旧规则
     算 cycle，把周四启航 09-17 的 6 条考勤存成了 2609暑假班，成为 cycle_from_unit
     「取最近一条」的命中目标，会带错该班后续新课的周期标签。
+
+    只算前端产物：后端 db.py/server.py 改了必须重启进程才生效，页面重载解决不了，
+    把它们算进来只会让页面白白刷一次。
     """
-    parts = []
-    for f in ("static/index.html", "db.py", "server.py"):
-        try:
-            parts.append(str(int(os.path.getmtime(os.path.join(BASE_DIR, f)))))
-        except OSError:
-            parts.append("0")
-    return jsonify({"v": "-".join(parts)})
+    try:
+        v = str(int(os.path.getmtime(os.path.join(BASE_DIR, "static", "index.html"))))
+    except OSError:
+        v = "0"
+    return jsonify({"v": v})
 
 @app.route("/test")
 def test_page():
